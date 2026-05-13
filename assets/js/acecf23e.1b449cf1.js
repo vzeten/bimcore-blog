@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkbimcore_blog=self.webpackChunkbimcore_blog||[]).push([["3220"],{1912(o){o.exports=JSON.parse('{"blogBasePath":"/blog","blogTitle":"Blog","authorsListPath":"/blog/authors"}')}}]);
