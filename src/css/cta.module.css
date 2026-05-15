@@ -1,0 +1,35 @@
+﻿.ctaBlock {
+  border-left: 4px solid var(--ifm-color-primary);
+  background: var(--ifm-color-emphasis-100);
+  border-radius: 0 8px 8px 0;
+  padding: 1.2rem 1.5rem;
+  margin: 2rem 0;
+}
+
+.ctaTitle {
+  font-weight: 700;
+  font-size: 1.15rem;
+  margin-bottom: 0.4rem;
+}
+
+.ctaText {
+  margin-bottom: 0.8rem;
+  line-height: 1.5;
+}
+
+.ctaButton {
+  display: inline-block;
+  background: var(--ifm-color-primary);
+  color: #fff;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.ctaButton:hover {
+  opacity: 0.85;
+  color: #fff;
+  text-decoration: none;
+}
