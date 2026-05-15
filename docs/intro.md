@@ -1,17 +1,11 @@
 ﻿---
 slug: /
-title: BIMCORE Learn
+title: Welcome
 sidebar_position: 0
-hide_table_of_contents: true
 ---
 
 # BIMCORE Learn
 
-Revit courses, guides & resources.
+Revit courses, guides and resources by BIMCORE.
 
-## Get Started
-
-- **[Courses](/courses)** — Step-by-step Revit courses
-- **[Guides](/guides)** — Product docs & manuals
-- **[Help](/help)** — FAQ & support
-- **[Blog](/blog)** — Tips, comparisons & news
+Browse the sidebar to get started.

@@ -1,30 +1,25 @@
 // @ts-check
 import {themes as prismThemes} from 'prism-react-renderer';
-
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'BIMCORE Learn',
   tagline: 'Revit courses, guides & resources',
   favicon: 'img/favicon.ico',
-
-  future: {
-    v4: true,
-  },
-
+  future: { v4: true },
   url: 'https://learn.bimcore.one',
   baseUrl: '/',
-
   organizationName: 'vzeten',
   projectName: 'bimcore-blog',
-
   onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
-
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
+  },
   i18n: {
     defaultLocale: 'en',
-    locales: ['en', 'ru'],
+    locales: ['en'],
   },
-
   presets: [
     [
       'classic',
@@ -37,14 +32,7 @@ const config = {
         },
         blog: {
           showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
           editUrl: 'https://github.com/vzeten/bimcore-blog/tree/main/',
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
         },
         theme: {
           customCss: './src/css/custom.css',
@@ -52,14 +40,16 @@ const config = {
       }),
     ],
   ],
-
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       image: 'img/social-card.jpg',
-      colorMode: {
-        respectPrefersColorScheme: true,
+	  docs: {
+        sidebar: {
+          hideable: true,
+        },
       },
+      colorMode: { respectPrefersColorScheme: true },
       navbar: {
         title: 'BIMCORE Learn',
         logo: {
@@ -67,54 +57,36 @@ const config = {
           src: 'img/logo.png',
         },
         items: [
-          {
-            type: 'docSidebar',
-            sidebarId: 'coursesSidebar',
-            position: 'left',
-            label: 'Courses',
-          },
-          {
-            type: 'docSidebar',
-            sidebarId: 'guidesSidebar',
-            position: 'left',
-            label: 'Guides',
-          },
-          {
-            type: 'docSidebar',
-            sidebarId: 'helpSidebar',
-            position: 'left',
-            label: 'Help',
-          },
           {to: '/blog', label: 'Blog', position: 'left'},
-          {type: 'localeDropdown', position: 'right'},
         ],
       },
       footer: {
         style: 'dark',
         links: [
           {
-            title: 'Learn',
+            title: 'Community',
             items: [
-              {label: 'Courses', to: '/courses'},
-              {label: 'Guides', to: '/guides'},
+              {label: 'Ask about Revit', href: 'https://community.bimcore.one'},
+              {label: 'Telegram', href: 'https://t.me/bimcore_one'},
             ],
           },
           {
-            title: 'More',
+            title: 'Social',
             items: [
-              {label: 'Blog', to: '/blog'},
-              {label: 'Help', to: '/help'},
+              {label: 'YouTube', href: 'https://www.youtube.com/@int_lines'},
+              {label: 'Instagram', href: 'https://www.instagram.com/bimcore.one'},
+              {label: 'Threads', href: 'https://www.threads.com/@bimcore.one'},
+              {label: 'Pinterest', href: 'https://pin.it/3hlU51KaD'},
             ],
           },
           {
-            title: 'BIMCORE',
+            title: 'Contact',
             items: [
-              {label: 'bimcore.one', href: 'https://bimcore.one'},
-              {label: 'GitHub', href: 'https://github.com/vzeten/bimcore-blog'},
+              {label: 'Ivan Zylev — LinkedIn', href: 'https://www.linkedin.com/in/ivan-zylev/'},
             ],
           },
         ],
-        copyright: `© ${new Date().getFullYear()} BIMCORE`,
+        copyright: '© ' + new Date().getFullYear() + ' BIMCORE LTD',
       },
       prism: {
         theme: prismThemes.github,
@@ -122,5 +94,4 @@ const config = {
       },
     }),
 };
-
 export default config;

@@ -1,14 +1,8 @@
 ﻿---
 title: Revit Families
-sidebar_position: 0
+sidebar_position: 1
 ---
 
 # Revit Families
 
-Guides for BIMCORE Revit families.
-
-- [Sockets](sockets)
-- [Kitchens](kitchens)
-- [Wardrobes](wardrobes)
-
-*Content coming soon...*
+Guides for creating Revit families.
