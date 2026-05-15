@@ -1,7 +1,7 @@
 ﻿---
 title: Welcome to BIMCORE Blog
 slug: welcome
-authors: [bimcore]
+authors: [ivan]
 tags: [news]
 date: 2025-01-01
 ---
