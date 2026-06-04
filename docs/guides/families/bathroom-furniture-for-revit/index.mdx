@@ -1,0 +1,288 @@
+---
+title: "Bathroom Furniture Revit Families"
+slug: /guides/families/bathroom-furniture-for-revit
+sidebar_label: "16 Bathroom Furniture"
+sidebar_position: 16
+description: "Bathroom furniture families Guide by BIMCORE"
+image: ./img-01.jpg
+---
+
+## 1. GENERAL INFORMATION
+
+- Set name: Bathroom Furniture
+- Set version: 1.1.0
+- Revit version: 2019
+
+### Description
+
+This set of Revit families is intended for modeling bathroom furniture in Autodesk Revit.
+Using these families, you can create vanity units with or without sinks, wall-mounted cabinets with mirrors, tall cabinets, shelving units, and other configurations with precise dimensions.
+
+The set is suitable for interior designers and architects. For furniture manufacturers, the families are not sufficiently detailed for production modeling.
+
+### Loading and Placement
+
+To view and load the required families from the set, you can open the *Project with bathroom furniture* and copy the families using the **Ctrl+C** keyboard shortcut, then paste them into your project using **Ctrl+V**.
+
+Alternatively, you can open the folder containing the family files and drag them into the project using the mouse.
+
+## 2. SET CONTENTS
+
+![Bathroom Furniture Revit Families — SET CONTENTS](./img-01.jpg)
+
+The set includes the following families:
+
+- Linen tower
+- Open linen tower
+- Louvered Door
+- Mirror cabinet
+- Bathroom vanity
+- Shelving unit
+- Laundry hamper
+
+## 3. FAMILIES
+
+### Bathroom vanity
+
+**The bathroom** **vanity** family is used to create vanity units of various configurations.
+
+![Bathroom Furniture Revit Families — Bathroom vanity](./img-02.jpg)
+
+The following elements can be enabled or disabled:
+
+- Countertop
+- Faucet
+- Sink
+- Doors
+- False drawer front
+- Handles
+- Siphon
+- Carcass back
+- Legs
+- Opening
+- Graphic symbols
+
+#### Dimensions
+
+![Bathroom Furniture Revit Families — Dimensions](./img-03.jpg)
+
+**Vanity Height** is an overall height parameter that includes additional element heights if they are enabled (Leg height, Rail height, Countertop thickness).
+
+![Bathroom Furniture Revit Families — Dimensions](./img-04.jpg)
+
+Parameters starting with **INT** are shared parameters and can be used in schedules if required.
+
+![Bathroom Furniture Revit Families — Dimensions](./img-05.jpg)
+
+Handles of the **Cut-out**, **Bow handle**, and **Overlay handle** types allow width adjustment.
+
+Cut-out and overlay handles are always centered along the top edge of the front panel.
+
+![Bathroom Furniture Revit Families — Dimensions](./img-06.jpg)
+
+The **Side Leg Offset** and **Front/Back Leg Offset** parameters control the movement of the legs toward the center of the vanity unit.
+
+#### Doors
+
+![Bathroom Furniture Revit Families — Doors](./img-07.jpg)
+
+The vanity unit can have two front panel layouts: either two doors or two drawers.
+
+![Bathroom Furniture Revit Families — Doors](./img-08.jpg)
+
+In the front panel type dropdown list:
+
+- STD.front (flat front panel)
+- FR.front (front panel with an external frame)
+- INT.front (with integrated handle)
+
+![Bathroom Furniture Revit Families — Doors](./img-09.jpg)
+
+All door types can be either inset or overlay.
+
+![Bathroom Furniture Revit Families — Doors](./img-10.jpg)
+
+When *Opening* visibility is enabled, the opening type must be selected according to the door layout.
+
+#### Handles
+
+![Bathroom Furniture Revit Families — Handles](./img-11.jpg)
+
+In this section, you can select the handle shape:
+
+- Knob
+- Cut-out
+- Bow handle
+- Overlay handle
+
+If the **Centered Placement** parameter is disabled, the handles move to the top edge of the front panel.
+
+In this case, the **Dimensions** section allows adjustment of the distance from the top edge.
+
+#### Legs
+
+![Bathroom Furniture Revit Families — Legs](./img-12.jpg)
+
+The vanity unit has two leg types: **Rectangle** and **Cylinder**. You can disable all legs or only the rear legs.
+
+#### Materials
+
+![Bathroom Furniture Revit Families — Materials](./img-13.jpg)
+
+#### Graphics Settings
+
+![Bathroom Furniture Revit Families — Graphics Settings](./img-14.jpg)
+
+To change the color, line weight, line type, or to disable the display of opening lines in the family, go to: Manage → Object Styles → Furniture / Plumbing Fixtures
+
+### Mirror Cabinet
+
+The **Mirror Cabinet** family is used to create wall-mounted cabinets of various configurations.
+
+![Bathroom Furniture Revit Families — Mirror Cabinet](./img-15.jpg)
+
+The following elements can be enabled or disabled:
+
+- Section Left
+- Section Right
+- Shelf below
+
+#### Dimensions
+
+![Bathroom Furniture Revit Families — Dimensions](./img-16.jpg)
+
+Parameters starting with **INT** are shared and can be used in schedules if required.
+
+#### Section options
+
+![Bathroom Furniture Revit Families — Section options](./img-17.jpg)For mirror cabinets, the number of sections can be configured. Sections can be identical or configured individually. The width of each section is configured individually. Side sections can have a front panel, 2 or 3 shelves. Sections are configured independently of each other.
+
+![Bathroom Furniture Revit Families — Section options](./img-18.jpg)
+
+In the central section, the mirror can be placed in three ways: on the carcass (as a door), inside the carcass (forming a shelf), without the carcass (mirror mounted on the wall, with one or two side sections).
+
+#### Materials
+
+![Bathroom Furniture Revit Families — Materials](./img-19.jpg)
+
+### Linen tower
+
+The **Linen tower** family is used to create narrow cabinets of various configurations.
+
+![Bathroom Furniture Revit Families — Linen tower](./img-20.jpg)
+
+The following elements can be enabled or disabled:
+
+- Doors
+- Handles
+- Legs
+- Opening
+
+#### Dimensions
+
+![Bathroom Furniture Revit Families — Dimensions](./img-21.jpg)
+
+Parameters starting with **INT** are shared and can be used in schedules if required.
+
+![Bathroom Furniture Revit Families — Dimensions](./img-22.jpg)
+
+Handles of the **Bow** type allow width adjustment.
+
+![Bathroom Furniture Revit Families — Dimensions](./img-23.jpg)
+
+The **Side Leg Offset** and **Forward-backward shift Legs** parameters control the movement of the legs toward the center of the cabinet.
+
+#### Doors
+
+![Bathroom Furniture Revit Families — Doors](./img-24.jpg)
+
+The linen tower can have from 1 to 3 modules. Modules can be identical or configured individually. The height of each module is configured individually, except for Module 3. Module 3 height is calculated by subtracting the total height of Modules 1 and 2 from the overall linen tower height.
+
+![Bathroom Furniture Revit Families — Doors](./img-25.jpg)
+
+In the linen tower type dropdown list:
+
+- STD.front (flat front panel)
+- FR.front (front panel with an external frame)
+
+![Bathroom Furniture Revit Families — Doors](./img-26.jpg)
+
+Each module in the cabinet is configured independently.
+
+![Bathroom Furniture Revit Families — Doors](./img-27.jpg)
+
+The opening type for each module’s doors is configured individually.
+
+Opening types:
+
+1 - Left-hinged
+
+2 - Drawer
+
+3 - Right-hinged
+
+4 - Drop-down
+
+#### Handles
+
+![Bathroom Furniture Revit Families — Handles](./img-28.jpg)
+
+This family includes two handle types: **Knob** and **Bow**. Bow handles can switch between vertical and horizontal orientation.
+
+![Bathroom Furniture Revit Families — Handles](./img-29.jpg)
+
+For each door, handle placement and orientation are configured individually when using pull handles.
+
+#### Legs
+
+![Bathroom Furniture Revit Families — Legs](./img-30.jpg)
+
+In the leg shape dropdown list:
+
+- Rectangle
+- Cylinder
+- Plinth
+- Base to the floor
+
+#### Materials
+
+![Bathroom Furniture Revit Families — Materials](./img-31.jpg)
+
+#### Graphics Settings
+
+![Bathroom Furniture Revit Families — Graphics Settings](./img-32.jpg)
+
+To change the color, line weight, line type, or to disable the display of opening lines in the family, go to: Manage → Object Styles → Furniture
+
+### Louvered door
+
+The **Louvered Door** family is used to create both standalone doors and cabinet front panels.
+
+![Bathroom Furniture Revit Families — Louvered door](./img-33.jpg)
+
+The following elements can be enabled or disabled:
+
+- Mid rail 2
+- Mid rail 1
+- Handle
+- Opening
+
+#### Dimensions
+
+![Bathroom Furniture Revit Families — Dimensions](./img-34.jpg)
+
+Parameters starting with **INT** are shared and can be used in schedules if required.
+
+#### Handles
+
+![Bathroom Furniture Revit Families — Handles](./img-35.jpg)
+
+Handle placement can be configured for the door.
+
+#### Graphics Settings
+
+![Bathroom Furniture Revit Families — Graphics Settings](./img-36.jpg)
+
+To change the color, line weight, line type, or to disable the display of opening lines in the family, go to: Manage → Object Styles → Furniture
+
+<CTA type="guide" />

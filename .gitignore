@@ -8,6 +8,14 @@
 .docusaurus
 .cache-loader
 
+# Migration scratch (knowledge.bimcore.one → MDX converter, source HTML snapshots, intermediate MD).
+# Keep convert.js around for batch ПП2; ignore downloaded HTML, node_modules, intermediates.
+/_tmp
+
+# Claude Code — личные настройки машины (разрешения и т.п.), не коммитим.
+# launch.json (конфиги dev-сервера) — общий, его коммитим.
+.claude/settings.local.json
+
 # Misc
 .DS_Store
 .env.local

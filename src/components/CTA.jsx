@@ -12,14 +12,16 @@ const ctaData = {
     link: 'https://community.bimcore.one/',
     button: translate({id: 'cta.blog.button', message: 'Join the Community'}),
   },
+  // ВРЕМЕННО: курса пока нет — lesson CTA уводит в сообщество (поддержка + бесплатные семейства).
+  // Вернуть link на '/courses/revit-interior-free' и copy про курс при готовности курса (#45).
   lesson: {
-    title: translate({id: 'cta.lesson.title', message: 'Want the full picture?'}),
+    title: translate({id: 'cta.lesson.title', message: 'Just starting out?'}),
     text: translate({
       id: 'cta.lesson.text',
-      message: 'This lesson is part of a bigger journey. Start the free Interior Design in Revit course — from zero to a finished project.',
+      message: 'You don\'t have to learn Revit alone. Join the BIMCORE community — ask questions, get answers from real Revit users, and download free families to practice with.',
     }),
-    link: '/courses/revit-interior-free',
-    button: translate({id: 'cta.lesson.button', message: 'Start Free Course'}),
+    link: 'https://community.bimcore.one/',
+    button: translate({id: 'cta.lesson.button', message: 'Join the Community'}),
   },
   course: {
     title: translate({id: 'cta.course.title', message: 'Need help or feedback?'}),
@@ -31,13 +33,24 @@ const ctaData = {
     button: translate({id: 'cta.course.button', message: 'Join the Community'}),
   },
   guide: {
-    title: translate({id: 'cta.guide.title', message: 'Like what you see?'}),
+    title: translate({id: 'cta.guide.title', message: 'Like these families?'}),
     text: translate({
       id: 'cta.guide.text',
-      message: 'This family is part of the Complete Interior Designer Kit — everything you need to model interiors in Revit, in one package.',
+      message: 'These families are part of the Revit Family Set for Interior Designers — everything you need to model interiors in Revit, in one package.',
     }),
-    link: 'https://bimcore.one/products',
-    button: translate({id: 'cta.guide.button', message: 'View the Full Kit'}),
+    link: 'https://bimcore.one/',
+    button: translate({id: 'cta.guide.button', message: 'View the Full Set'}),
+  },
+  // BIMCORE plugin docs. ВРЕМЕННО → сообщество (отдельной страницы продукта плагина пока нет).
+  // Вернуть на страницу плагина, когда появится (аналог guide → продукт).
+  plugin: {
+    title: translate({id: 'cta.plugin.title', message: 'Using the BIMCORE plugin?'}),
+    text: translate({
+      id: 'cta.plugin.text',
+      message: 'Join the BIMCORE community — get help with the plugin, share feedback, and download free Revit families to use with it.',
+    }),
+    link: 'https://community.bimcore.one/',
+    button: translate({id: 'cta.plugin.button', message: 'Join the Community'}),
   },
   help: {
     title: translate({id: 'cta.help.title', message: "Can't find what you need?"}),

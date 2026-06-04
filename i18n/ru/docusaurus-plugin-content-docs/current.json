@@ -1,0 +1,30 @@
+{
+  "version.label": {
+    "message": "Next",
+    "description": "The label for version current"
+  },
+  "sidebar.mainSidebar.category.Revit Lessons": {
+    "message": "Уроки Revit",
+    "description": "The label for category 'Revit Lessons' in sidebar 'mainSidebar'"
+  },
+  "sidebar.mainSidebar.category.Courses": {
+    "message": "Курсы",
+    "description": "The label for category 'Courses' in sidebar 'mainSidebar'"
+  },
+  "sidebar.mainSidebar.category.Guides": {
+    "message": "Инструкции",
+    "description": "The label for category 'Guides' in sidebar 'mainSidebar'"
+  },
+  "sidebar.mainSidebar.category.Help": {
+    "message": "Справка",
+    "description": "The label for category 'Help' in sidebar 'mainSidebar'"
+  },
+  "sidebar.mainSidebar.category.Families": {
+    "message": "Семейства",
+    "description": "The label for category 'Families' in sidebar 'mainSidebar'"
+  },
+  "sidebar.mainSidebar.category.BIMCORE Plugin": {
+    "message": "BIMCORE Plugin",
+    "description": "The label for category 'BIMCORE Plugin' in sidebar 'mainSidebar'"
+  }
+}

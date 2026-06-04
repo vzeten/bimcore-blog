@@ -1,0 +1,83 @@
+/* Адаптивный 16:9 контейнер для YouTube-видео.
+   Используется компонентом src/components/YouTube.jsx.
+   Фасад (facade): сначала показываем лёгкую картинку-превью с кнопкой Play,
+   реальный iframe грузится только по клику — это ускоряет загрузку страницы
+   (LCP) и не тянет ~1 МБ скриптов YouTube на каждый просмотр статьи. */
+
+.wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 1.5rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+
+/* iframe и фасад занимают весь контейнер 16:9 без искажений */
+.wrapper iframe,
+.facade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Фасад — кликабельная картинка-превью */
+.facade {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* HD-превью внутри фасада — резкое, заполняет 16:9 без искажений */
+.thumbnail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Тёмная вуаль для контраста кнопки Play */
+.facade::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.15);
+  transition: background 0.2s ease;
+}
+
+.facade:hover::before,
+.facade:focus-visible::before {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Кнопка Play в стиле YouTube */
+.playButton {
+  position: relative;
+  z-index: 1;
+  width: 68px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(33, 33, 33, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.facade:hover .playButton,
+.facade:focus-visible .playButton {
+  background: #f00;
+}
+
+.playButton svg {
+  width: 28px;
+  height: 28px;
+  fill: #fff;
+}

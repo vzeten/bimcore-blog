@@ -1,0 +1,46 @@
+{
+  "link.title.Community": {
+    "message": "Сообщество",
+    "description": "The title of the footer links column with title=Community in the footer"
+  },
+  "link.title.Social": {
+    "message": "Соцсети",
+    "description": "The title of the footer links column with title=Social in the footer"
+  },
+  "link.title.Contact": {
+    "message": "Контакты",
+    "description": "The title of the footer links column with title=Contact in the footer"
+  },
+  "link.item.label.Ask about Revit": {
+    "message": "Спросить про Revit",
+    "description": "The label of footer link with label=Ask about Revit linking to https://community.bimcore.one"
+  },
+  "link.item.label.Telegram": {
+    "message": "Telegram",
+    "description": "The label of footer link with label=Telegram linking to https://t.me/bimcore_one"
+  },
+  "link.item.label.YouTube": {
+    "message": "YouTube",
+    "description": "The label of footer link with label=YouTube linking to https://www.youtube.com/@int_lines"
+  },
+  "link.item.label.Instagram": {
+    "message": "Instagram",
+    "description": "The label of footer link with label=Instagram linking to https://www.instagram.com/bimcore.one"
+  },
+  "link.item.label.Threads": {
+    "message": "Threads",
+    "description": "The label of footer link with label=Threads linking to https://www.threads.com/@bimcore.one"
+  },
+  "link.item.label.Pinterest": {
+    "message": "Pinterest",
+    "description": "The label of footer link with label=Pinterest linking to https://pin.it/3hlU51KaD"
+  },
+  "link.item.label.Ivan Zylev — LinkedIn": {
+    "message": "Ivan Zylev — LinkedIn",
+    "description": "The label of footer link with label=Ivan Zylev — LinkedIn linking to https://www.linkedin.com/in/ivan-zylev/"
+  },
+  "copyright": {
+    "message": "© 2026 BIMCORE LTD",
+    "description": "The footer copyright"
+  }
+}

@@ -1,0 +1,815 @@
+---
+title: "Kitchen Revit Families"
+slug: /guides/families/kitchen-for-revit
+sidebar_label: "02 Kitchen"
+sidebar_position: 2
+description: "Guide on using the Kitchen family set for Revit for interior designers and architects. The families were developed by BIMCORE"
+image: ./img-01.png
+---
+
+## 1. GENERAL INFORMATION
+
+-   Set name: Kitchen
+-   Version 3.2.1
+-   Revit version: 2019
+
+### Description
+
+This set of Revit families is made for modeling a kitchen in Autodesk Revit.
+
+Using the families, you can create a kitchen according to exact dimensions and count the number of kitchen modules. Suitable for interior designers and architects. Families are not detailed enough for furniture makers.
+
+### Loading and placing into the project
+
+In order to view and download the families from the set, you can open **Project with kitchen** and copy the families using the Ctrl+C key combination, and then paste them into your project Ctrl+V.
+
+Or open the folder with family files and drag it into the project with the mouse.
+
+## 2. SET STRUCTURE
+
+![Kitchen Revit Families — SET STRUCTURE](./img-01.png)
+
+The set includes the following families:
+
+Base unit
+
+-   Base unit (х1,х2,х3,х4)
+-   Base unit 2 doors (2 дверцы, 2 ящика)
+-   Base unit L-angle
+-   Base unit V-angle
+
+Wall unit
+
+-   Wall unit
+-   Wall unit L-angle
+
+Tall unit
+
+-   Tall unit (х1,х2,х3,х4,х5,х6)
+
+Fillers
+
+-   Filler
+-   Corner filler
+-   Panel
+-   Panel with Gola
+
+Others
+
+-   Island worktop
+
+## 3. COMMON ELEMENTS OF KITCHEN UNITS
+
+Kitchen units - the main families of the set from which the kitchen is made.
+
+In this chapter you will learn what elements units consist of and how to use them.
+
+### Common elements
+
+Common elements - elements that are repeated in each kitchen unit.
+
+![Kitchen Revit Families — Common elements](./img-02.jpg)
+
+The common elements of all kitchen units are:
+
+-   Doors
+-   Handles
+-   Legs
+-   Opening
+-   Frame
+-   Back (part of the frame)
+-   Left End (part of the frame)
+-   Right End (part of the frame)
+
+### Doors
+
+![Kitchen Revit Families — Doors](./img-03.jpg)
+
+Doors types can be selected in the drop-down list for each **unit** family. It is:
+
+-   None
+-   Standart (STD.)
+-   Frame inside (FR.Inside)
+-   Frame outside  (FR.Outside)
+-   Integrated up (INT.Up)
+-   Integrated left (INT.LH)
+-   Integrated right (INT.RH)
+-   Integrated down (INT.Down)
+
+![Kitchen Revit Families — Doors](./img-04.jpg)
+
+### Handles
+
+#### Handles type
+
+![Kitchen Revit Families — Handles type](./img-05.png)
+
+Handles types can be selected in the drop-down list for each **unit** family. It is:
+
+-   None
+-   D-shape
+-   Built-in
+-   Round
+-   Т-bar
+
+For **built-in handles** you need to set the **Handle.Offset** = 2mm so that it moves to the edge of the door.
+
+![Kitchen Revit Families — Handles type](./img-06.png)
+
+The **T-bar** display changes with different handle lengths (Handle.Length).
+
+#### Handles position
+
+![Kitchen Revit Families — Handles position](./img-07.png)
+
+The placement of handles is not made by a drop-down list, but simply by numbers from 1 to 9. Visually, this is similar to the placement of numbers from a keyboard. You can also look at the tooltip in the **H.Position** parameter itself.
+
+The position of the handles can be horizontal or vertical. The **Handle.Horizontal** parameter is responsible for this.
+
+### Opening
+
+![Kitchen Revit Families — Opening](./img-08.png)
+
+Opening types can be selected in the drop-down list for each **unit** family. It is:
+
+-   None
+-   Left (LH)
+-   Right (RH)
+-   Down
+-   Up
+-   Drawer
+-   Double
+-   Left slide (LH Slide)
+-   Right slide (RH Slide)
+-   Double slide
+-   Lift up
+-   Lift oblique
+-   Folder
+-   2 drawers
+
+Doors opening does not depend on the handles position.
+
+![Kitchen Revit Families — Opening](./img-09.png)
+
+To turn on Opening RU or ENG, you need to go to View Visibility and then to Furniture.
+
+### End
+
+![Kitchen Revit Families — End](./img-10.png)
+
+Left end (LH) and Right end (RH) are present in all frames and can be turned off if necessary. But they are on by default.
+
+LH.End, R.End - add an additional panel to the side and cover the end of the door.
+
+![Kitchen Revit Families — End](./img-11.png)
+
+In units that are installed on the floor, additional parameters are added to the ends. These are: LH.Floor-standing, RH.Floor-standing (which allows the ends to be lowered to the floor) and LH.End, RH.End.
+
+## 4. FAMILIES: PARAMETERS AND ELEMENTS
+
+### Base unit
+
+**Base unit** is used to build kitchen cabinets, which are placed on the floor and serve as a work surface for cooking.
+
+![Kitchen Revit Families — Base unit](./img-12.png)
+
+Here you can on/off the following elements:
+
+-   Worktop
+-   Handles
+-   Doors
+-   Frame
+-   Back
+-   Shelf
+-   Hidden drawer (displayed by line pattern)
+-   Legs
+-   Gola
+-   different options for the End, which were mentioned previously
+
+![Kitchen Revit Families — Base unit](./img-13.png)
+
+There is also Equipment:
+
+-   Hob
+-   Sink (and Fauset automatically ON)
+-   Equipment in the Door
+
+#### Family types
+
+![Kitchen Revit Families — Family types](./img-14.png)
+
+Family types are named by the number of doors in the unit:
+
+-   х1
+-   х2
+-   х3
+-   х4
+
+The numbers of the doors go in order from bottom to top, where D1 is the lower door, and D4 is the upper door.
+
+To change the number of doors in the Base unit, you need to select the appropriate family type, and not instance parameters. If there is one door, then choose x1. If there are two doors - x2. And so on up to four doors, this is the maximum value in this family.
+
+#### Dimensions
+
+![Kitchen Revit Families — Dimensions](./img-15.png)
+
+![Kitchen Revit Families — Dimensions](./img-16.png)
+
+**Width, Depth, Height** of the unit are the dimensions of the frame. **Door thickness, Worktop thickness, Plinth** - individual parameters.
+
+Worktop depth in the top view has a fixed value and consists of the dimensions: Depth + Door thickness + 5mm.
+
+There are gray parameters that cannot be controlled. But they are needed to understand the size calculations. For example, **Worktop height.** The parameter summarizes all heights and shows the important end point of the worktop when Worktop is enabled. (see pictures)
+
+Due to the fact that there are 4 family types in the family, which means there are 4 doors; you can change individual parameters specifically for each.
+
+If family type **x1** is selected, then we change all the parameters with the number 1: D1.Height (in x1 it is equal to the height of the frame), E1.Type, E1.Closed, D1.Type, D1.Opening, H1.Position. If **x2** is selected, then we change all parameters with numbers 1 and 2.
+
+![Kitchen Revit Families — Dimensions](./img-17.png)
+
+It is better to start building D.Height from the lower, first door. Because D.Height of the last, upper door does not work.
+
+For example, family type x3 is selected, **D1.Height** and **D2.Height** will be changeable, and **D3.Height** is calculated based on the first two heights.
+
+If D.Height is more than frame Height, there will be an error. If this happens, simply go back and put smaller values in D.Height.
+
+#### Hob
+
+![Kitchen Revit Families — Hob](./img-18.png)
+
+**Hob** types can be selected in the drop-down list. It is:
+
+-   300 (2 burner)
+-   450 (3 burner)
+-   580 (4 burner)
+-   880 (6 burner)
+
+Be sure to choose types with the initial heading INT 02 Hob. Because various other families are loaded into the drop-down lists and do not need to be selected.
+
+#### Sink
+
+![Kitchen Revit Families — Sink](./img-19.png)
+
+There are two types of Sink, which are selected in the drop-down list. It is:
+
+-   Topmount
+-   Undermount
+
+Be sure to choose types with the initial heading INT 02 Sink. Because various other families are loaded into the drop-down lists and do not need to be selected.
+
+**Kitchen faucet** to the Sink:
+
+-   height 360
+-   height 450
+
+Be sure to choose types with the initial heading INT 02 Kitchen faucet.
+
+![Kitchen Revit Families — Sink](./img-20.png)
+
+The Sink and Hob on the worktop can be moved to the left or to the right of the central axis.
+
+There is also a parameter for the sink - Sink width.
+
+If the configuration of these elements does not suit you, turn them off and place a separate family in the project.
+
+#### Gola
+
+![Kitchen Revit Families — Gola](./img-21.png)
+
+Gola can be placed on top of the frame, under the worktop - this is Gola 1. And the Gola 2 handle will be between the drawers in the center of the frame. The height of the frame can be higher/lower, but the height of the individual doors in this case changes equally, Gola 2 is always in the center.
+
+#### Equipment
+
+Equipment can be installed in place of the door. To do this, you need to select the door number and equipment type from the drop-down list.
+
+There are several types of equipment:
+
+-   Built-in
+-   Integrated
+
+![Kitchen Revit Families — Equipment](./img-22.png)
+
+Built-in equipment:
+
+-   Wine built-in
+-   Oven built-in
+-   Coffee machine
+-   Microwave built-in
+-   Freezer built-in
+-   Dish warmer
+-   Fridge built-in
+-   Dish dryer
+
+![Kitchen Revit Families — Equipment](./img-23.png)
+
+Integrated equipment:
+
+-   Wine integrated
+-   Freezer integrated
+-   Dishwasher integrated
+-   Washing machine
+-   Fridge integrated
+
+![Kitchen Revit Families — Equipment](./img-24.png)
+
+#### Materials
+
+![Kitchen Revit Families — Materials](./img-25.png)
+
+### Base unit 2 doors
+
+**Base unit** **2 doors** is used to build kitchen cabinets, which are placed on the floor and serve as a work surface for cooking. Unlike the Base unit, there is no equipment in the doors, and the number of doors is only 2.
+
+![Kitchen Revit Families — Base unit 2 doors](./img-26.png)
+
+Here you can on/off the following elements:
+
+-   Worktop
+-   Handles
+-   Doors
+-   Frame
+-   Back
+-   Legs
+-   Gola
+-   different options for the End, which were mentioned previously
+
+![Kitchen Revit Families — Base unit 2 doors](./img-27.png)
+
+There is also Equipment:
+
+-   Hob
+-   Sink (and Fauset automatically ON)
+
+#### Family types
+
+![Kitchen Revit Families — Family types](./img-28.png)
+
+Family types are named by the type of opening in the unit:
+
+-   2 doors
+-   2 drawers
+
+#### Dimensions
+
+![Kitchen Revit Families — Dimensions](./img-29.png)
+
+![Kitchen Revit Families — Dimensions](./img-30.png)
+
+**Width, Depth, Height** of the unit are the dimensions of the frame. **Door thickness, Worktop thickness, Plinth** - individual parameters.
+
+Worktop depth in the top view has a fixed value and consists of the dimensions: Depth + Door thickness + 5mm.
+
+There are gray parameters that cannot be controlled. But they are needed to understand the size calculations. For example, **Worktop height.** The parameter summarizes all heights and shows the important end point of the worktop when Worktop is enabled. (see pictures)
+
+In this family, the height and width of the doors do not need to be placed; everything is calculated automatically based on the overall dimensions of the unit.
+
+#### Hob
+
+![Kitchen Revit Families — Hob](./img-31.png)
+
+**Hob** types can be selected in the drop-down list. It is:
+
+-   300 (2 burner)
+-   450 (3 burner)
+-   580 (4 burner)
+-   880 (6 burner)
+
+Be sure to choose types with the initial heading INT 02 Hob. Because various other families are loaded into the drop-down lists and do not need to be selected.
+
+#### Sink
+
+![Kitchen Revit Families — Sink](./img-32.png)
+
+There are two types of Sink, which are selected in the drop-down list. It is:
+
+-   Topmount
+-   Undermount
+
+Be sure to choose types with the initial heading INT 02 Sink. Because various other families are loaded into the drop-down lists and do not need to be selected.
+
+**Kitchen faucet** to the Sink:
+
+-   height 360
+-   height 450
+
+Be sure to choose types with the initial heading INT 02 Kitchen faucet.
+
+![Kitchen Revit Families — Sink](./img-33.png)
+
+The Sink and Hob on the worktop can be moved to the left or to the right of the central axis.
+
+There is also a parameter for the sink - Sink width.
+
+If the configuration of these elements does not suit you, turn them off and place a separate family in the project.
+
+#### Gola
+
+![Kitchen Revit Families — Gola](./img-34.png)
+
+Gola can be placed on top of the frame, under the worktop - this is Gola 1.
+
+#### Materials
+
+![Kitchen Revit Families — Materials](./img-35.png)
+
+### Base unit L-angle
+
+**Base unit** **L-angle** is used to build corner kitchen cabinets, which are placed on the floor and serve as a work surface for cooking. Unlike the Base unit, there is no equipment in the doors, and the number of doors is only 1.
+
+![Kitchen Revit Families — Base unit L-angle](./img-36.png)
+
+Here you can on/off the following elements:
+
+-   Worktop
+-   Handles
+-   Doors
+-   Frame
+-   Back
+-   Finished side
+-   Filler
+-   Legs
+-   Gola
+-   different options for the End, which were mentioned previously
+
+![Kitchen Revit Families — Base unit L-angle](./img-37.png)
+
+There is also Equipment:
+
+-   Hob
+-   Sink (and Fauset automatically ON)
+
+There are no family types.
+
+#### Dimensions
+
+![Kitchen Revit Families — Dimensions](./img-38.png)
+
+![Kitchen Revit Families — Dimensions](./img-39.png)
+
+**Width, Depth, Height** of the unit are the dimensions of the frame. **Door thickness, Worktop thickness, Plinth** - individual parameters.
+
+Worktop depth in the top view has a fixed value and consists of the dimensions: Depth + Door thickness + 5mm.
+
+There are gray parameters that cannot be controlled. But they are needed to understand the size calculations. For example, **Worktop height.** The parameter summarizes all heights and shows the important end point of the worktop when Worktop is enabled. (see pictures)
+
+In this family, the height and width of the doors do not need to be placed; everything is calculated automatically based on the overall dimensions of the unit.
+
+#### Hob
+
+![Kitchen Revit Families — Hob](./img-40.png)
+
+**Hob** types can be selected in the drop-down list. It is:
+
+-   300 (2 burner)
+-   450 (3 burner)
+-   580 (4 burner)
+-   880 (6 burner)
+
+Be sure to choose types with the initial heading INT 02 Hob. Because various other families are loaded into the drop-down lists and do not need to be selected.
+
+#### Sink
+
+![Kitchen Revit Families — Sink](./img-41.png)
+
+There are two types of Sink, which are selected in the drop-down list. It is:
+
+-   Topmount
+-   Undermount
+
+Be sure to choose types with the initial heading INT 02 Sink. Because various other families are loaded into the drop-down lists and do not need to be selected.
+
+**Kitchen faucet** to the Sink:
+
+-   height 360
+-   height 450
+
+Be sure to choose types with the initial heading INT 02 Kitchen faucet.
+
+![Kitchen Revit Families — Sink](./img-42.png)
+
+The Sink and Hob on the worktop can be moved to the left or to the right of the central axis.
+
+There is also a parameter for the sink - Sink width.
+
+If the configuration of these elements does not suit you, turn them off and place a separate family in the project.
+
+#### Gola
+
+![Kitchen Revit Families — Gola](./img-43.png)
+
+Gola can be placed on top of the frame, under the worktop - this is Gola 1.
+
+#### Materials
+
+![Kitchen Revit Families — Materials](./img-44.png)
+
+### Base unit V-angle
+
+**Base unit** **V-angle** is used to build corner kitchen cabinets, which are placed on the floor and serve as a work surface for cooking. Unlike the Base unit, there is no equipment in the doors, and the number of doors is only 1.
+
+![Kitchen Revit Families — Base unit V-angle](./img-45.png)
+
+Here you can on/off the following elements:
+
+-   Worktop
+-   Handles
+-   Doors
+-   Frame
+-   Back
+-   Legs
+-   End: Left, Right
+
+![Kitchen Revit Families — Base unit V-angle](./img-46.png)
+
+There is also Equipment:
+
+-   Hob
+-   Sink (and Fauset automatically ON)
+
+There are no family types.
+
+#### Dimensions
+
+![Kitchen Revit Families — Dimensions](./img-47.png)
+
+![Kitchen Revit Families — Dimensions](./img-48.png)
+
+**Width, Depth, Height** of the unit are the dimensions of the frame. **Door thickness, Worktop thickness, Plinth** - individual parameters.
+
+Worktop depth in the top view has a fixed value and consists of the dimensions: Depth + Door thickness + 5mm.
+
+There are gray parameters that cannot be controlled. But they are needed to understand the size calculations. For example, **Worktop height.** The parameter summarizes all heights and shows the important end point of the worktop when Worktop is enabled. (see pictures)
+
+In this family, the height and width of the doors do not need to be placed; everything is calculated automatically based on the overall dimensions of the unit.
+
+#### Hob
+
+![Kitchen Revit Families — Hob](./img-49.png)
+
+**Hob** types can be selected in the drop-down list. It is:
+
+-   300 (2 burner)
+-   450 (3 burner)
+-   580 (4 burner)
+-   880 (6 burner)
+
+Be sure to choose types with the initial heading INT 02 Hob. Because various other families are loaded into the drop-down lists and do not need to be selected.
+
+#### Sink
+
+![Kitchen Revit Families — Sink](./img-50.png)
+
+There are two types of Sink, which are selected in the drop-down list. It is:
+
+-   Topmount
+-   Undermount
+
+Be sure to choose types with the initial heading INT 02 Sink. Because various other families are loaded into the drop-down lists and do not need to be selected.
+
+**Kitchen faucet** to the Sink:
+
+-   height 360
+-   height 450
+
+Be sure to choose types with the initial heading INT 02 Kitchen faucet.
+
+The sink/hob on the worktop are placed on the central axis and DO NOT move left/right.
+
+There is also a parameter for the sink - **Sink width**.If the configuration of these elements does not suit you, turn them off and place a separate family in the project.
+
+#### Materials
+
+![Kitchen Revit Families — Materials](./img-51.png)
+
+### Tall unit
+
+**Tall unit** is used to build floor-standing column cabinets for the kitchen. With or without built-in equipment.
+
+![Kitchen Revit Families — Tall unit](./img-52.png)
+
+Here you can on/off the following elements:
+
+-   Worktop
+-   Handles
+-   Doors
+-   Frame
+-   Back
+-   Legs
+-   Gola
+-   different options for the End, which were mentioned previously
+
+![Kitchen Revit Families — Tall unit](./img-53.png)
+
+There is also Equipment:
+
+-   Equipment in the Door
+
+#### Family types
+
+![Kitchen Revit Families — Family types](./img-54.png)
+
+Family types are named by the number of doors in the unit:
+
+-   х1
+-   х2
+-   х3
+-   х4
+-   х5
+-   х6
+
+The numbers of the doors go in order from bottom to top, where D1 is the lower door, and D6 is the upper door.
+
+To change the number of doors in the Base unit, you need to select the appropriate family type, and not instance parameters. If there is one door, then choose x1. If there are two doors - x2. And so on up to six doors, this is the maximum value in this family.
+
+#### Dimensions
+
+![Kitchen Revit Families — Dimensions](./img-55.png)
+
+**Width, Depth, Height** of the unit are the dimensions of the frame. **Door thickness, Plinth** - individual parameters.
+
+Due to the fact that there are 6 family types in the family, which means there are 6 doors; you can change individual parameters specifically for each.
+
+If family type **x1** is selected, then we change all the parameters with the number 1: D1.Height (in x1 it is equal to the height of the frame), E1.Type, E1.Closed, D1.Type, D1.Opening, H1.Position. If **x2** is selected, then we change all parameters with numbers 1 and 2.
+
+![Kitchen Revit Families — Dimensions](./img-56.png)
+
+It is better to start building D.Height from the lower, first door. Because D.Height of the last, upper door does not work.
+
+For example, family type x3 is selected, **D1.Height** and **D2.Height** will be changeable, and **D3.Height** is calculated based on the first two heights.
+
+If D.Height is more than frame Height, there will be an error. If this happens, simply go back and put smaller values in D.Height.
+
+#### Gola
+
+Gola handles in the Tall unit can be placed vertically on the left and right of the frame, and also horizontally between Doors - this is Gola 1, Gola 2, Gola 3, Gola 4.
+
+![Kitchen Revit Families — Gola](./img-57.png)
+
+![Kitchen Revit Families — Gola](./img-58.png)
+
+The numbers of the Gola handles go in order from bottom to top, where Gola 1 is the lower handle, and Gola 4 is the upper.
+
+![Kitchen Revit Families — Gola](./img-59.png)
+
+Parameter Gola inside - moves Gola inside the frame, that is the Ends of the Frame become visible.
+
+#### Equipment
+
+Equipment can be installed in place of the door. To do this, you need to select the serial number of the door, where to place the equipment (E.Position) and the equipment type from the drop-down list. Heading - INT 02 E.
+
+There are several types of equipment:
+
+-   Built-in
+-   Integrated
+
+![Kitchen Revit Families — Equipment](./img-60.png)
+
+Built-in equipment:
+
+-   Wine built-in
+-   Oven built-in
+-   Coffee machine
+-   Microwave built-in
+-   Freezer built-in
+-   Dish warmer
+-   Fridge built-in
+-   Dish dryer
+
+![Kitchen Revit Families — Equipment](./img-61.png)
+
+Integrated equipment:
+
+-   Wine integrated
+-   Freezer integrated
+-   Dishwasher integrated
+-   Washing machine
+-   Fridge integrated
+
+![Kitchen Revit Families — Equipment](./img-62.png)
+
+By default, the equipment has the door height in which it is installed. But if you need to change the dimensions, then put the number 0 in the E.Position parameter and the equipment is freely placed as needed for a specific case. To do this, change E.Base and E.Height.
+
+#### Materials
+
+![Kitchen Revit Families — Materials](./img-63.png)
+
+### Wall unit
+
+**Wall unit** is used to build kitchen wall cabinets.
+
+![Kitchen Revit Families — Wall unit](./img-64.png)
+
+Here you can on/off the following elements:
+
+-   Handles
+-   Doors
+-   Frame
+-   Back
+-   Lighting
+-   Shelves
+-   End: Left, Right
+
+![Kitchen Revit Families — Wall unit](./img-65.png)
+
+There is also Equipment:
+
+-   Equipment in the Door
+
+#### Number of doors
+
+![Kitchen Revit Families — Number of doors](./img-66.png)
+
+To change the number of doors in the wall unit, you need to select instance parameters, because there are no family types in the family.
+
+There are Doors:
+
+-   Door 1 (by default)
+-   Double doors
+-   2 doors (you can add Folder opening to this parameter and the top handle will disappear)
+
+#### Number of shelves
+
+![Kitchen Revit Families — Number of shelves](./img-67.png)
+
+The number of shelves in the wall unit can be from 1 to 3.
+
+#### Dimensions
+
+![Kitchen Revit Families — Dimensions](./img-68.png)
+
+**Width, Depth, Height** of the unit are the dimensions of the frame. **Door thickness** - individual parameters.
+
+**Doors elongation** moves the door downward from the frame by a specified distance.
+
+#### Equipment
+
+![Kitchen Revit Families — Equipment](./img-69.png)
+
+Equipment can be installed in place of the first/lower door. To do this, you need to select the equipment type from the drop-down list.    Equipment type, Heading - INT 02 Wall E.
+
+There are several types of equipment:
+
+-   Hood integrated
+-   Hood telescopic
+-   Microwave built-in
+-   Dish dryer
+
+#### Materials
+
+![Kitchen Revit Families — Materials](./img-70.png)
+
+### Wall unit L-angle
+
+**Wall unit L-angle** is used to build corner kitchen wall cabinets.
+
+![Kitchen Revit Families — Wall unit L-angle](./img-71.png)
+
+Here you can on/off the following elements:
+
+-   Handles
+-   Doors
+-   Frame
+-   Back
+-   Lighting
+-   Shelves
+-   End: Left, Right
+
+#### Number of shelves
+
+![Kitchen Revit Families — Number of shelves](./img-72.png)
+
+The number of shelves in the wall unit can be from 1 to 3.
+
+#### Dimensions
+
+![Kitchen Revit Families — Dimensions](./img-73.png)
+
+**Width, Depth, Height** of the unit are the dimensions of the frame. **Door thickness** - individual parameters.
+
+**Doors elongation** moves the door downward from the frame by a specified distance.
+
+#### Materials
+
+![Kitchen Revit Families — Materials](./img-74.png)
+
+## 5. STYLING
+
+### Graphics settings
+
+![Kitchen Revit Families — Graphics settings](./img-75.png)
+
+To change the color/weight/pattern of family lines, you need to go to Manage - Object Styles - Furniture/ Plumbing Fixtures/ Mechanical Equipment
+
+### Marking
+
+![Kitchen Revit Families — Marking](./img-76.png)
+
+![Kitchen Revit Families — Marking](./img-77.png)
+
+At a **Fine** detail level, Equipment text symbols do not appear on floor plans. But if you turn on the **Medium** or **Coarse** detail level, the text will be visible.
+
+![Kitchen Revit Families — Marking](./img-78.png)
+
+To change the text symbol of equipment, you need to select the equipment in the unit using the Tab key and click Edit Type, then Type Comments.
+
+<CTA type="guide" />

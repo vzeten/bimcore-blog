@@ -18,7 +18,10 @@ const config = {
   },
   i18n: {
     defaultLocale: 'en',
-    locales: ['en'],
+    locales: ['en', 'ru', 'es'],
+    // EN — основной язык сайта (без префикса в URL). RU — перевод (под /ru/...).
+    // Структура файлов перевода: i18n/ru/docusaurus-plugin-content-{docs|blog}/current/...
+    // (см. decisions.md «Дефолтный язык сайта — EN»).
   },
   presets: [
     [
@@ -33,6 +36,10 @@ const config = {
         blog: {
           showReadingTime: true,
           editUrl: 'https://github.com/vzeten/bimcore-blog/tree/main/',
+          // Custom truncate marker — <truncate /> JSX-тег вместо {/* truncate */} или <!-- -->
+          // Sveltia rich-editor не экранирует JSX-теги, MDX парсер их валидирует.
+          // См. decisions «Truncate-маркер = <truncate /> JSX-тег».
+          truncateMarker: /<truncate\s*\/>/,
         },
         theme: {
           customCss: './src/css/custom.css',
@@ -67,6 +74,8 @@ const config = {
         },
         items: [
           {to: '/blog', label: 'Blog', position: 'left'},
+          {href: 'https://bimcore.one', label: 'Shop', position: 'left', target: '_blank'},
+          {type: 'localeDropdown', position: 'right'},
         ],
       },
       footer: {

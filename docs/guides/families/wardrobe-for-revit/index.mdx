@@ -1,0 +1,677 @@
+---
+title: "Wardrobe Revit Families"
+slug: /guides/families/wardrobe-for-revit
+sidebar_label: "03 Wardrobe"
+sidebar_position: 3
+description: "Wardrobe families Guide by BIMCORE"
+image: ./img-01.jpg
+---
+
+## 1. GENERAL INFORMATION
+
+-   Set name: Wardrobe
+-   Version 1.2.0
+-   Revit version: 2019
+
+### Description
+
+This set of Revit families is made for modeling wardrobes in Autodesk Revit.
+
+Using the families, you can create frame systems, cabinet systems, dressers and  and individual internal components according to exact dimensionss.
+
+Suitable for interior designers and architects.
+
+### Loading and placing into the project
+
+In order to view and download the families from the set, you can open Project with wardrobe and copy the families using the Ctrl+C key combination, and then paste them into your project Ctrl+V.
+
+Or open the folder with family files and drag it into the project with the mouse.
+
+The set includes families in the Furniture and Entourage categories.
+
+## 2. SET STRUCTURE
+
+![Wardrobe Revit Families — SET STRUCTURE](./img-01.jpg)
+
+Families in the “Furniture” category:
+
+-   Basket
+-   Corner shelf
+-   Crossbar
+-   Double sliding door
+-   Double swing door
+-   Drawer
+-   Glass front
+-   Inclined shoe rack
+-   Mesh basket
+-   Mirror
+-   Pantograph
+-   Pull-out basket
+-   Pull-out trouser rack
+-   Shelf
+-   Single swing door
+-   Standard front
+-   Storage cubbies
+-   Straight shoe rack
+-   Swing-door cabinet
+-   Triple sliding door
+-   Trouser rack
+-   Vertical panel
+-   Vertical round post
+
+![Wardrobe Revit Families — SET STRUCTURE](./img-02.jpg)
+
+Families Furniture Sets in the “Furniture” category:
+
+-   Cabinet system Corner module
+-   Cabinet system
+-   Corner shelves array
+-   Dresser
+-   Frame system
+-   Section 1 shelf and crossbar
+-   Section 2 shelves and crossbars
+-   Section 3 shelves and dresser
+-   Section Shelf_Crossbar_Dresser
+-   Section_with cubbies
+-   Shelves array
+-   SECTION_3 LEV
+
+The “Furniture Sets” families act as containers and combine families from the “Furniture” category.
+
+![Wardrobe Revit Families — SET STRUCTURE](./img-03.jpg)
+
+Families of the “Entourage” category:
+
+-   Box
+-   Hat
+-   Stack
+-   Bag
+-   Travel suitcase
+
+The families have shared parameters with the INT prefix, which can be included in schedules.
+
+## 3. COMMON ELEMENTS
+
+Common elements are elements that are frequently repeated within families.
+
+### Handles
+
+Handles are included in families with doors. These families are:
+
+-   Double sliding door
+-   Double swing door
+-   Single swing door
+-   Triple sliding door
+-   Swing-door cabinet
+-   Cabinet system
+
+And also in families with fronts:
+
+-   Pull-out trouser rack
+-   Drawer
+-   Dresser
+-   Section Shelf_Crossbar_Dresser
+-   Section 3 shelves and dresser
+-   SECTION_3 LEV
+
+The required handle type can be selected from the Handle Type drop-down list. The following handle types are included in the set:
+
+-   Round knob
+-   Surface-mounted handle
+-   U-handle
+-   T-handle
+-   Recessed handle (this type is selected in the panel type)
+
+![Wardrobe Revit Families — Handles](./img-04.jpg)
+
+Families with doors:
+
+-   Cabinet system
+-   Swing-door cabinet
+-   Single swing door
+-   Double swing door
+-   Double sliding door
+-   Triple sliding door
+
+In these families, the handle position is controlled by the “Handle offset” and “Vertical handle offset” parameters.
+
+The handle size is defined by the “Handle Length” parameter.
+
+![Wardrobe Revit Families — Handles](./img-05.jpg)
+
+The handle can be horizontal or vertical.
+
+![Wardrobe Revit Families — Handles](./img-06.jpg)
+
+For single doors, the position is set using numbers from 1 to 9 — analogous to the layout of numbers on a numeric keypad (see the tooltip in the “Handle Position” / “Single Door Handle Position” parameter).
+
+For double and triple doors, the handle position on the panel is specified as follows: 1 — bottom, 2 — middle, 3 — top (see the tooltip in the “Handle Position” parameter).
+
+![Wardrobe Revit Families — Handles](./img-07.jpg)
+
+In families with fronts:
+
+-   Dresser
+-   Drawer
+-   Pull-out trouser rack
+
+The handle can only be horizontal.
+
+Its position is controlled by the Moving the handle down parameter, and the size is defined by the Handle Length parameter.
+
+Section families are simplified; in them, only the handle length can be specified, without any offset.
+
+![Wardrobe Revit Families — Handles](./img-08.jpg)
+
+### Panels
+
+In families
+
+-   Pull-out trouser rack
+-   Drawer
+-   Double sliding door
+-   Double swing door
+-   Single swing door
+-   Triple sliding door
+-   Swing-door cabinet
+-   Cabinet system
+-   SECTION_3 LEV
+-   Section Shelf_Crossbar_Dresser
+-   Section 3 shelves and dresser
+-   Dresser
+
+the Panel Type can be selected from a drop-down list. The set includes the following panel types:
+
+-   Inset panel
+-   Panel with recessed panel (For single doors, it is possible to choose the recessed handle position: top, bottom, left, or right)
+-   Milled panel
+-   Overlay panel
+-   Standard
+
+![Wardrobe Revit Families — Panels](./img-09.jpg)
+
+For panels of the Recessed panel type, you can set the handle length or select the Full length recessed handle option.
+
+For Inset panel and Milled panel types, the frame width can be adjusted.
+
+![Wardrobe Revit Families — Panels](./img-10.jpg)
+
+![Wardrobe Revit Families — Panels](./img-11.jpg)
+
+## 4. FAMILIES
+
+### Shelf and Corner shelf
+
+These families are available both independently and as part of Furniture Set families:
+
+-   Frame system
+-   Shelves array
+-   Corner shelves array
+-   SECTION_3 LEV
+-   Section_with cubbies
+-   Section Shelf_Crossbar_Dresser
+-   Section 1 shelf and crossbar
+-   Section 2 shelves and crossbars
+-   Section 3 shelves and dresser
+
+#### Dimensions and options
+
+![Wardrobe Revit Families — Dimensions and options](./img-12.jpg)
+
+For shelves, you can adjust the overall dimensions, the size and offset of the lighting, and specify the shelf material and the lighting material.
+
+### Pull-out trouser rack
+
+#### Dimensions
+
+In the family, you can adjust the overall dimensions and the upward offset of the front. There is a 2 mm gap above the front for model realism.
+
+![Wardrobe Revit Families — Dimensions](./img-13.jpg)
+
+#### Options
+
+The following options are provided: Pull out the trouser rack and pull out the trouser rack halfway, toggle the front on or off, and enable/disable the Conventional graphic symbol - Opening.
+
+![Wardrobe Revit Families — Options](./img-14.jpg)
+
+.
+
+### Pull-out basket
+
+#### Dimensions and options
+
+In the family, you can adjust the overall dimensions. The following options are provided: Pull out the basket and pull out the basket halfway.
+
+![Wardrobe Revit Families — Dimensions and options](./img-15.jpg)
+
+### Drawer
+
+The Drawer family is used to create individual wardrobe drawers and is part of the Furniture Set families:
+
+-   Dresser
+-   SECTION_3 LEV
+-   Section Shelf_Crossbar_Dresser
+-   Section 3 shelves and dresser
+
+#### Dimensions
+
+In the family, you can specify the overall dimensions, as well as the dimensions of the edges and fronts.
+
+![Wardrobe Revit Families — Dimensions](./img-16.jpg)
+
+#### Options
+
+The drawer can be pulled out fully or halfway. There is an option to enable or disable the Conventional graphic symbol - opening.
+
+![Wardrobe Revit Families — Options](./img-17.jpg)
+
+### Storage cubbies
+
+The Storage Cubbies family is used to create storage compartments.
+
+#### Dimensions, visibility and options
+
+![Wardrobe Revit Families — Dimensions, visibility and options](./img-18.jpg)
+
+You can enable or disable the following elements:
+
+-   Top panel
+-   Bottom panel
+-   Left panel
+-   Right panel
+
+You can specify the number of compartments horizontally and vertically. The minimum number of compartments is 1, and there is no maximum limit.
+
+### Pantograph
+
+The Pantograph family is used to place a pantograph with clothes on hangers.
+
+#### Dimensions
+
+![Wardrobe Revit Families — Dimensions](./img-19.jpg)
+
+#### Options and visibility
+
+![Wardrobe Revit Families — Options and visibility](./img-20.jpg)
+
+In the family, you can enable hangers, short or long clothes. The pantograph can be lowered parallel to the floor. Hanger symbol is configured through Manage Panel - Object Styles - Detail Items - INT 03 Wardrobe
+
+![Wardrobe Revit Families — Options and visibility](./img-21.jpg)
+
+### Crossbar
+
+The Crossbar family is used to place a clothing rod with hangers and clothes. It is used both as an independent family and within the following families:
+
+-   Section 1 shelf and crossbar
+-   Section 2 shelves and crossbars
+-   Section 3 shelves and dresser
+-   Section_with cubbies
+-   SECTION_3 LEV
+
+#### Dimensions
+
+![Wardrobe Revit Families — Dimensions](./img-22.jpg)
+
+#### Options and visibility
+
+![Wardrobe Revit Families — Options and visibility](./img-23.jpg)
+
+In the family, you can enable top mounting, hangers, and either short or long clothes. The crossbar is available in square or round cross-sections.
+
+Hanger symbol is configured through Manage Panel - Object Styles - Detail Items - INT 03 Wardrobe
+
+![Wardrobe Revit Families — Options and visibility](./img-24.jpg)
+
+### Inclined shoe rack
+
+#### Dimensions and visibility
+
+The family allows adjustment of overall dimensions, elements sizes, andAngle of inclination. You can enable or disable the following elements:
+
+-   Upstand
+-   Backlight
+-   Heel bar
+
+You can specify the material for the shelf and the backlight.
+
+![Wardrobe Revit Families — Dimensions and visibility](./img-25.jpg)
+
+### Straight shoe rack
+
+#### Dimensions and visibility
+
+The family allows adjustment of overall dimensions and element sizes. The backlight can be enabled or disabled, and a material can be assigned to each element.
+
+![Wardrobe Revit Families — Dimensions and visibility](./img-26.jpg)
+
+### Swing-door cabinet
+
+The Swing-Door Cabinet family is used to create cabinets with a single or double door.
+
+#### Dimensions
+
+![Wardrobe Revit Families — Dimensions](./img-27.jpg)
+
+In the family you can specify the overall dimensions, panel thickness, and the height of the plinth and legs.Wheels can be selected, with a total height of 60 mm, of which 50 mm is the wheel diameter.
+
+#### Options and visibility
+
+You can choose a single or double door, or create a cabinet without doors.
+
+![Wardrobe Revit Families — Options and visibility](./img-28.jpg)
+
+You can enable or disable the following elements:
+
+-   Top panel
+-   Bottom panel
+-   Left panel
+-   Right panel
+-   Back panel
+-   Plinth
+-   Wheels
+-   Legs
+-   Conventional graphic symbol - opening
+
+For the top view, there are two opening options — swing and bi-folding. There is a Panels Extend Forward option. A material can be assigned to each cabinet element.
+![Wardrobe Revit Families — Options and visibility](./img-29.jpg)
+
+![Wardrobe Revit Families — Options and visibility](./img-30.jpg)
+
+### Swing doors
+
+The set includes two swing door families:
+
+-   Single swing door
+-   Double swing door
+
+#### Dimensions and options
+
+![Wardrobe Revit Families — Dimensions and options](./img-31.jpg)
+
+For the doors, you can specify the width, height, and thickness. A 2 mm gap is provided on the left and right for model realism. It is possible to assign materials to the door panel, frame, and handle. In the top view, both families allow choosing either swing or bi-folding opening.
+
+### Sliding doors
+
+The set includes two sliding door families:
+
+-   Double sliding door
+-   Triple sliding door
+
+#### Dimensions and options
+
+![Wardrobe Revit Families — Dimensions and options](./img-32.jpg)
+
+For the doors, you can specify the width, height, and thickness. A 2 mm gap is provided on the left and right for model realism. It is possible to assign materials to the door panel, frame, and handle.
+
+For a triple door, the handle position of the central door can be specified.
+
+### Shelves array and Corner shelves array
+
+The families are designed to speed up the workflow and allow multiple shelves to be placed at once.
+
+#### Dimensions and options
+
+![Wardrobe Revit Families — Dimensions and options](./img-33.jpg)
+
+![Wardrobe Revit Families — Dimensions and options](./img-34.jpg)
+
+![Wardrobe Revit Families — Dimensions and options](./img-35.jpg)
+
+In the family, the following parameters are defined: the number of shelves (from 2), the overall dimensions, and one of the height parameters — either the distance between the shelves or the total height of the array.
+
+### Dresser
+
+The family is intended for creating dressers with drawers (from 1 unit).
+
+![Wardrobe Revit Families — Dresser](./img-36.jpg)
+
+#### Dimensions
+
+![Wardrobe Revit Families — Dimensions](./img-37.jpg)
+
+#### Visibility and options
+
+![Wardrobe Revit Families — Visibility and options](./img-38.jpg)
+
+The overall dimensions can be specified, as well as the sizes of the drawers, edges, and panels. Three bottom options are provided:
+
+-   Plinth
+-   Wheels
+-   Legs
+
+The height of the plinth and legs is controlled by the corresponding parameter. The wheels have a diameter of 50 mm and a height of 60 mm. All options can be disabled — in that case, the bottom drawer is placed on the floor.
+
+The following elements can be enabled or disabled:
+
+-   Top panel
+-   Back panel
+-   Left panel
+-   Right panel
+-   Wheels
+-   Legs
+-   Plinth
+-   Conventional graphic symbol - opening
+
+A material can be assigned to each element.
+
+### Frame system
+
+The family is intended for creating wardrobe frame systems.
+
+#### Visibility and options
+
+![Wardrobe Revit Families — Visibility and options](./img-39.jpg)
+
+#### Dimensions
+
+For each system element, the size and position can be specified. You can either set the total system width (the spacing between the stands will be calculated automatically) or define the spacing between the stands — in that case, the total width will be determined automatically.
+
+![Wardrobe Revit Families — Dimensions](./img-40.jpg)![Wardrobe Revit Families — Dimensions](./img-41.jpg)
+
+The number of sections starts from 1. The following elements can be enabled or disabled:
+
+-   Back panel
+-   Wall mounting
+-   Shelf backlight
+-   Top shelf
+-   Bottom shelf
+-   Top frame
+-   Bottom frame
+
+A material can be assigned to each component element.
+
+### Cabinet system
+
+The family is used to create modules of the cabinet system.
+
+![Wardrobe Revit Families — Cabinet system](./img-42.jpg)
+
+#### Dimensions
+
+![Wardrobe Revit Families — Dimensions](./img-43.jpg)
+
+#### Options and visibility
+
+The top panel can be made inset to display the cam connector. The following elements can be enabled or disabled:
+
+-   Top panel
+-   Bottom panel
+-   Left side panel
+-   Right side panel
+-   Back panel
+-   Plinth
+-   Top backlight
+-   Left backlight
+-   Right backlight
+
+You can choose single or double swing doors, as well as sliding doors — double or triple. For a triple door, the handle position of the central door can be specified.
+
+For swing doors, the Bi-folding symbol is available in the plan view. A separate material can be assigned to each module element.
+
+![Wardrobe Revit Families — Options and visibility](./img-44.jpg)
+
+### Cabinet system Corner module
+
+The family is intended for creating corner modules in cabinet systems.
+
+![Wardrobe Revit Families — Cabinet system Corner module](./img-45.jpg)
+
+#### Dimensions and options
+
+![Wardrobe Revit Families — Dimensions and options](./img-46.jpg)
+
+The top panel can be made inset to display the cam connector. The following elements can be enabled or disabled:
+
+-   Top panel
+-   Bottom panel
+-   Left panel
+-   Right panel
+-   Back panel
+-   Plinth
+
+### Section_with cubbies
+
+The family is designed to speed up workflow and allow simultaneous placement of three shelves, storage cubbies, and a crossbar.
+
+![Wardrobe Revit Families — Sectionwith cubbies](./img-47.jpg)
+
+#### Dimensions, visibility and options
+
+![Wardrobe Revit Families — Dimensions, visibility and options](./img-48.jpg)
+
+In the family, you can adjust the section dimensions, as well as the size and placement of elements. Materials can be assigned to the elements. The following elements can be enabled or disabled:
+
+-   Hangers
+-   Long clothes
+-   Short clothes
+-   Backlight
+
+There is a “Top Mounting” option.
+
+For the storage cubbies, you can set the number of cells horizontally and vertically.
+
+### Section 1 shelf and crossbar
+
+The family is designed to speed up workflow and allow simultaneous placement of a shelf and a crossbar.
+
+![Wardrobe Revit Families — Section 1 shelf and crossbar](./img-49.jpg)
+
+#### Dimensions, visibility and options
+
+![Wardrobe Revit Families — Dimensions, visibility and options](./img-50.jpg)
+
+In the family, you can adjust the section dimensions, as well as the size and placement of elements. Materials can be assigned to the elements. The following elements can be enabled or disabled:
+
+-   Hangers
+-   Long clothes
+-   Short clothes
+-   Backlight
+
+There is a “Top Mounting” option.
+
+![Wardrobe Revit Families — Dimensions, visibility and options](./img-51.jpg)
+
+### Section 2 shelves and crossbars
+
+The family is designed to speed up workflow and allow simultaneous placement of two shelves and two crossbars.
+
+![Wardrobe Revit Families — Section 2 shelves and crossbars](./img-52.jpg)
+
+#### Dimensions, visibility and options
+
+![Wardrobe Revit Families — Dimensions, visibility and options](./img-53.jpg)
+
+In the family, you can adjust the section dimensions, as well as the size and placement of elements. Materials can be assigned to the elements. The following elements can be enabled or disabled for each crossbar and shelf:
+
+-   Hangers
+-   Long clothes
+-   Short clothes
+-   Backlight
+
+Each crossbar has a “Top Mounting” option.
+
+### Section 3 shelves and dresser
+
+The family is designed to speed up workflow and allow simultaneous placement of three shelves and a dresser.
+
+![Wardrobe Revit Families — Section 3 shelves and dresser](./img-54.jpg)
+
+#### Dimensions, visibility and options
+
+![Wardrobe Revit Families — Dimensions, visibility and options](./img-55.jpg)
+
+In the family, you can adjust the section dimensions, as well as the size and placement of elements. Materials can be assigned to the elements. The dresser allows enabling or disabling the Opening symbol, and the shelves’ lighting can be turned on or off. The number of drawers in the dresser can range from 1 to 4.
+
+### Section Shelf_Crossbar_Dresser
+
+The family is designed to speed up workflow and allow simultaneous placement of a set consisting of a shelf, a crossbar, and a dresser.
+
+![Wardrobe Revit Families — Section ShelfCrossbarDresser](./img-56.jpg)
+
+#### Dimensions, visibility and options
+
+![Wardrobe Revit Families — Dimensions, visibility and options](./img-57.jpg)
+
+In the family, you can adjust the section dimensions, as well as the size and placement of elements. Materials can be assigned to the elements. The dresser allows enabling or disabling the Opening symbol, and the number of drawers can range from 1 to 4.
+
+The following elements can be enabled or disabled for the crossbar and shelf:
+
+-   Hangers
+-   Long clothes
+-   Short clothes
+-   Backlight
+
+The crossbar has a “Top Mounting” option.
+
+### SECTION_3 LEV
+
+This is a modular family, which can be used to assemble composite sections.
+
+![Wardrobe Revit Families — SECTION3 LEV](./img-58.jpg)
+
+#### Dimensions and options
+
+![Wardrobe Revit Families — Dimensions and options](./img-59.jpg)
+
+It consists of three levels, and for each level you can choose the following elements:
+Levels 1 and 2:
+
+-   TROUSER RACK
+-   SHELF
+-   EMPTY
+-   CROSSBAR
+-   CUBBIES 2x1
+-   CUBBIES 2x2
+-   CUBBIES 3x1
+-   CUBBIES 3x2
+-   DRAWERS x1
+-   DRAWERS x2
+-   DRAWERS x3
+-   DRAWERS x4
+
+3 level:
+
+-   DOOR_2 - Cabinet with double doors
+-   DOOR_TOP - Cabinet with single doors with upward-opening mechanism
+-   DOOR_LEFT - Cabinet with single doors with left-opening mechanism
+-   DOOR_RIGHT - Cabinet with single doors with right-opening mechanism
+-   SHELF
+-   EMPTY
+-   EMPTY_DOOR_2 - Combination of an empty space at the bottom and a cabinet with double doors
+-   EMPTY_DOOR_TOP - Combination of a lower empty space and a cabinet with double doors
+-   EMPTY_DOOR_LEFT - Combination of a lower empty space and a cabinet with a single door opening to the left
+-   EMPTY_DOOR_RIGHT - Combination of a lower empty space and a cabinet with a single door opening to the right
+
+A material, size, and placement height can be specified for each element.
+
+![Wardrobe Revit Families — Dimensions and options](./img-60.jpg)
+
+## 5. STYLING
+
+### Graphics settings
+
+![Wardrobe Revit Families — Graphics settings](./img-61.jpg)
+
+To change the color/weight/pattern of family lines, you need to go to Manage - Object Styles - Entourage/Detail Items/Furniture/Lighting Fixtures
+
+<CTA type="guide" />
