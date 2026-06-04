@@ -31,11 +31,9 @@ const config = {
         docs: {
           sidebarPath: './sidebars.js',
           routeBasePath: '/',
-          editUrl: 'https://github.com/vzeten/bimcore-blog/tree/main/',
         },
         blog: {
           showReadingTime: true,
-          editUrl: 'https://github.com/vzeten/bimcore-blog/tree/main/',
           // Custom truncate marker — <truncate /> JSX-тег вместо {/* truncate */} или <!-- -->
           // Sveltia rich-editor не экранирует JSX-теги, MDX парсер их валидирует.
           // См. decisions «Truncate-маркер = <truncate /> JSX-тег».
