@@ -98,6 +98,7 @@ _docs_fields: &docs_fields
   - label: 'Sidebar: позиция'
     name: sidebar_position
     widget: number
+    value_type: int
     required: true
     hint: 'Порядок в боковой панели категории. 10, 20, 30 — меньше = выше. Рекомендую шаг 10 чтобы потом можно было вставить между (15, 25).'
   - { label: 'Описание (SEO)', name: description, widget: text, required: false }
