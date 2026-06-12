@@ -9,10 +9,8 @@ image: ./img-01.png
 
 ## 1. GENERAL INFORMATION
 
-#### Set name: Doors
-
+- Set name: Doors
 - Version 1.2.0
-
 - Revit version: 2019
 
 ### Description
@@ -40,65 +38,43 @@ The set includes the following families:
 Exterior door:
 
 - Single
-
 - Double
-
 - Single with sidelites (transom)
-
 - Double with sidelites (transom)
 
 Interior door:
 
 - Single
-
 - Double
-
 - Single with sidelites (transom)
-
 - Double with sidelites (transom)
-
 - Invisible
-
 - Invisible double
 
 Sliding door:
 
 - Pocket — single, double
-
 - Bi-fold — single, double
-
 - Compack — single, double
-
 - Rotary — single, double
-
 - Pivot — single, double
-
 - Wall-sliding — single, double
-
 - Magic — single, double
-
 - Sliding 2 panels
-
 - Sliding 3 panels
-
 - Sliding 4 panels
 
 Technical door:
 
 - Single
-
 - Double
-
 - Swinging single
-
 - Swinging double
 
 Openings:
 
 - Opening — suitable for marking small openings in the wall: pipes, ventilation, etc.
-
 - Door opening — a simple opening in the wall.
-
 - Doorway — openings of various shapes with frames, casing or jambs.
 
 Door tag
@@ -115,11 +91,8 @@ Door handing parameters are located in the type parameters.
 Handing types:
 
 - Left handing
-
 - Right handing
-
 - Outward
-
 - Inward
 
 ![Doors Revit Families — Handing](./img-04.jpeg)
@@ -176,19 +149,12 @@ Handles
 You can select handle types from the drop-down list unless these are sliding doors (in which case only sliding handles are selected by default). These are:
 
 - None
-
 - Rectangle
-
 - Rounded
-
 - On backplate
-
 - Pull bar
-
 - Sliding
-
 - Knob
-
 - D-handle
 
 To identify all door hardware in the shedules, a common parameter, *INT_Door hardware*, was created. It is located in the Identification section.
@@ -208,15 +174,12 @@ The handle on 2D can be turned off (for example, if the door has a sliding handl
 Lock types:
 
 - Upper lock (in exterior doors)
-
 - Lower lock (It is present in all door families, and is always on for entrance doors)
 
 The Lower lock has additional options for placing the Turn and Key inside or outside:
 
 - Key-Turn
-
 - Turn-Key
-
 - Key-Key
 
 ![Doors Revit Families — Hardware (Handles, locks..)](./img-15.png)
@@ -288,11 +251,8 @@ If casing is disabled, the false transom will not function.
 Sidelites (or transoms) is used in the following families:
 
 - INT 19 Door exterior single with sidelites
-
 - INT 19 Door exterior double with sidelites
-
 - INT 19 Door interior single with sidelites
-
 - INT 19 Door interior double with sidelites
 
 ![Doors Revit Families — Sidelites (Transom)](./img-23.jpeg)
@@ -300,17 +260,11 @@ Sidelites (or transoms) is used in the following families:
 Sidelites can be placed:
 
 - Top
-
 - Right
-
 - Left
-
 - Right and Left
-
 - Right and Top
-
 - Left and Top
-
 - Left, Right and Top
 
 The *Left and right sidelights Full-height* parameter moves the side transoms up.
@@ -334,11 +288,8 @@ Interior door families are doors that connect rooms within a space. The door ope
 Interior doors are divided into:
 
 - Single (single/with one panel)
-
 - Double (with two panels)
-
 - With sidelites (transom)
-
 - Invisible
 
 ![Doors Revit Families — Interior doors](./img-27.png)
@@ -346,31 +297,18 @@ Interior doors are divided into:
 In the family you can on/off the following elements:
 
 - Lower lock
-
 - 2D coarse detail level
-
 - Axis 2D
-
 - Muntins
-
 - Threshold
-
 - Casing inside
-
 - Jambs outside
-
 - Jambs inside
-
 - Reveals outside
-
 - Reveals inside
-
 - Panels count (from 0 to 3)
-
 - Rail classic
-
 - Bead
-
 - Coplanar casing
 
 ![Doors Revit Families — Interior doors](./img-28.jpeg)
@@ -446,23 +384,14 @@ Material for door classic are suitable for doors with panels (cutouts), while pl
 Sliding door families are doors in which the panels slide/shift/rotate (unlike conventional interior doors). Sliding doors are divided into:
 
 - Pocket — single, double
-
 - Bi-fold — single, double
-
 - Compack — single, double
-
 - Rotary — single, double
-
 - Pivot — single, double
-
 - Wall-sliding — single, double
-
 - Magic — single, double
-
 - Sliding 2 panels
-
 - Sliding 3 panels
-
 - Sliding 4 panels
 
 The geometry of sliding doors is the same as in interior doors. This includes the frame, casing, jambs, etc. The differences are in the sizes and additional elements.
@@ -548,27 +477,16 @@ There is a difference in the visibility of some parameters:
 In the family you can on/off the following elements:
 
 - Door viewer
-
 - Upper lock
-
 - Mirror
-
 - 2D coarse detail level
-
 - Axis 2D
-
 - Arrow 2D
-
 - Casing outside
-
 - Casing inside
-
 - Jambs outside
-
 - Jambs inside
-
 - Reveals outside
-
 - Reveals inside
 
 ![Doors Revit Families — Exterior and technical doors](./img-53.png)
@@ -576,25 +494,15 @@ In the family you can on/off the following elements:
 In the family you can on/off the following elements:
 
 - Window
-
 - Louver
-
 - 2D coarse detail level
-
 - Axis 2D
-
 - Arrow 2D
-
 - Casing outside
-
 - Casing inside
-
 - Jambs outside
-
 - Jambs inside
-
 - Reveals outside
-
 - Reveals inside
 
 ![Doors Revit Families — Exterior and technical doors](./img-54.png)
@@ -649,11 +557,8 @@ Types are named by Width and Height opening + form (1000х2100 Rectangle).
 In the family you can on/off the following elements:
 
 - Frame
-
 - Casing
-
 - Reveals
-
 - 2D coarse detail level
 
 ![Doors Revit Families — Doorway](./img-61.png)
@@ -661,11 +566,8 @@ In the family you can on/off the following elements:
 You can choose types with different form for opening:
 
 - Rectangle
-
 - Arched
-
 - Rounded rectangle
-
 - Ellipse
 
 ![Doors Revit Families — Doorway](./img-62.png)
@@ -683,9 +585,7 @@ Width and Height - - these are the dimensions of the opening.
 Door tag has 3 types:
 
 - Tag
-
 - Tag + Opening dimension
-
 - Opening dimension
 
 ## 5. STYLING
