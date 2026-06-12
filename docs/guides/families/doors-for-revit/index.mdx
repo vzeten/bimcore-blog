@@ -1,19 +1,19 @@
 ---
-title: Doors Revit Families
+title: "Doors Revit Families"
 slug: /guides/families/doors-for-revit
-sidebar_label: 19 Doors
+sidebar_label: "19 Doors"
 sidebar_position: 19
-description: Doors families guide by BIMCORE
+description: "Doors families guide by BIMCORE"
 image: ./img-01.png
-unlisted: true
 ---
 
 ## 1. GENERAL INFORMATION
 
 #### Set name: Doors
 
--   Version 1.2.0
--   Revit version: 2019
+- Version 1.2.0
+
+- Revit version: 2019
 
 ### Description
 
@@ -31,53 +31,75 @@ IMPORTANT! Place doors only on the plan view, not in 3D (otherwise, an error may
 
 ## 2. SET STRUCTURE
 
-![](./img-01.png)
+![Doors Revit Families — 2. SET STRUCTURE](./img-01.png)
 
-![](./img-02.png)
+![Doors Revit Families — 2. SET STRUCTURE](./img-02.png)
 
 The set includes the following families:
 
 Exterior door:
 
--   Single
--   Double
--   Single with sidelites (transom)
--   Double with sidelites (transom)
+- Single
+
+- Double
+
+- Single with sidelites (transom)
+
+- Double with sidelites (transom)
 
 Interior door:
 
--   Single
--   Double
--   Single with sidelites (transom)
--   Double with sidelites (transom)
--   Invisible
--   Invisible double
+- Single
+
+- Double
+
+- Single with sidelites (transom)
+
+- Double with sidelites (transom)
+
+- Invisible
+
+- Invisible double
 
 Sliding door:
 
--   Pocket — single, double
--   Bi-fold — single, double
--   Compack — single, double
--   Rotary — single, double
--   Pivot — single, double
--   Wall-sliding — single, double
--   Magic — single, double
--   Sliding 2 panels
--   Sliding 3 panels
--   Sliding 4 panels
+- Pocket — single, double
+
+- Bi-fold — single, double
+
+- Compack — single, double
+
+- Rotary — single, double
+
+- Pivot — single, double
+
+- Wall-sliding — single, double
+
+- Magic — single, double
+
+- Sliding 2 panels
+
+- Sliding 3 panels
+
+- Sliding 4 panels
 
 Technical door:
 
--   Single
--   Double
--   Swinging single
--   Swinging double
+- Single
+
+- Double
+
+- Swinging single
+
+- Swinging double
 
 Openings:
 
--   Opening — suitable for marking small openings in the wall: pipes, ventilation, etc.
--   Door opening — a simple opening in the wall.
--   Doorway — openings of various shapes with frames, casing or jambs.
+- Opening — suitable for marking small openings in the wall: pipes, ventilation, etc.
+
+- Door opening — a simple opening in the wall.
+
+- Doorway — openings of various shapes with frames, casing or jambs.
 
 Door tag
 
@@ -89,47 +111,51 @@ Common elements - elements that are repeated in each family.
 
 Door handing parameters are located in the type parameters.
 
-![](./img-03.jpg)  
+![Doors Revit Families — Handing](./img-03.jpeg)\
 Handing types:
 
--   Left handing
--   Right handing
--   Outward
--   Inward
+- Left handing
 
-![](./img-04.jpg)
+- Right handing
+
+- Outward
+
+- Inward
+
+![Doors Revit Families — Handing](./img-04.jpeg)
 
 For double doors that do not have Left or Right handing (with identical doors), only the Outward or Inward options will be specified.
 
-![](./img-05.jpg)
+![Doors Revit Families — Handing](./img-05.jpeg)
 
 The swinging angle works for 3D and 2D doors separately, since the display on 2D is done using conditional lines.
 
-![](./img-06.jpg)
+![Doors Revit Families — Handing](./img-06.jpeg)
 
 Sliding single doors have Left and Right handing options. Outward and Inward - none (use flip arrows). In double sliding doors - only arrows.
 
 These arrows also show the outside of the families. This means you can tell where Reveals Outside will be, Reveals Inside, and so on.
 
-![](./img-07.jpg)
+![Doors Revit Families — Handing](./img-07.jpeg)
 
-To make it easier to indicate door handings in shedules, a shared parameter was created - INT_Door handing. It's located in the Identification section.   
-If a parameter is gray (inactive), it means that a special formula is written inside it and because of this, the parameter cannot be controlled.  
+To make it easier to indicate door handings in shedules, a shared parameter was created - INT_Door handing. It's located in the Identification section.\
+If a parameter is gray (inactive), it means that a special formula is written inside it and because of this, the parameter cannot be controlled.\
+\
 If the parameter is black (active), you can enter the information yourself for a specific door configuration. This applies to almost all sliding doors.
 
 For double doors that do not have Left or Right handing, only the Outward or Inward options will be specified.
 
-![](./img-08.jpg)
+![Doors Revit Families — Handing](./img-08.jpeg)
 
 At the Fine detail level, everything is displayed as in 3D, except for the door and handles. This 2D door rotates separately from the 3D door.
 
 At the Medium detail level, the frame geometry is drawn with simplified lines. Casing ansd jambs are hidden. The door is displayed simply as a line.
 
-![](./img-09.jpg)
+![Doors Revit Families — Handing](./img-09.jpeg)
 
 ### Type properties
 
-![](./img-10.jpg)
+![Doors Revit Families — Type properties](./img-10.jpeg)
 
 Types for all families start with the opening dimensions (opening width and opening height).
 
@@ -145,74 +171,85 @@ Sidelites SL - placement: Left, Right, Top, Left and Right, Left and Top, Right 
 
 Handles
 
-![](./img-11.jpg)
+![Doors Revit Families — Hardware (Handles, locks..)](./img-11.jpeg)
 
 You can select handle types from the drop-down list unless these are sliding doors (in which case only sliding handles are selected by default). These are:
 
--   None
--   Rectangle
--   Rounded
--   On backplate
--   Pull bar
--   Sliding
--   Knob
--   D-handle
+- None
 
-To identify all door hardware in the shedules, a common parameter, _INT_Door hardware_, was created. It is located in the Identification section.
+- Rectangle
+
+- Rounded
+
+- On backplate
+
+- Pull bar
+
+- Sliding
+
+- Knob
+
+- D-handle
+
+To identify all door hardware in the shedules, a common parameter, *INT_Door hardware*, was created. It is located in the Identification section.
 
 You must fill in the information yourself for a specific door assembly.
 
-![](./img-12.jpg)
+![Doors Revit Families — Hardware (Handles, locks..)](./img-12.jpeg)
 
 The handle on 2D can be turned off (for example, if the door has a sliding handle type).
 
-![](./img-13.png)
+![Doors Revit Families — Hardware (Handles, locks..)](./img-13.png)
 
-_Pull bar only outside_ turns on a bar handle on one side only, while on the other side you can choose any other handle.
+*Pull bar only outside* turns on a bar handle on one side only, while on the other side you can choose any other handle.
 
-![](./img-14.png)
+![Doors Revit Families — Hardware (Handles, locks..)](./img-14.png)
 
 Lock types:
 
--   Upper lock (in exterior doors)
--   Lower lock (It is present in all door families, and is always on for entrance doors)
+- Upper lock (in exterior doors)
+
+- Lower lock (It is present in all door families, and is always on for entrance doors)
 
 The Lower lock has additional options for placing the Turn and Key inside or outside:
 
--   Key-Turn
--   Turn-Key
--   Key-Key
+- Key-Turn
 
-![](./img-15.png)
+- Turn-Key
 
-The dimensions of all hardware remain unchanged. Only the offset from the door edge to the handle's centerline can be adjusted, which is controlled by the _"Handle side offset" parameter_.
+- Key-Key
 
-_Pull bar_ is placed a little further away from the standard placement of all handles and locks.
+![Doors Revit Families — Hardware (Handles, locks..)](./img-15.png)
 
-_Door viewer_ for entrance doors is centered unless the Mirror is enabled. In this case, the door viewer is positioned toward the handle axis.  
+The dimensions of all hardware remain unchanged. Only the offset from the door edge to the handle's centerline can be adjusted, which is controlled by the *"Handle side offset" parameter*.
+
+*Pull bar* is placed a little further away from the standard placement of all handles and locks.
+
+*Door viewer* for entrance doors is centered unless the Mirror is enabled. In this case, the door viewer is positioned toward the handle axis.\
+\
 Handles placement **1000мм** from the door bottom
 
 ### Finishing
 
 If the project includes finishing with additional thin walls that are attached to the main wall, the door must be able to slide by this thickness of the finishing and fit within the dimensions.
 
-![](./img-16.jpg)
+![Doors Revit Families — Finishing](./img-16.jpeg)
 
 The finishing can be either on the outside or inside of the wall. To remove the finishing, you need set the Finishing thickness parameter to 0.
 
 ### Reveals
 
-![](./img-17.jpg)
+![Doors Revit Families — Reveals](./img-17.jpeg)
 
 The Reveals are made in all door families by common nested families INT 19 Door reveals outside and INT 19 Door reveals inside. They are located in the Walls category. They can be enabled or disabled by clicking Reveals inside or Reveals outside parameters.
 
-![](./img-18.jpg)
+![Doors Revit Families — Reveals](./img-18.jpeg)
 
 To ensure that the reveals area is calculated based on the outer edges, rather than the entire volume (which would produce incorrect data for the shedule), a division by materials has been made.
 
-_Material for reveals not for shedule_ - this is the material for filling reveals.
+*Material for reveals not for shedule* - this is the material for filling reveals.
 
-But _material for reveals_ - this is the outer edge (face) of the reveal to which the material is applied using the paint tool. The material can be used to calculate the area.
+But *material for reveals* - this is the outer edge (face) of the reveal to which the material is applied using the paint tool. The material can be used to calculate the area.
 
 ### Dimensions
 
@@ -222,25 +259,25 @@ Rough width and Rough height, Thickness - these are the dimensions of the door p
 
 #### Rebate
 
-![](./img-19.jpg)
+![Doors Revit Families — Rebate](./img-19.jpeg)
 
 A rebate is a cutout in the opening for frame. The default value is 0.
 
 #### Installation depth
 
-![](./img-20.jpg)
+![Doors Revit Families — Installation depth](./img-20.jpeg)
 
 Installation depth – the depth of the door with frame offset into the opening. The default value is 0.
 
 #### Casing and jambs
 
-![](./img-21.jpg)
+![Doors Revit Families — Casing and jambs](./img-21.jpeg)
 
 The casing are fixed to the edge of the jambs and move with it. Even if the jambs are turned off and you need to move the door casing, simply adjust the thickness of the jambs.
 
 #### False transom
 
-![](./img-22.jpg)
+![Doors Revit Families — False transom](./img-22.jpeg)
 
 The false transom can be enabled in this family by setting the "False transom height outside" and "False transom height inside" parameters to values ​​greater than 0. Then, one of these values ​​will be added to the "Casing width" value, increasing the height of the casing.
 
@@ -250,30 +287,39 @@ If casing is disabled, the false transom will not function.
 
 Sidelites (or transoms) is used in the following families:
 
--   INT 19 Door exterior single with sidelites
--   INT 19 Door exterior double with sidelites
--   INT 19 Door interior single with sidelites
--   INT 19 Door interior double with sidelites
+- INT 19 Door exterior single with sidelites
 
-![](./img-23.jpg)
+- INT 19 Door exterior double with sidelites
+
+- INT 19 Door interior single with sidelites
+
+- INT 19 Door interior double with sidelites
+
+![Doors Revit Families — Sidelites (Transom)](./img-23.jpeg)
 
 Sidelites can be placed:
 
--   Top
--   Right
--   Left
--   Right and Left
--   Right and Top
--   Left and Top
--   Left, Right and Top
+- Top
 
-The _Left and right sidelights Full-height_ parameter moves the side transoms up.
+- Right
 
-![](./img-24.jpg)
+- Left
 
-![](./img-25.jpg)
+- Right and Left
 
-![](./img-26.jpg)
+- Right and Top
+
+- Left and Top
+
+- Left, Right and Top
+
+The *Left and right sidelights Full-height* parameter moves the side transoms up.
+
+![Doors Revit Families — Sidelites (Transom)](./img-24.jpeg)
+
+![Doors Revit Families — Sidelites (Transom)](./img-25.jpeg)
+
+![Doors Revit Families — Sidelites (Transom)](./img-26.jpeg)
 
 Muntins - these are elements of the door.
 
@@ -287,43 +333,59 @@ Interior door families are doors that connect rooms within a space. The door ope
 
 Interior doors are divided into:
 
--   Single (single/with one panel)
--   Double (with two panels)
--   With sidelites (transom)
--   Invisible
+- Single (single/with one panel)
 
-![](./img-27.png)
+- Double (with two panels)
+
+- With sidelites (transom)
+
+- Invisible
+
+![Doors Revit Families — Interior doors](./img-27.png)
 
 In the family you can on/off the following elements:
 
--   Lower lock
--   2D coarse detail level
--   Axis 2D
--   Muntins
--   Threshold
--   Casing inside
--   Jambs outside
--   Jambs inside
--   Reveals outside
--   Reveals inside
--   Panels count (from 0 to 3)
--   Rail classic
--   Bead
--   Coplanar casing
+- Lower lock
 
-![](./img-28.jpg)
+- 2D coarse detail level
+
+- Axis 2D
+
+- Muntins
+
+- Threshold
+
+- Casing inside
+
+- Jambs outside
+
+- Jambs inside
+
+- Reveals outside
+
+- Reveals inside
+
+- Panels count (from 0 to 3)
+
+- Rail classic
+
+- Bead
+
+- Coplanar casing
+
+![Doors Revit Families — Interior doors](./img-28.jpeg)
 
 These door types are suitable for all interior doors (except invisible doors) and sliding doors.
 
 Additional door options allow you make simple, non-milled door, as well as classic solid and glass doors.
 
-![](./img-29.jpg)
+![Doors Revit Families — Interior doors](./img-29.jpeg)
 
 The number of panels can be from 0 to 3. If the value is 0, there will be a simple door without cutouts.
 
-![](./img-30.png)
+![Doors Revit Families — Interior doors](./img-30.png)
 
-![](./img-31.jpg)
+![Doors Revit Families — Interior doors](./img-31.jpeg)
 
 The Coplanar casing parameter shifts the door and frame toward the edge of the casing so they are aligned.
 
@@ -331,17 +393,17 @@ If this parameter is enabled, the Installation depth cannot be changed.
 
 #### Dimensions
 
-![](./img-32.png)
+![Doors Revit Families — Dimensions](./img-32.png)
 
 The door (panel) dimensions are slightly smaller than those in the Rough Width and Rough Height parameters due to clearnace around the door perimeter.
 
-_Rough Width_ = Width-Frame width\*2
+*Rough Width* = Width-Frame width\*2
 
-_Rough Height_ = Height - Frame width - 10mm (or -Threshold height)
+*Rough Height* = Height - Frame width - 10mm (or -Threshold height)
 
 If the threshold is turned off, there is a gap of about 10 mm at the bottom of the door.
 
-![](./img-33.png)
+![Doors Revit Families — Dimensions](./img-33.png)
 
 In double families there are both double doors and unequal double doors. Simply choose the right type.
 
@@ -351,29 +413,29 @@ Rough Width = 1_Door width + 2_Door Width
 
 Rough Height = Door height
 
-![](./img-34.png)
+![Doors Revit Families — Dimensions](./img-34.png)
 
 The Invisible door can also open outwards and inwards.
 
-![](./img-35.png)
+![Doors Revit Families — Dimensions](./img-35.png)
 
-_Flush skirting height_ option shifts the interior Reveals upward, allowing for the placement of a hidden skirting.
+*Flush skirting height* option shifts the interior Reveals upward, allowing for the placement of a hidden skirting.
 
-_To the Ceiling_ option removes the frame above the door and part of the reveals above.
+*To the Ceiling* option removes the frame above the door and part of the reveals above.
 
 A double invisible door is also included in the set.
 
-![](./img-36.png)
+![Doors Revit Families — Dimensions](./img-36.png)
 
-_Multi-component wall_ option for invisible doors should be enabled when your wall finishing is done in additional layers within the main wall, rather than as separate thin walls.
+*Multi-component wall* option for invisible doors should be enabled when your wall finishing is done in additional layers within the main wall, rather than as separate thin walls.
 
-{/* TODO #47: скриншот «shadow profile trim» — добавить из Word-файла v1.2.0 */}
+![Doors Revit Families — Dimensions](./img-37.png)
 
 The shadow profile trim is configured in the Dimensions section. If the height is set to 0 mm, the door will look normal. Setting it to 20 mm will add a shadow profile trim.
 
 #### Materials
 
-![](./img-37.png)
+![Doors Revit Families — Materials](./img-38.png)
 
 The materials of the panels are in the type.
 
@@ -383,48 +445,57 @@ Material for door classic are suitable for doors with panels (cutouts), while pl
 
 Sliding door families are doors in which the panels slide/shift/rotate (unlike conventional interior doors). Sliding doors are divided into:
 
--   Pocket — single, double
--   Bi-fold — single, double
--   Compack — single, double
--   Rotary — single, double
--   Pivot — single, double
--   Wall-sliding — single, double
--   Magic — single, double
--   Sliding 2 panels
--   Sliding 3 panels
--   Sliding 4 panels
+- Pocket — single, double
+
+- Bi-fold — single, double
+
+- Compack — single, double
+
+- Rotary — single, double
+
+- Pivot — single, double
+
+- Wall-sliding — single, double
+
+- Magic — single, double
+
+- Sliding 2 panels
+
+- Sliding 3 panels
+
+- Sliding 4 panels
 
 The geometry of sliding doors is the same as in interior doors. This includes the frame, casing, jambs, etc. The differences are in the sizes and additional elements.
 
 #### Pocket door
 
-![](./img-38.png)
+![Doors Revit Families — Pocket door](./img-39.png)
 
 Clear opening width = Rough Width – Reduction of clear opening width
 
-![](./img-39.png)
+![Doors Revit Families — Pocket door](./img-40.png)
 
 #### Bi-fold door
 
-![](./img-40.png)
+![Doors Revit Families — Bi-fold door](./img-41.png)
 
 #### Compack door
 
-![](./img-41.png)
+![Doors Revit Families — Compack door](./img-42.png)
 
 #### Rotary door
 
-![](./img-42.png)
+![Doors Revit Families — Rotary door](./img-43.png)
 
 #### Pivot door
 
-![](./img-43.png)
+![Doors Revit Families — Pivot door](./img-44.png)
 
-![](./img-44.png)
+![Doors Revit Families — Pivot door](./img-45.png)
 
 If the vertical axis is centered, the door is moved toward the center. If the vertical axis is to the side, the door is positioned closer to the edge of the opening; this distance can be adjusted (Vertical axis offset).
 
-![](./img-45.png)
+![Doors Revit Families — Pivot door](./img-46.png)
 
 In the Pivot, wall-sliding, Magic, sliding 2-4 panels families, you can turn off the Frame and leave only the Reveals. Options may vary, as shown in the images above. The door width will depend on the thickness of the reveals or frame, so adjust these parameters as needed.
 
@@ -432,7 +503,7 @@ This is also reflected in the type’s names. If Reveals are enabled, the word "
 
 #### Wall-sliding door
 
-![](./img-46.png)
+![Doors Revit Families — Wall-sliding door](./img-47.png)
 
 The door is 25mm wider than the opening on the left and right.
 
@@ -440,25 +511,25 @@ Rail width = Rough width \*2 + 25мм + If the casings are wide, then the rail a
 
 #### Magic door
 
-![](./img-47.png)
+![Doors Revit Families — Magic door](./img-48.png)
 
 The door is 50mm wider than the opening on the left and right. And from above - on the Door over opening parameter.
 
 #### Sliding 2 panels
 
-![](./img-48.png)
+![Doors Revit Families — Sliding 2 panels](./img-49.png)
 
 Rough width = Doors width \* 2
 
 #### Sliding 3 panels
 
-![](./img-49.png)
+![Doors Revit Families — Sliding 3 panels](./img-50.png)
 
 Rough Width = Doors width \* 3
 
 #### Sliding 4 panels
 
-![](./img-50.png)
+![Doors Revit Families — Sliding 4 panels](./img-51.png)
 
 Rough Width = Doors width \* 4
 
@@ -468,44 +539,65 @@ Exterior door and technical door families are combined into one group because th
 
 There is a difference in the visibility of some parameters:
 
-Exterior have: Door viewer, Upper lock, Mirror
+<u>Exterior have:</u> Door viewer, Upper lock, Mirror
 
-Technical have: Window and Louver.
+<u>Technical have:</u> Window and Louver.
 
-![](./img-51.png)
-
-In the family you can on/off the following elements:
-
--   Door viewer
--   Upper lock
--   Mirror
--   2D coarse detail level
--   Axis 2D
--   Arrow 2D
--   Casing outside
--   Casing inside
--   Jambs outside
--   Jambs inside
--   Reveals outside
--   Reveals inside
-
-![](./img-52.png)
+![Doors Revit Families — Exterior and technical doors](./img-52.png)
 
 In the family you can on/off the following elements:
 
--   Window
--   Louver
--   2D coarse detail level
--   Axis 2D
--   Arrow 2D
--   Casing outside
--   Casing inside
--   Jambs outside
--   Jambs inside
--   Reveals outside
--   Reveals inside
+- Door viewer
 
-![](./img-53.png)
+- Upper lock
+
+- Mirror
+
+- 2D coarse detail level
+
+- Axis 2D
+
+- Arrow 2D
+
+- Casing outside
+
+- Casing inside
+
+- Jambs outside
+
+- Jambs inside
+
+- Reveals outside
+
+- Reveals inside
+
+![Doors Revit Families — Exterior and technical doors](./img-53.png)
+
+In the family you can on/off the following elements:
+
+- Window
+
+- Louver
+
+- 2D coarse detail level
+
+- Axis 2D
+
+- Arrow 2D
+
+- Casing outside
+
+- Casing inside
+
+- Jambs outside
+
+- Jambs inside
+
+- Reveals outside
+
+- Reveals inside
+
+![Doors Revit Families — Exterior and technical doors](./img-54.png)
 
 Antipanic handles have been added to the technical doors.
 
@@ -513,17 +605,18 @@ Antipanic handles have been added to the technical doors.
 
 In the families of exterior and technical doors there are parameters Door unit and Gaps.
 
-![](./img-54.png)
+![Doors Revit Families — Dimensions](./img-55.png)
 
 Door unit width = Width - Gap\*2
 
 Door unit height = Height – Gap\*2
 
-Rough Width and Rough Height are actually slightly smaller than the parameter values ​​due to clearance of several mm around the perimeter. (So if the Rough Width is 880 mm, then the actual width is 874 mm.   
-Therefore, it's better to reference the dimensions to the reference planes rather than the door lines.)   
+Rough Width and Rough Height are actually slightly smaller than the parameter values ​​due to clearance of several mm around the perimeter. (So if the Rough Width is 880 mm, then the actual width is 874 mm.\
+Therefore, it's better to reference the dimensions to the reference planes rather than the door lines.)\
+\
 Increasing the Door Thickness also increases the depth of the frame.
 
-![](./img-55.png)
+![Doors Revit Families — Dimensions](./img-56.png)
 
 In double families there are both double doors and unequal double doors. Simply choose the right type 1.5x or 2x.
 
@@ -537,14 +630,13 @@ Rough Width = 1_Door width + 2_Door Width
 
 Rough Height = Door height
 
-![](./img-56.png)
-
+![Doors Revit Families — Dimensions](./img-57.png)
 
 #### Materials
 
-![](./img-57.png)
+![Doors Revit Families — Materials](./img-58.png)
 
-![](./img-58.png)
+![Doors Revit Families — Materials](./img-59.png)
 
 ### Doorway
 
@@ -552,47 +644,55 @@ A Doorway is an opening with a frame. The frame may have casing or reveals.
 
 Types are named by Width and Height opening + form (1000х2100 Rectangle).
 
-![](./img-59.png)
+![Doors Revit Families — Doorway](./img-60.png)
 
 In the family you can on/off the following elements:
 
--   Frame
--   Casing
--   Reveals
--   2D coarse detail level
+- Frame
 
-![](./img-60.png)
+- Casing
+
+- Reveals
+
+- 2D coarse detail level
+
+![Doors Revit Families — Doorway](./img-61.png)
 
 You can choose types with different form for opening:
 
--   Rectangle
--   Arched
--   Rounded rectangle
--   Ellipse
+- Rectangle
 
-![](./img-61.png)
+- Arched
+
+- Rounded rectangle
+
+- Ellipse
+
+![Doors Revit Families — Doorway](./img-62.png)
 
 Width and Height - - these are the dimensions of the opening.
 
-_Rounding_ must be more than 50mm.
+*Rounding* must be more than 50mm.
 
-![](./img-62.png)
+![Doors Revit Families — Doorway](./img-63.png)
 
 ### Door tag
 
-![](./img-63.jpg)
+![Doors Revit Families — Door tag](./img-64.jpeg)
 
 Door tag has 3 types:
 
--   Tag
--   Tag + Opening dimension
--   Opening dimension
+- Tag
+
+- Tag + Opening dimension
+
+- Opening dimension
 
 ## 5. STYLING
 
 ### Graphics settings
 
-![](./img-64.png)
+![Doors Revit Families — Graphics settings](./img-65.png)
 
 To change the color/weight/pattern of family lines, you need to go to Manage - Object Styles - Doors
 
