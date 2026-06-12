@@ -4,7 +4,7 @@ slug: /guides/families/doors-for-revit
 sidebar_label: 19 Doors
 sidebar_position: 19
 description: Doors families guide by BIMCORE
-image: 01_0-инструкция.png
+image: ./img-01.png
 unlisted: true
 ---
 
@@ -31,9 +31,9 @@ IMPORTANT! Place doors only on the plan view, not in 3D (otherwise, an error may
 
 ## 2. SET STRUCTURE
 
-![](01_0-инструкция.png)
+![](./img-01.png)
 
-![](707aa02a553760531bc77b52ea28aba4.png)
+![](./img-02.png)
 
 The set includes the following families:
 
@@ -89,7 +89,7 @@ Common elements - elements that are repeated in each family.
 
 Door handing parameters are located in the type parameters.
 
-![](media/7009df7eb197635116beb2605f5a91b6.jpeg)  
+![](./img-03.jpg)  
 Handing types:
 
 -   Left handing
@@ -97,21 +97,21 @@ Handing types:
 -   Outward
 -   Inward
 
-![](media/27ef7342b5796cdd7a0e941b2aae19d7.jpeg)
+![](./img-04.jpg)
 
 For double doors that do not have Left or Right handing (with identical doors), only the Outward or Inward options will be specified.
 
-![](media/36599ddd4ba401de933545b08d60eeba.jpeg)
+![](./img-05.jpg)
 
 The swinging angle works for 3D and 2D doors separately, since the display on 2D is done using conditional lines.
 
-![](media/f26ec6dcce5d68dafdcd2922da210391.jpeg)
+![](./img-06.jpg)
 
 Sliding single doors have Left and Right handing options. Outward and Inward - none (use flip arrows). In double sliding doors - only arrows.
 
 These arrows also show the outside of the families. This means you can tell where Reveals Outside will be, Reveals Inside, and so on.
 
-![](media/f99da64c01890caf5653ad24ecbfef6d.jpeg)
+![](./img-07.jpg)
 
 To make it easier to indicate door handings in shedules, a shared parameter was created - INT_Door handing. It's located in the Identification section.   
 If a parameter is gray (inactive), it means that a special formula is written inside it and because of this, the parameter cannot be controlled.  
@@ -119,17 +119,17 @@ If the parameter is black (active), you can enter the information yourself for a
 
 For double doors that do not have Left or Right handing, only the Outward or Inward options will be specified.
 
-![](media/6db42d38dcf446ed06ffad8117bd12ea.jpeg)
+![](./img-08.jpg)
 
 At the Fine detail level, everything is displayed as in 3D, except for the door and handles. This 2D door rotates separately from the 3D door.
 
 At the Medium detail level, the frame geometry is drawn with simplified lines. Casing ansd jambs are hidden. The door is displayed simply as a line.
 
-![](media/a059b7f70d7e1d3a24e9859ac27d8ef2.jpeg)
+![](./img-09.jpg)
 
 ### Type properties
 
-![](media/08bd921eea723cdd18bb28647ba04edb.jpeg)
+![](./img-10.jpg)
 
 Types for all families start with the opening dimensions (opening width and opening height).
 
@@ -145,7 +145,7 @@ Sidelites SL - placement: Left, Right, Top, Left and Right, Left and Top, Right 
 
 Handles
 
-![](media/ec8afbe5ae11e9e40e60e44dfdd11308.jpeg)
+![](./img-11.jpg)
 
 You can select handle types from the drop-down list unless these are sliding doors (in which case only sliding handles are selected by default). These are:
 
@@ -162,15 +162,15 @@ To identify all door hardware in the shedules, a common parameter, _INT_Door har
 
 You must fill in the information yourself for a specific door assembly.
 
-![](media/2dd96d509251f7b8e245d9a05db1ac50.jpeg)
+![](./img-12.jpg)
 
 The handle on 2D can be turned off (for example, if the door has a sliding handle type).
 
-![](media/a89206c28bf67ee9813551a99e0e48d3.png)
+![](./img-13.png)
 
 _Pull bar only outside_ turns on a bar handle on one side only, while on the other side you can choose any other handle.
 
-![](media/c20a72df66dc68855b4530d138a3910f.png)
+![](./img-14.png)
 
 Lock types:
 
@@ -183,7 +183,7 @@ The Lower lock has additional options for placing the Turn and Key inside or out
 -   Turn-Key
 -   Key-Key
 
-![](media/6a211e4a9bebe491a50144e57f07766b.png)
+![](./img-15.png)
 
 The dimensions of all hardware remain unchanged. Only the offset from the door edge to the handle's centerline can be adjusted, which is controlled by the _"Handle side offset" parameter_.
 
@@ -196,17 +196,17 @@ Handles placement **1000мм** from the door bottom
 
 If the project includes finishing with additional thin walls that are attached to the main wall, the door must be able to slide by this thickness of the finishing and fit within the dimensions.
 
-![](media/dec49e0a7a38a0a839c813e7906e66a1.jpeg)
+![](./img-16.jpg)
 
 The finishing can be either on the outside or inside of the wall. To remove the finishing, you need set the Finishing thickness parameter to 0.
 
 ### Reveals
 
-![](media/94afaf27e2503966d8ea58f4d10d4b54.jpeg)
+![](./img-17.jpg)
 
 The Reveals are made in all door families by common nested families INT 19 Door reveals outside and INT 19 Door reveals inside. They are located in the Walls category. They can be enabled or disabled by clicking Reveals inside or Reveals outside parameters.
 
-![](media/e22d7d649c71465f4850ef2a133e2337.jpeg)
+![](./img-18.jpg)
 
 To ensure that the reveals area is calculated based on the outer edges, rather than the entire volume (which would produce incorrect data for the shedule), a division by materials has been made.
 
@@ -222,25 +222,25 @@ Rough width and Rough height, Thickness - these are the dimensions of the door p
 
 #### Rebate
 
-![](media/61d9cf0d3d306d39ec69589d07056256.jpeg)
+![](./img-19.jpg)
 
 A rebate is a cutout in the opening for frame. The default value is 0.
 
 #### Installation depth
 
-![](media/fe9ae1874828135985d5b2634a844210.jpeg)
+![](./img-20.jpg)
 
 Installation depth – the depth of the door with frame offset into the opening. The default value is 0.
 
 #### Casing and jambs
 
-![](media/ddaac03c28cec20e8bea477f7103d61b.jpeg)
+![](./img-21.jpg)
 
 The casing are fixed to the edge of the jambs and move with it. Even if the jambs are turned off and you need to move the door casing, simply adjust the thickness of the jambs.
 
 #### False transom
 
-![](media/286375d6903ae66f68ef084fe45e1f12.jpeg)
+![](./img-22.jpg)
 
 The false transom can be enabled in this family by setting the "False transom height outside" and "False transom height inside" parameters to values ​​greater than 0. Then, one of these values ​​will be added to the "Casing width" value, increasing the height of the casing.
 
@@ -255,7 +255,7 @@ Sidelites (or transoms) is used in the following families:
 -   INT 19 Door interior single with sidelites
 -   INT 19 Door interior double with sidelites
 
-![](media/d7b7f0781eae0a5c79f04f7831533476.jpeg)
+![](./img-23.jpg)
 
 Sidelites can be placed:
 
@@ -269,11 +269,11 @@ Sidelites can be placed:
 
 The _Left and right sidelights Full-height_ parameter moves the side transoms up.
 
-![](media/1de7fdf358699f06e8d262bfe9cb6f18.jpeg)
+![](./img-24.jpg)
 
-![](media/4ad87483a71c03a52a095dfd4d6d9847.jpeg)
+![](./img-25.jpg)
 
-![](media/cf2b1e517540f91108127c6a428f8803.jpeg)
+![](./img-26.jpg)
 
 Muntins - these are elements of the door.
 
@@ -292,7 +292,7 @@ Interior doors are divided into:
 -   With sidelites (transom)
 -   Invisible
 
-![](media/54aeab7abcbc410ae74506a5a0ba24cf.png)
+![](./img-27.png)
 
 In the family you can on/off the following elements:
 
@@ -311,19 +311,19 @@ In the family you can on/off the following elements:
 -   Bead
 -   Coplanar casing
 
-![](media/19ecc13471fec6234a10be0d9c0c45a5.jpeg)
+![](./img-28.jpg)
 
 These door types are suitable for all interior doors (except invisible doors) and sliding doors.
 
 Additional door options allow you make simple, non-milled door, as well as classic solid and glass doors.
 
-![](media/ba32c01205c142503add58d5125ce8aa.jpeg)
+![](./img-29.jpg)
 
 The number of panels can be from 0 to 3. If the value is 0, there will be a simple door without cutouts.
 
-![](media/345844a20db4bcc2942371f71298d4bf.png)
+![](./img-30.png)
 
-![](media/eb3ed0f4b01beed65cc3eabcb56a5c6e.jpeg)
+![](./img-31.jpg)
 
 The Coplanar casing parameter shifts the door and frame toward the edge of the casing so they are aligned.
 
@@ -331,7 +331,7 @@ If this parameter is enabled, the Installation depth cannot be changed.
 
 #### Dimensions
 
-![](media/4aa788db04a482ae4a08930d52c7d666.png)
+![](./img-32.png)
 
 The door (panel) dimensions are slightly smaller than those in the Rough Width and Rough Height parameters due to clearnace around the door perimeter.
 
@@ -341,7 +341,7 @@ _Rough Height_ = Height - Frame width - 10mm (or -Threshold height)
 
 If the threshold is turned off, there is a gap of about 10 mm at the bottom of the door.
 
-![](media/e38a70ee03d30cb5c629a60f04d3f96c.png)
+![](./img-33.png)
 
 In double families there are both double doors and unequal double doors. Simply choose the right type.
 
@@ -351,11 +351,11 @@ Rough Width = 1_Door width + 2_Door Width
 
 Rough Height = Door height
 
-![](media/20c27e7f78e1f38ec96cada3f7babf89.png)
+![](./img-34.png)
 
 The Invisible door can also open outwards and inwards.
 
-![](media/286b2647111ada893a5d9a9c7d64c616.png)
+![](./img-35.png)
 
 _Flush skirting height_ option shifts the interior Reveals upward, allowing for the placement of a hidden skirting.
 
@@ -363,17 +363,17 @@ _To the Ceiling_ option removes the frame above the door and part of the reveals
 
 A double invisible door is also included in the set.
 
-![](media/9fd1c201b554a3ba89241e55172fdd97.png)
+![](./img-36.png)
 
 _Multi-component wall_ option for invisible doors should be enabled when your wall finishing is done in additional layers within the main wall, rather than as separate thin walls.
 
-![](media/97070fd867b2cfd8650963f3545fc60b.png)
+{/* TODO #47: скриншот «shadow profile trim» — добавить из Word-файла v1.2.0 */}
 
 The shadow profile trim is configured in the Dimensions section. If the height is set to 0 mm, the door will look normal. Setting it to 20 mm will add a shadow profile trim.
 
 #### Materials
 
-![](media/f9c56946b6ee7c3ba965fde7b978b115.png)
+![](./img-37.png)
 
 The materials of the panels are in the type.
 
@@ -398,33 +398,33 @@ The geometry of sliding doors is the same as in interior doors. This includes th
 
 #### Pocket door
 
-![](media/909e7a57ce34117aa68851ecf2577cc3.png)
+![](./img-38.png)
 
 Clear opening width = Rough Width – Reduction of clear opening width
 
-![](media/7e6d821836e5e8dc3bcf51519acc72ab.png)
+![](./img-39.png)
 
 #### Bi-fold door
 
-#### ![](media/572d81e321bfa82b1d33ca3282ee4e08.png)
+![](./img-40.png)
 
 #### Compack door
 
-![](media/1eb6c2f2c9e77f023e8050afacd078e5.png)
+![](./img-41.png)
 
 #### Rotary door
 
-![](media/8b2a588dd248469721390b4ade905bb5.png)
+![](./img-42.png)
 
 #### Pivot door
 
-![](media/0dfcc26b2f403766cfbb1eb1f58a71b8.png)
+![](./img-43.png)
 
-![](media/057e346be4c708042d78455572a13950.png)
+![](./img-44.png)
 
 If the vertical axis is centered, the door is moved toward the center. If the vertical axis is to the side, the door is positioned closer to the edge of the opening; this distance can be adjusted (Vertical axis offset).
 
-![](media/5fb4094ee8bf7dd8f3046f33050974be.png)
+![](./img-45.png)
 
 In the Pivot, wall-sliding, Magic, sliding 2-4 panels families, you can turn off the Frame and leave only the Reveals. Options may vary, as shown in the images above. The door width will depend on the thickness of the reveals or frame, so adjust these parameters as needed.
 
@@ -432,7 +432,7 @@ This is also reflected in the type’s names. If Reveals are enabled, the word "
 
 #### Wall-sliding door
 
-![](media/c2d8de99a083e95334862ba587f4aaa8.png)
+![](./img-46.png)
 
 The door is 25mm wider than the opening on the left and right.
 
@@ -440,25 +440,25 @@ Rail width = Rough width \*2 + 25мм + If the casings are wide, then the rail a
 
 #### Magic door
 
-![](media/9556244a9206ef4240a7853d4dda5ac6.png)
+![](./img-47.png)
 
 The door is 50mm wider than the opening on the left and right. And from above - on the Door over opening parameter.
 
 #### Sliding 2 panels
 
-![](media/8e3ecc61ec7904fa764acd568a2acd2f.png)
+![](./img-48.png)
 
 Rough width = Doors width \* 2
 
 #### Sliding 3 panels
 
-![](media/321960d425d66c4bcf1f3a88dcc44d17.png)
+![](./img-49.png)
 
 Rough Width = Doors width \* 3
 
 #### Sliding 4 panels
 
-![](media/8e9a97127778f2b709500ff771f0f492.png)
+![](./img-50.png)
 
 Rough Width = Doors width \* 4
 
@@ -472,7 +472,7 @@ Exterior have: Door viewer, Upper lock, Mirror
 
 Technical have: Window and Louver.
 
-![](media/a45896f9e8b64df341eee9a847f594f6.png)
+![](./img-51.png)
 
 In the family you can on/off the following elements:
 
@@ -489,7 +489,7 @@ In the family you can on/off the following elements:
 -   Reveals outside
 -   Reveals inside
 
-![](media/2491d1bd36be2a5097f9db52d1fc77c8.png)
+![](./img-52.png)
 
 In the family you can on/off the following elements:
 
@@ -505,7 +505,7 @@ In the family you can on/off the following elements:
 -   Reveals outside
 -   Reveals inside
 
-![](media/23cff76a79248e0fd9047a768f9c801c.png)
+![](./img-53.png)
 
 Antipanic handles have been added to the technical doors.
 
@@ -513,7 +513,7 @@ Antipanic handles have been added to the technical doors.
 
 In the families of exterior and technical doors there are parameters Door unit and Gaps.
 
-#### ![](media/383fb3ed0a9c181802037a9a1239b25f.png)
+![](./img-54.png)
 
 Door unit width = Width - Gap\*2
 
@@ -523,7 +523,7 @@ Rough Width and Rough Height are actually slightly smaller than the parameter va
 Therefore, it's better to reference the dimensions to the reference planes rather than the door lines.)   
 Increasing the Door Thickness also increases the depth of the frame.
 
-![](media/c09ce48dfb5a3bd8d25adc909e1b177b.png)
+![](./img-55.png)
 
 In double families there are both double doors and unequal double doors. Simply choose the right type 1.5x or 2x.
 
@@ -537,15 +537,14 @@ Rough Width = 1_Door width + 2_Door Width
 
 Rough Height = Door height
 
-![](media/dc17065e58a3eb4b2ee5b10189976fae.png)
+![](./img-56.png)
 
-#### 
 
 #### Materials
 
-![](media/6717094e4dac8316d198274b57bfb177.png)
+![](./img-57.png)
 
-![](media/7982580d467f87ec2a2ef57c64805569.png)
+![](./img-58.png)
 
 ### Doorway
 
@@ -553,7 +552,7 @@ A Doorway is an opening with a frame. The frame may have casing or reveals.
 
 Types are named by Width and Height opening + form (1000х2100 Rectangle).
 
-![](media/32ec43837ca691c7c58639e087d06069.png)
+![](./img-59.png)
 
 In the family you can on/off the following elements:
 
@@ -562,7 +561,7 @@ In the family you can on/off the following elements:
 -   Reveals
 -   2D coarse detail level
 
-![](media/457367fa4f52de5fcb8f65fb62225c4b.png)
+![](./img-60.png)
 
 You can choose types with different form for opening:
 
@@ -571,17 +570,17 @@ You can choose types with different form for opening:
 -   Rounded rectangle
 -   Ellipse
 
-![](media/d07c4f4f6489b69347faf7fa8cd4707f.png)
+![](./img-61.png)
 
 Width and Height - - these are the dimensions of the opening.
 
 _Rounding_ must be more than 50mm.
 
-![](media/774bdb31cad8cc15780a680b5814c866.png)
+![](./img-62.png)
 
 ### Door tag
 
-![](media/97297814a6a4b76def998c2244af9903.jpeg)
+![](./img-63.jpg)
 
 Door tag has 3 types:
 
@@ -593,7 +592,7 @@ Door tag has 3 types:
 
 ### Graphics settings
 
-![](media/508485c053a066da14cb6e0c762fe312.png)
+![](./img-64.png)
 
 To change the color/weight/pattern of family lines, you need to go to Manage - Object Styles - Doors
 
