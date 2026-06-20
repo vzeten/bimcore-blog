@@ -1,0 +1,63 @@
+---
+title: "How to Remove the Joint Line Between Walls of Different Materials on a Plan in Revit"
+slug: /lessons/walls-different-materials
+sidebar_label: "Walls of different materials"
+sidebar_position: 1
+description: "Make walls of different materials read as one solid wall on a Revit plan: join them, set a coarse-scale solid fill, and apply Coarse detail to walls only."
+---
+
+<YouTube id="vhiVY0EkPu4" title="How to Remove the Joint Line Between Walls of Different Materials on a Plan in Revit" uploadDate="2026-06-19" />
+
+When walls of different materials meet on a plan, Revit draws a separation line between them along with two separate fill patterns. On general plans this is often unnecessary — you want the walls to read as one solid wall, with no joint between the materials. In this lesson we'll see how to achieve that without changing the materials themselves and without breaking how the walls look on other views.
+
+## The result
+
+At the **Coarse** detail level, two joined walls of different materials merge into a single solid area of one color — with no separation line. At the **Medium** and **Fine** detail levels everything stays as before: the walls are still split according to their configured material display.
+
+## Step 1. Join the walls with Join Geometry
+
+1. Go to the **Modify** tab.
+2. Pick the **Join Geometry** tool.
+3. Click the first wall, then the second.
+
+The wall geometry is joined, and Revit no longer treats their joint as an outer boundary. Without joining, the next steps won't work and the separation line will remain.
+
+## Step 2. Set the coarse-detail fill for each wall
+
+For each of the joined walls:
+
+1. Select the wall and click **Edit Type**.
+2. In the type properties, find **Coarse Scale Fill Pattern** and set it to **Solid fill**.
+3. Set **Coarse Scale Fill Color** to the color you want — for example, gray.
+
+> Tip: add the chosen color to your palette (custom colors) so you can quickly apply the same shade to the second wall and to future projects.
+
+Repeat the same for the second wall (in the example, the insulated wall): the same solid fill, the same gray color.
+
+Now, at the Coarse detail level both walls are filled identically and meet with no visible joint line, while at Medium and Fine they are displayed the way their materials are set up.
+
+## Step 3. Switch only the walls to Coarse detail
+
+Often you don't want to drop the entire view to Coarse — the other elements should stay as they are. In that case you can set the **Coarse** detail level for walls only:
+
+1. Open **Visibility/Graphic Overrides** (shortcut **VG** / **VV**).
+2. Find the **Walls** category.
+3. Set its **Detail Level** to **Coarse**.
+
+After this, the view's overall detail level can stay anything you like (Medium, Fine), but on this specific view the walls will always display at Coarse — reading as one solid wall. The setting applies only to the current view and doesn't affect other plans.
+
+## When this is useful
+
+- General plans, where the building's shape matters more than the wall makeup.
+- Marketing and presentation layouts.
+- Any plan where the detail of the wall layers is distracting.
+
+## In short
+
+1. Join the walls with **Join Geometry**.
+2. In each wall's type, set a **Solid fill of one color** at the Coarse detail level (Coarse Scale Fill Pattern + Coarse Scale Fill Color).
+3. Use **Visibility/Graphic Overrides** to set the Coarse detail level for the **Walls** category only.
+
+Done — the joint line between different materials disappears where you don't need it, while all the other plan elements keep their original settings.
+
+<CTA type="lesson" />

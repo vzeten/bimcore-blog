@@ -1,0 +1,63 @@
+---
+title: "Cómo Quitar la Línea de Unión Entre Muros de Distintos Materiales en Planta en Revit"
+slug: /lessons/walls-different-materials
+sidebar_label: "Muros de distintos materiales"
+sidebar_position: 1
+description: "Cómo quitar la línea de unión entre muros de distintos materiales en planta en Revit: unir, relleno sólido a escala gruesa y nivel de detalle Bajo solo para muros."
+---
+
+<YouTube id="vhiVY0EkPu4" title="Cómo quitar la línea de unión entre muros de distintos materiales en planta en Revit" uploadDate="2026-06-19" />
+
+Cuando dos muros de distintos materiales se encuentran en planta, Revit dibuja una línea de separación entre ellos junto con dos patrones de relleno separados. En los planos generales esto suele sobrar, ya que quieres que los muros se lean como un solo muro continuo, sin junta entre los materiales. En esta lección veremos cómo conseguirlo sin cambiar los materiales en sí y sin romper cómo se ven los muros en otras vistas.
+
+## El resultado
+
+Con el nivel de detalle **Bajo**, dos muros unidos de distintos materiales se fundirán en una sola área continua de un mismo color, sin línea de separación. Con los niveles de detalle **Medio** y **Alto** todo quedará como antes, es decir, los muros se siguen mostrando según cómo estén configurados sus materiales.
+
+## Paso 1. Une los muros con Unir geometría
+
+1. Ve a la pestaña **Modificar**.
+2. Elige la herramienta **Unir geometría** (Unir).
+3. Haz clic en el primer muro y después en el segundo.
+
+La geometría de los muros queda unida y Revit deja de tratar su encuentro como un borde exterior. Sin unir los muros, los pasos siguientes no funcionarán y la línea de separación seguirá ahí.
+
+## Paso 2. Configura el relleno a nivel de detalle Bajo en cada muro
+
+Para cada uno de los muros unidos:
+
+1. Selecciona el muro y haz clic en **Editar tipo**.
+2. En las propiedades de tipo, busca **Patrón de relleno de escala gruesa** y ponlo en **Relleno sólido**.
+3. En **Color de relleno de escala gruesa**, elige el color que quieras, por ejemplo gris.
+
+> Consejo: añade el color elegido a tu paleta (colores personalizados) para aplicar rápidamente el mismo tono al segundo muro y a futuros proyectos.
+
+Repite lo mismo en el segundo muro (en el ejemplo, el muro con aislamiento), con el mismo relleno sólido y el mismo color gris.
+
+Ahora, con el nivel de detalle Bajo ambos muros tienen el mismo relleno y se encuentran sin línea de unión visible, mientras que en Medio y Alto se muestran según estén configurados sus materiales.
+
+## Paso 3. Pon solo los muros en nivel de detalle Bajo
+
+A menudo no quieres bajar toda la vista a nivel Bajo, ya que el resto de los elementos deben quedarse como están. En ese caso puedes aplicar el nivel de detalle **Bajo** solo a los muros:
+
+1. Abre **Reemplazos de visibilidad/gráficos** (atajo **VG** / **VV**).
+2. Busca la categoría **Muros**.
+3. Ajusta su **Nivel de detalle** a **Bajo**.
+
+Después de esto, el nivel de detalle general de la vista puede quedarse en lo que quieras (Medio, Alto), pero en esta vista concreta los muros siempre se mostrarán en Bajo, leyéndose como un solo muro continuo. El ajuste afecta únicamente a la vista actual y no toca los demás planos.
+
+## Cuándo resulta útil
+
+- Planos generales, donde importa más la forma del edificio que la composición del muro.
+- Presentaciones y láminas de marketing.
+- Cualquier plano donde el detalle de las capas del muro distrae.
+
+## En resumen
+
+1. Une los muros con **Unir geometría**.
+2. En el tipo de cada muro, define un **Relleno sólido de un mismo color** a nivel de detalle Bajo (Patrón de relleno de escala gruesa más Color de relleno de escala gruesa).
+3. Usa **Reemplazos de visibilidad/gráficos** para poner el nivel de detalle Bajo solo en la categoría **Muros**.
+
+Listo. La línea de unión entre distintos materiales desaparece donde no la necesitas, mientras que el resto de los elementos del plano conservan su configuración original.
+
+<CTA type="lesson" />
