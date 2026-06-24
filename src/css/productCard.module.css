@@ -1,0 +1,146 @@
+/* Карточка товара (см. src/components/ProductCard.jsx).
+   Лёгкая витрина: фото слева, текст и кнопки справа. Без рантайма Ecwid. */
+
+.card {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 2rem;
+  align-items: start; /* текст выровнен по верху, а не по центру высокого фото */
+  max-width: 680px;
+  margin: 1.25rem 0 1.75rem;
+  padding: 1.75rem 2rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 16px;
+  background: var(--ifm-background-surface-color, #fff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 10px 30px rgba(0, 0, 0, 0.07);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08), 0 20px 48px rgba(0, 0, 0, 0.1);
+}
+
+/* ---- Левая колонка: фото на подложке ---- */
+
+.media {
+  display: block;
+  background: var(--ifm-color-emphasis-100);
+  border-radius: 12px;
+  padding: 0.75rem;
+  line-height: 0;
+}
+
+.media img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 6px;
+}
+
+/* ---- Правая колонка: текст, цена, кнопки ---- */
+
+.body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ifm-color-primary);
+  margin-bottom: 0.55rem;
+}
+
+.title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.desc {
+  margin: 0.75rem 0 0;
+  color: var(--ifm-color-emphasis-700);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+/* ---- Кнопки ---- */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-top: 1.5rem;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.7rem 1.4rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  border: 2px solid var(--ifm-color-primary);
+  transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.btnPrimary {
+  background-color: var(--ifm-color-primary);
+  color: #fff;
+}
+
+.btnPrimary:hover {
+  opacity: 0.9;
+  color: #fff;
+  text-decoration: none;
+}
+
+.btnSecondary {
+  background-color: transparent;
+  color: var(--ifm-color-primary);
+}
+
+.btnSecondary:hover {
+  background-color: var(--ifm-color-primary);
+  color: #fff;
+  text-decoration: none;
+}
+
+/* ---- Мобильная раскладка: в столбик, фото сверху ---- */
+@media (max-width: 700px) {
+  .card {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    max-width: 440px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1.25rem;
+  }
+
+  /* Фото на мобиле не на всю ширину — иначе квадрат занимает полэкрана
+     и выпихивает кнопки под сгиб. Ограничиваем и центрируем. */
+  .media {
+    max-width: 260px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .actions {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+    text-align: center;
+  }
+}

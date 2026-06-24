@@ -14,6 +14,7 @@
 import MDXComponents from '@theme-original/MDXComponents';
 import CTA from '@site/src/components/CTA';
 import YouTube from '@site/src/components/YouTube';
+import ProductCard from '@site/src/components/ProductCard';
 
 export default {
   ...MDXComponents,
@@ -25,6 +26,9 @@ export default {
   // Используется в .mdx как: <YouTube id="ifJtfM3LgGg" title="..." />.
   // В Sveltia CMS — кнопка «YouTube видео» в редакторе.
   YouTube,
+  // ProductCard — лёгкая карточка товара с витриной и ссылками (см. src/components/ProductCard.jsx).
+  // Используется в .mdx как: <ProductCard name="..." image="..." buyUrl="..." price="121" currency="GBP" />.
+  ProductCard,
   // <truncate /> — маркер обрыва превью для blog plugin (truncateMarker в docusaurus.config.js).
   // Сам компонент ничего не рендерит — он только marker для Docusaurus.
   // Регистрируем чтобы MDX парсер не выдавал warning про unknown component.

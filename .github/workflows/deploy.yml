@@ -22,6 +22,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          ECWID_PUBLIC_TOKEN: ${{ secrets.ECWID_PUBLIC_TOKEN }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./build

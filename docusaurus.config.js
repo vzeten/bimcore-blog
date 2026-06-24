@@ -1,7 +1,19 @@
 // @ts-check
 import {themes as prismThemes} from 'prism-react-renderer';
+import {config as loadEnv} from 'dotenv';
+
+// Локально читаем токены из .env.local (в git не коммитится).
+// На GitHub Actions переменные приходят из секретов репозитория (process.env).
+loadEnv({path: '.env.local'});
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
+  // Публичный токен Ecwid (public_...) для подгрузки цен на карточках товара.
+  // Источник: .env.local (локально) или секрет ECWID_PUBLIC_TOKEN (GitHub Actions).
+  // Это PUBLIC-токен (только чтение каталога) — попадание в бандл сайта штатно.
+  customFields: {
+    ecwidPublicToken: process.env.ECWID_PUBLIC_TOKEN || '',
+  },
   title: 'BIMCORE Learn',
   tagline: 'Revit courses, guides & resources',
   favicon: 'img/favicon.ico',
