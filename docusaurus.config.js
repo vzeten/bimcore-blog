@@ -69,18 +69,15 @@ const config = {
   themes: [
     [
       // Локальный (оффлайн) поиск по статьям. Индекс строится при build,
-      // в dev-режиме не работает — проверять только на production build + serve.
-      // docs в корне сайта (routeBasePath: '/'), блог — на /blog.
+      // в dev НЕ работает — проверять через build + serve.
+      // docsRouteBasePath: '/' обязателен (docs в корне сайта).
       '@easyops-cn/docusaurus-search-local',
       /** @type {import('@easyops-cn/docusaurus-search-local').PluginOptions} */
       ({
         hashed: true,
         language: ['en', 'ru', 'es'],
         docsRouteBasePath: '/',
-        indexBlog: true,
-        blogRouteBasePath: '/blog',
         highlightSearchTermsOnTargetPage: true,
-        searchBarShortcutHint: false,
       }),
     ],
   ],
