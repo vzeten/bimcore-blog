@@ -6,6 +6,34 @@ import {config as loadEnv} from 'dotenv';
 // На GitHub Actions переменные приходят из секретов репозитория (process.env).
 loadEnv({path: '.env.local'});
 
+// Служебные страницы, которым не место в sitemap и llms.txt (все локали).
+const serviceRoutePatterns = ['', '/ru', '/es'].flatMap((l) =>
+  ['blog/tags', 'blog/archive', 'blog/authors', 'search'].flatMap((p) => [
+    `${l}/${p}`,
+    `${l}/${p}/`,
+    `${l}/${p}/**`,
+  ]),
+);
+
+// llms.txt: unlisted-заглушки («coming soon») ИИ-агентам не показываем.
+// ⚠ При снятии unlisted со страницы — убрать её отсюда.
+const unlistedRoutePatterns = [
+  // Заглушки во всех локалях.
+  ...['', '/ru', '/es'].flatMap((l) =>
+    ['courses', 'help', 'guides/bimcore-plugin', 'lessons/what-is-revit'].flatMap(
+      (p) => [`${l}/${p}/`, `${l}/${p}/**`],
+    ),
+  ),
+  // EN/ES-заглушки статей, живущих пока только на русском (/ru/ публичны).
+  ...['', '/es'].flatMap((l) =>
+    [
+      'guides/families/sockets-for-revit',
+      'guides/families/windows-for-revit',
+      'guides/families/retro-style-socket-for-revit',
+    ].flatMap((p) => [`${l}/${p}/`, `${l}/${p}/**`]),
+  ),
+];
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   // Публичный токен Ecwid (public_...) для подгрузки цен на карточках товара.
@@ -20,12 +48,15 @@ const config = {
   future: { v4: true },
   url: 'https://learn.bimcore.one',
   baseUrl: '/',
+  // Хостинг 301-редиректит URL без «/» на вариант со «/» (статика из папок).
+  // true выравнивает sitemap/canonical/hreflang с реальными URL — без цепочки 301.
+  trailingSlash: true,
   organizationName: 'vzeten',
   projectName: 'bimcore-blog',
-  onBrokenLinks: 'warn',
+  onBrokenLinks: 'throw',
   markdown: {
     hooks: {
-      onBrokenMarkdownLinks: 'warn',
+      onBrokenMarkdownLinks: 'throw',
     },
   },
   i18n: {
@@ -54,6 +85,14 @@ const config = {
         theme: {
           customCss: './src/css/custom.css',
         },
+        sitemap: {
+          // Страницы тегов/архива/авторов блога дополнительно получают noindex
+          // в src/theme/ — sitemap-плагин сам выкидывает noindex-маршруты;
+          // паттерны здесь — явная страховка. /search задаёт noindex
+          // неправильным тегом (property= вместо name=), поэтому для него
+          // ignorePatterns обязателен.
+          ignorePatterns: serviceRoutePatterns,
+        },
       }),
     ],
   ],
@@ -63,6 +102,23 @@ const config = {
       {
         trackingID: 'G-7CETNM0WVL',
         anonymizeIP: true,
+      },
+    ],
+    [
+      // Генерирует llms.txt (индекс для ИИ-ассистентов) + markdown-копии страниц
+      // при build. postBuild выполняется для каждой локали: EN → /llms.txt,
+      // RU → /ru/llms.txt, ES → /es/llms.txt. Локали исключать нельзя —
+      // локаль без единого маршрута валит сборку.
+      '@signalwire/docusaurus-plugin-llms-txt',
+      {
+        siteTitle: 'BIMCORE Learn',
+        siteDescription:
+          'Free Revit lessons and family guides for interior designers and architects.',
+        depth: 2,
+        content: {
+          includeBlog: true,
+          excludeRoutes: [...serviceRoutePatterns, ...unlistedRoutePatterns],
+        },
       },
     ],
   ],
