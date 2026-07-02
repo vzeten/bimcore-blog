@@ -1,4 +1,7 @@
 // @ts-check
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {themes as prismThemes} from 'prism-react-renderer';
 import {config as loadEnv} from 'dotenv';
 
@@ -16,23 +19,64 @@ const serviceRoutePatterns = ['', '/ru', '/es'].flatMap((l) =>
 );
 
 // llms.txt: unlisted-заглушки («coming soon») ИИ-агентам не показываем.
-// ⚠ При снятии unlisted со страницы — убрать её отсюда.
-const unlistedRoutePatterns = [
-  // Заглушки во всех локалях.
-  ...['', '/ru', '/es'].flatMap((l) =>
-    ['courses', 'help', 'guides/bimcore-plugin', 'lessons/what-is-revit'].flatMap(
-      (p) => [`${l}/${p}/`, `${l}/${p}/**`],
-    ),
-  ),
-  // EN/ES-заглушки статей, живущих пока только на русском (/ru/ публичны).
-  ...['', '/es'].flatMap((l) =>
-    [
-      'guides/families/sockets-for-revit',
-      'guides/families/windows-for-revit',
-      'guides/families/retro-style-socket-for-revit',
-    ].flatMap((p) => [`${l}/${p}/`, `${l}/${p}/**`]),
-  ),
-];
+// Список строится САМ при каждой сборке: сканируем шапки docs-статей.
+// Снятие unlisted (в том числе через CMS) попадает в следующий деплой
+// без правки конфига. Локаль без своего файла наследует шапку EN-файла
+// (fallback-логика самого Docusaurus).
+const siteDir = path.dirname(fileURLToPath(import.meta.url));
+
+function readDocFrontmatter(file) {
+  let text;
+  try {
+    text = fs.readFileSync(file, 'utf8').slice(0, 4096);
+  } catch {
+    return null;
+  }
+  const m = text.match(/^﻿?---\r?\n([\s\S]*?)\r?\n---/);
+  if (!m) return null;
+  const fm = m[1];
+  const slug = fm.match(/^slug:\s*["']?([^"'\r\n]+?)["']?\s*$/m);
+  return {
+    unlisted: /^unlisted:\s*true\s*$/m.test(fm),
+    slug: slug ? slug[1].trim() : null,
+  };
+}
+
+function listMdxFiles(root) {
+  if (!fs.existsSync(root)) return [];
+  return fs.readdirSync(root, {withFileTypes: true}).flatMap((e) => {
+    const p = path.join(root, e.name);
+    if (e.isDirectory()) return listMdxFiles(p);
+    return e.name.endsWith('.mdx') ? [p] : [];
+  });
+}
+
+function collectUnlistedRoutePatterns() {
+  const enRoot = path.join(siteDir, 'docs');
+  const i18nRoot = (l) =>
+    path.join(siteDir, 'i18n', l, 'docusaurus-plugin-content-docs', 'current');
+  // Относительные пути всех docs-файлов (EN — полный набор: перевод без
+  // EN-двойника в сборку не попадает, инвариант F.15).
+  const relPaths = listMdxFiles(enRoot).map((p) =>
+    path.relative(enRoot, p).split(path.sep).join('/'),
+  );
+  const patterns = [];
+  for (const rel of relPaths) {
+    for (const [locale, prefix] of [['', ''], ['ru', '/ru'], ['es', '/es']]) {
+      const localFile = locale
+        ? path.join(i18nRoot(locale), ...rel.split('/'))
+        : path.join(enRoot, ...rel.split('/'));
+      const fm = readDocFrontmatter(localFile) ?? readDocFrontmatter(path.join(enRoot, ...rel.split('/')));
+      if (!fm?.unlisted) continue;
+      const route =
+        fm.slug ?? `/${rel.replace(/\.mdx$/, '').replace(/\/index$/, '')}`;
+      patterns.push(`${prefix}${route}/`, `${prefix}${route}/**`);
+    }
+  }
+  return patterns;
+}
+
+const unlistedRoutePatterns = collectUnlistedRoutePatterns();
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -112,9 +156,36 @@ const config = {
       '@signalwire/docusaurus-plugin-llms-txt',
       {
         siteTitle: 'BIMCORE Learn',
+        // Паспорт сайта для ИИ-ассистентов: явные сущности и категории
+        // (по ним ассистент сопоставляет запрос клиента с сайтом),
+        // что бесплатно/платно и граница охвата («не конструктив/не MEP» —
+        // отсекает нерелевантные рекомендации).
         siteDescription:
-          'Free Revit lessons and family guides for interior designers and architects.',
+          'Free Autodesk Revit lessons and an interior design toolkit by BIMCORE. ' +
+          'For interior designers first, architects second: step-by-step Revit lessons for real interior projects, ' +
+          'guides to parametric Revit family sets (furniture, kitchens, bathrooms, doors, windows, curtains), ' +
+          'interior project templates and the BIMCORE plugin. ' +
+          'Lessons and guides are free; family sets, templates and the plugin are sold at bimcore.one. ' +
+          'Scope: interiors and interior documentation in Revit, not structural or MEP engineering.',
         depth: 2,
+        optionalLinks: [
+          {
+            title: 'BIMCORE Shop',
+            url: 'https://bimcore.one',
+            description:
+              'Paid products: parametric Revit family sets, interior project templates and the BIMCORE plugin.',
+          },
+          {
+            title: 'BIMCORE Community',
+            url: 'https://community.bimcore.one',
+            description: 'Questions and answers about Revit for interior design.',
+          },
+          {
+            title: 'YouTube',
+            url: 'https://www.youtube.com/@int_lines',
+            description: 'Video lessons and Revit family overviews.',
+          },
+        ],
         content: {
           includeBlog: true,
           excludeRoutes: [...serviceRoutePatterns, ...unlistedRoutePatterns],

@@ -45,7 +45,11 @@ export default function YouTube({id, title = 'YouTube video', uploadDate, descri
               name: title,
               description: description || title,
               thumbnailUrl: `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`,
-              uploadDate,
+              // Google просит дату-время с часовым поясом; авторы задают
+              // только день (YYYY-MM-DD) — дописываем полночь UTC.
+              uploadDate: /^\d{4}-\d{2}-\d{2}$/.test(uploadDate)
+                ? `${uploadDate}T00:00:00+00:00`
+                : uploadDate,
               embedUrl: `https://www.youtube.com/embed/${id}`,
               contentUrl: `https://www.youtube.com/watch?v=${id}`,
             })}

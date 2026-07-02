@@ -38,6 +38,8 @@ import styles from '../css/productCard.module.css';
  * @param {string} [buyLabel]  Текст основной кнопки, по умолчанию 'Buy now'.
  * @param {string} [shopLabel] Текст второй кнопки, по умолчанию 'Go to the shop'.
  * @param {string} [sku]       Артикул (для schema.org), опционально.
+ * @param {string} [brand]     Бренд для schema.org, по умолчанию 'BIMCORE'
+ *                             (задел под два бренда по доменам — задача #52).
  * @param {string} [ecwidProductId] ID товара в Ecwid — включает авто-подгрузку цены.
  * @param {string} [ecwidStoreId]   ID магазина Ecwid, по умолчанию '86326685'.
  * @param {string} [ecwidToken]     Переопределить публичный токен Ecwid (обычно не нужно —
@@ -57,6 +59,7 @@ export default function ProductCard({
   buyLabel = 'Buy now',
   shopLabel = 'Go to the shop',
   sku = '',
+  brand = 'BIMCORE',
   ecwidProductId = '',
   ecwidStoreId = DEFAULT_STORE_ID,
   ecwidToken = '',
@@ -125,6 +128,11 @@ export default function ProductCard({
           {name}
         </span>
         {sku && <meta itemProp="sku" content={sku} />}
+        {brand && (
+          <span itemProp="brand" itemScope itemType="https://schema.org/Brand">
+            <meta itemProp="name" content={brand} />
+          </span>
+        )}
         {description && (
           <p className={styles.desc} itemProp="description">
             {description}
