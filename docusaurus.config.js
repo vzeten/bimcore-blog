@@ -121,6 +121,10 @@ const config = {
         },
         blog: {
           showReadingTime: true,
+          // Meta description ленты /blog/ (дефолт — бесполезное «Blog»).
+          // Переводы — i18n/<l>/docusaurus-plugin-content-blog/options.json.
+          blogDescription:
+            'What we learn about Revit on real interior projects: practical tips, workflows and family guides for interior designers.',
           // Custom truncate marker — <truncate /> JSX-тег вместо {/* truncate */} или <!-- -->
           // Sveltia rich-editor не экранирует JSX-теги, MDX парсер их валидирует.
           // См. decisions «Truncate-маркер = <truncate /> JSX-тег».
@@ -188,6 +192,9 @@ const config = {
         ],
         content: {
           includeBlog: true,
+          // false → полные URL: иначе ссылки в /ru/llms.txt теряют /ru/
+          // и ведут на EN-копии (у RU-only статей это 404). Аудит #63.
+          relativePaths: false,
           excludeRoutes: [...serviceRoutePatterns, ...unlistedRoutePatterns],
         },
       },

@@ -4,7 +4,7 @@
     "description": "The title for the blog used in SEO"
   },
   "description": {
-    "message": "Blog",
+    "message": "Что мы узнаём о Revit на реальных интерьерных проектах: практические советы, приёмы работы и инструкции к семействам.",
     "description": "The description for the blog used in SEO"
   },
   "sidebar.title": {
