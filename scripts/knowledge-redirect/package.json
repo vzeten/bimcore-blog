@@ -1,0 +1,12 @@
+{
+  "name": "knowledge-redirect",
+  "private": true,
+  "type": "module",
+  "description": "Gcore FastEdge функция 301-редиректа knowledge.bimcore.one -> learn.bimcore.one",
+  "scripts": {
+    "test": "node redirect.test.js"
+  },
+  "dependencies": {
+    "@gcoredev/fastedge-sdk-js": "^2.5.1"
+  }
+}

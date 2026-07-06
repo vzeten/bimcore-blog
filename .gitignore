@@ -30,3 +30,7 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# knowledge-redirect: сборка и зависимости FastEdge-функции (в git только исходники)
+scripts/knowledge-redirect/node_modules/
+scripts/knowledge-redirect/dist/
