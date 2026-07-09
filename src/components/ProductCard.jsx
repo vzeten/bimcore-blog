@@ -1,5 +1,5 @@
-import React, {useEffect, useState} from 'react';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import React from 'react';
+import {usePluginData} from '@docusaurus/useGlobalData';
 import styles from '../css/productCard.module.css';
 
 /**
@@ -11,10 +11,12 @@ import styles from '../css/productCard.module.css';
  *    экрана (LCP) и по SEO. Здесь же блок почти невесомый: своя разметка,
  *    своя schema.org, ссылки в магазин. Покупка — переходом на страницу товара.
  *
- * Цена (опционально) подтягивается из Ecwid лёгким запросом к REST API —
- * это один маленький JSON (пара КБ), а НЕ рантайм магазина. Чтобы цена
- * показалась, нужны ecwidProductId + ecwidToken (публичный токен магазина).
- * Без токена блок просто не показывает цену — никакой нагрузки.
+ * Цена (опционально) берётся из globalData, которую при СБОРКЕ наполняет
+ * плагин `ecwid-prices` (один запрос к Ecwid на весь каталог). Благодаря
+ * этому schema.org price/priceCurrency/availability попадают в статический
+ * HTML — их видит Googlebot (иначе GSC ругается «Укажите price»). Ключ
+ * поиска цены — ecwidProductId. Нет цены в карте (нет id / сбой запроса) —
+ * блок просто рендерится без цены, без ошибок.
  *
  * Использование в .mdx (import не нужен — зарегистрирован глобально):
  *   <ProductCard
@@ -25,7 +27,6 @@ import styles from '../css/productCard.module.css';
  *     buyUrl="https://bimcore.one/products/door-revit-families"
  *     shopUrl="https://bimcore.one"
  *     ecwidProductId="695706588"
- *     ecwidToken="public_xxx"
  *   />
  *
  * @param {string} name        Название товара — заголовок и schema.org name. Обязательный.
@@ -40,14 +41,9 @@ import styles from '../css/productCard.module.css';
  * @param {string} [sku]       Артикул (для schema.org), опционально.
  * @param {string} [brand]     Бренд для schema.org, по умолчанию 'BIMCORE'
  *                             (задел под два бренда по доменам — задача #52).
- * @param {string} [ecwidProductId] ID товара в Ecwid — включает авто-подгрузку цены.
- * @param {string} [ecwidStoreId]   ID магазина Ecwid, по умолчанию '86326685'.
- * @param {string} [ecwidToken]     Переопределить публичный токен Ecwid (обычно не нужно —
- *                                  берётся из customFields.ecwidPublicToken в конфиге).
+ * @param {string} [ecwidProductId] ID товара в Ecwid — по нему берётся цена из globalData.
  * @param {string} [currency]       Код валюты для schema.org, по умолчанию 'GBP'.
  */
-const DEFAULT_STORE_ID = '86326685';
-
 export default function ProductCard({
   name,
   eyebrow = '',
@@ -61,44 +57,15 @@ export default function ProductCard({
   sku = '',
   brand = 'BIMCORE',
   ecwidProductId = '',
-  ecwidStoreId = DEFAULT_STORE_ID,
-  ecwidToken = '',
   currency = 'GBP',
 }) {
-  // Токен берём из конфига (customFields.ecwidPublicToken); проп — на случай переопределения.
-  const {siteConfig} = useDocusaurusContext();
-  const token = ecwidToken || siteConfig?.customFields?.ecwidPublicToken || '';
-
-  // Цена, подтянутая из Ecwid: text — для показа (с символом валюты),
-  // value — число для schema.org.
-  const [priceText, setPriceText] = useState('');
-  const [priceValue, setPriceValue] = useState('');
-
-  useEffect(() => {
-    if (!ecwidProductId || !ecwidStoreId || !token) return undefined;
-
-    let cancelled = false;
-    const url =
-      `https://app.ecwid.com/api/v3/${ecwidStoreId}/products/${ecwidProductId}` +
-      `?token=${token}&responseFields=price,defaultDisplayedPriceFormatted`;
-
-    fetch(url)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (cancelled || !data) return;
-        if (data.defaultDisplayedPriceFormatted) {
-          setPriceText(data.defaultDisplayedPriceFormatted);
-        }
-        if (data.price != null) setPriceValue(String(data.price));
-      })
-      .catch(() => {
-        /* цена необязательна — молча игнорируем сбой запроса */
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [ecwidProductId, ecwidStoreId, token]);
+  // Цена из данных сборки (плагин ecwid-prices). Читается синхронно и при
+  // SSG, поэтому микроразметка price/... попадает в статический HTML.
+  const data = usePluginData('ecwid-prices');
+  const priceInfo =
+    (ecwidProductId && data?.prices?.[String(ecwidProductId)]) || null;
+  const priceValue = priceInfo?.value || '';
+  const priceText = priceInfo?.formatted || '';
 
   if (!name || !image) return null;
 

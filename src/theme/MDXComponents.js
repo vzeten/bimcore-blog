@@ -27,7 +27,8 @@ export default {
   // В Sveltia CMS — кнопка «YouTube видео» в редакторе.
   YouTube,
   // ProductCard — лёгкая карточка товара с витриной и ссылками (см. src/components/ProductCard.jsx).
-  // Используется в .mdx как: <ProductCard name="..." image="..." buyUrl="..." price="121" currency="GBP" />.
+  // Используется в .mdx как: <ProductCard name="..." image="..." buyUrl="..." ecwidProductId="660642703" />.
+  // Цена берётся из Ecwid при сборке (плагин ecwid-prices) по ecwidProductId.
   ProductCard,
   // <truncate /> — маркер обрыва превью для blog plugin (truncateMarker в docusaurus.config.js).
   // Сам компонент ничего не рендерит — он только marker для Docusaurus.

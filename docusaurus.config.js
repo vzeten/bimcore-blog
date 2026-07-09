@@ -145,6 +145,11 @@ const config = {
     ],
   ],
   plugins: [
+    // Тянет цены товаров из Ecwid при СБОРКЕ и кладёт в globalData, чтобы
+    // ProductCard впечатал schema.org price/priceCurrency/availability в
+    // статический HTML (иначе микроразметка появлялась только после fetch
+    // в браузере — Google её не видел, GSC ругался «Укажите price»).
+    './plugins/ecwid-prices',
     [
       '@docusaurus/plugin-google-gtag',
       {
