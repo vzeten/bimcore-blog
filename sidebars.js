@@ -6,7 +6,10 @@ const sidebars = {
       type: 'category',
       label: 'Revit Lessons',
       link: {type: 'doc', id: 'lessons/index'},
-      items: ['lessons/walls-different-materials/index'],
+      items: [
+        'lessons/walls-different-materials/index',
+        'lessons/railing-cornice-ceiling-plan/index',
+      ],
     },
     {
       type: 'category',
