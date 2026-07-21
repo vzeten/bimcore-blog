@@ -1,0 +1,49 @@
+---
+title: "Cómo Mostrar en un Plano de Techo una Cornisa Creada con Barandilla en Revit"
+slug: /lessons/railing-cornice-ceiling-plan
+sidebar_label: "¿Cómo mostrar una cornisa en el plano de techo?"
+sidebar_position: 2
+description: "Cómo mostrar en un plano de techo una cornisa creada con barandilla en Revit: rango de vista con el plano superior por debajo de la cornisa o subyacente."
+image: ./cover.png
+---
+
+<YouTube id="O7wQlsdSp30" title="Cómo mostrar en un plano de techo una cornisa creada con barandilla en Revit" uploadDate="2026-07-21" />
+
+Una cornisa modelada con la herramienta Barandilla es cómoda de crear, pero por defecto no se muestra en el plano de techo. El motivo es que el plano de techo reflejado mira hacia arriba y su Rango de vista está configurado de forma distinta al de un plano de planta, así que la cornisa queda fuera de la zona visible de la vista. En esta lección veremos dos formas de mostrar esa cornisa en el plano de techo. La cornisa del ejemplo mide 2500 mm de alto.
+
+## Método 1. Mediante el Rango de vista
+
+Es el método principal. La cornisa se muestra completa, con su relleno.
+
+1. Abre el plano de techo donde quieres que aparezca la cornisa. En el ejemplo este plano se llama "Cornisas".
+2. Abre las propiedades de la vista y entra en **Rango de vista**.
+3. Configura el rango de modo que el **plano superior del Rango de vista quede por debajo de la cornisa**.
+4. Haz clic en **Aceptar**.
+
+:::note[Nota]
+Esto es poco intuitivo, porque el instinto es subir el plano superior por encima de la cornisa, cuando en realidad hay que bajarlo por debajo. Pero es justo eso lo que hace que el plano de techo muestre la cornisa. Recuérdalo, aquí la lógica habitual no aplica.
+:::
+
+## Método 2. Mediante el Subyacente
+
+Un método alternativo. Úsalo cuando el primero no encaje por algún motivo.
+
+1. En las propiedades de la vista, busca el parámetro **Subyacente**.
+2. Pon **Rango: nivel base** en **Nivel 1** y **Rango: nivel superior** en **Sin límite**.
+3. Pon **Orientación de subyacente** en **Mirar hacia arriba**.
+
+La cornisa aparecerá en el plano, pero la representación será incompleta: las líneas se ven en medios tonos y sin el relleno que da el primer método. Aun así, en algunos casos es suficiente.
+
+## Qué método elegir
+
+- Si necesitas una representación limpia y completa de la cornisa en el plano de techo, usa el primer método con el Rango de vista.
+- Si el primer método no encaja con tu caso o con la configuración de la vista, usa el Subyacente, teniendo en cuenta la representación incompleta.
+
+## En resumen
+
+1. Método 1. Baja el **plano superior del Rango de vista por debajo de la cornisa** y haz clic en Aceptar.
+2. Método 2. Activa el **Subyacente** con nivel base "Nivel 1", nivel superior "Sin límite" y orientación "Mirar hacia arriba".
+
+Listo, la cornisa creada con barandilla ya se muestra en el plano de techo.
+
+<CTA type="lesson" />

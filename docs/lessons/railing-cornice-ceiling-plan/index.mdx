@@ -1,0 +1,49 @@
+---
+title: "How to Show a Railing-Based Cornice on a Ceiling Plan in Revit"
+slug: /lessons/railing-cornice-ceiling-plan
+sidebar_label: "How to Show a Cornice on a Ceiling Plan?"
+sidebar_position: 2
+description: "A cornice made with the Railing tool won't show on a reflected ceiling plan in Revit. Two fixes: lower the View Range top below the cornice, or use the Underlay."
+image: ./cover.png
+---
+
+<YouTube id="O7wQlsdSp30" title="How to Show a Railing-Based Cornice on a Ceiling Plan in Revit" uploadDate="2026-07-21" />
+
+A cornice modeled with the Railing tool is easy to create, but by default it doesn't show up on a ceiling plan. The reason is that a reflected ceiling plan looks upward and its View Range is set up differently from a floor plan, so the cornice ends up outside the view's visible zone. In this lesson we'll cover two ways to display such a cornice on a ceiling plan. The cornice in the example is 2500 mm high.
+
+## Method 1. Through the View Range
+
+This is the main method. The cornice shows in full, with its fill.
+
+1. Open the ceiling plan where you want the cornice to appear. In the example this plan is named "Cornices".
+2. Open the view properties and go to **View Range**.
+3. Set the range so that the **Top of the View Range is below the cornice**.
+4. Click **OK**.
+
+:::note
+This is counterintuitive, because your instinct is to raise the Top above the cornice, when in fact you need to lower it below. But that is exactly what makes the ceiling plan display the cornice. Keep this in mind — the usual logic doesn't apply here.
+:::
+
+## Method 2. Through the Underlay
+
+A fallback method. Use it when the first one doesn't fit for some reason.
+
+1. In the view properties, find the **Underlay** parameter.
+2. Set **Range: Base Level** to **Level 1** and **Range: Top Level** to **Unbounded**.
+3. Set **Underlay Orientation** to **Look Up**.
+
+The cornice will appear on the plan, but the display will be incomplete: the lines show in halftone and without the fill you get with the first method. Still, in some situations this is enough.
+
+## Which method to choose
+
+- If you need a clean, full display of the cornice on the ceiling plan, use the first method through the View Range.
+- If the first method doesn't fit your specific case or view settings, use the Underlay, keeping in mind the incomplete display.
+
+## In short
+
+1. Method 1. Lower the **Top of the View Range below the cornice** and click OK.
+2. Method 2. Turn on the **Underlay** with Base Level "Level 1", Top Level "Unbounded", and Orientation "Look Up".
+
+Done — the railing-based cornice now shows on the ceiling plan.
+
+<CTA type="lesson" />
