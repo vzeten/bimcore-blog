@@ -1,5 +1,7 @@
 import React, {useState} from 'react';
 import Head from '@docusaurus/Head';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import {useLocation} from '@docusaurus/router';
 import styles from '../css/youtube.module.css';
 
 /**
@@ -22,11 +24,27 @@ import styles from '../css/youtube.module.css';
  * @param {string} title   Подпись для accessibility и schema.org. По умолчанию 'YouTube video'.
  * @param {string} [uploadDate]  Дата публикации (YYYY-MM-DD) — включает VideoObject schema.
  * @param {string} [description] Описание для VideoObject schema.
+ * @param {number|string} [duration] Длительность в секундах (напр. 62) — Google рекомендует.
  */
-export default function YouTube({id, title = 'YouTube video', uploadDate, description}) {
+export default function YouTube({id, title = 'YouTube video', uploadDate, description, duration}) {
   const [loaded, setLoaded] = useState(false);
+  const {siteConfig} = useDocusaurusContext();
+  const {pathname} = useLocation();
 
   if (!id) return null;
+
+  // Канонический адрес страницы — для mainEntityOfPage (сигнал Google:
+  // «это видео — главная сущность страницы», а текст — сопровождение).
+  const pageUrl = `${siteConfig.url}${pathname}`;
+
+  // Секунды → ISO 8601 (62 → PT1M2S). Уже готовый "PT..." пропускаем как есть.
+  const isoDuration = (() => {
+    if (!duration) return undefined;
+    if (typeof duration === 'string' && duration.startsWith('PT')) return duration;
+    const s = Number(duration);
+    if (!Number.isFinite(s) || s <= 0) return undefined;
+    return `PT${Math.floor(s / 60) > 0 ? `${Math.floor(s / 60)}M` : ''}${s % 60}S`;
+  })();
 
   // maxresdefault — резкое HD-превью 1280×720 (нативный 16:9, не мылит).
   // Если у видео нет HD-кадра — onError откатывается на hqdefault (есть всегда).
@@ -52,6 +70,8 @@ export default function YouTube({id, title = 'YouTube video', uploadDate, descri
                 : uploadDate,
               embedUrl: `https://www.youtube.com/embed/${id}`,
               contentUrl: `https://www.youtube.com/watch?v=${id}`,
+              ...(isoDuration && {duration: isoDuration}),
+              mainEntityOfPage: {'@type': 'WebPage', '@id': pageUrl},
             })}
           </script>
         </Head>

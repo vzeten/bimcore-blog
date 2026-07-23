@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Карта видео (video sitemap): заявляет уроки как страницы просмотра их роликов.
+     Обновлять при публикации нового урока с видео (см. playbook-publish в базе знаний).
+     Объявлена в static/robots.txt строкой Sitemap. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+  <url>
+    <loc>https://learn.bimcore.one/lessons/railing-cornice-ceiling-plan/</loc>
+    <video:video>
+      <video:thumbnail_loc>https://i.ytimg.com/vi/O7wQlsdSp30/maxresdefault.jpg</video:thumbnail_loc>
+      <video:title>How to Show a Railing-Based Cornice on a Ceiling Plan in Revit</video:title>
+      <video:description>A cornice made with the Railing tool won't show on a reflected ceiling plan in Revit. Two fixes: lower the View Range top below the cornice, or use the Underlay.</video:description>
+      <video:player_loc>https://www.youtube.com/embed/O7wQlsdSp30</video:player_loc>
+      <video:duration>62</video:duration>
+      <video:publication_date>2026-07-21T00:00:00+00:00</video:publication_date>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://learn.bimcore.one/ru/lessons/railing-cornice-ceiling-plan/</loc>
+    <video:video>
+      <video:thumbnail_loc>https://i.ytimg.com/vi/88smGdlZILw/maxresdefault.jpg</video:thumbnail_loc>
+      <video:title>Как отобразить на плане потолка карниз, созданный ограждением, в Revit</video:title>
+      <video:description>Как показать на плане потолка карниз, созданный ограждением, в Revit: секущий диапазон с верхом ниже карниза или подложка с ориентацией «Посмотреть вверх».</video:description>
+      <video:player_loc>https://www.youtube.com/embed/88smGdlZILw</video:player_loc>
+      <video:duration>53</video:duration>
+      <video:publication_date>2026-06-10T00:00:00+00:00</video:publication_date>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://learn.bimcore.one/es/lessons/railing-cornice-ceiling-plan/</loc>
+    <video:video>
+      <video:thumbnail_loc>https://i.ytimg.com/vi/O7wQlsdSp30/maxresdefault.jpg</video:thumbnail_loc>
+      <video:title>Cómo mostrar en un plano de techo una cornisa creada con barandilla en Revit</video:title>
+      <video:description>Cómo mostrar en un plano de techo una cornisa creada con barandilla en Revit: rango de vista con el plano superior por debajo de la cornisa o subyacente.</video:description>
+      <video:player_loc>https://www.youtube.com/embed/O7wQlsdSp30</video:player_loc>
+      <video:duration>62</video:duration>
+      <video:publication_date>2026-07-21T00:00:00+00:00</video:publication_date>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://learn.bimcore.one/lessons/walls-different-materials/</loc>
+    <video:video>
+      <video:thumbnail_loc>https://i.ytimg.com/vi/vhiVY0EkPu4/maxresdefault.jpg</video:thumbnail_loc>
+      <video:title>How to Remove the Joint Line Between Walls of Different Materials on a Plan in Revit</video:title>
+      <video:description>Make walls of different materials read as one solid wall on a Revit plan: join them, set a coarse-scale solid fill, and apply Coarse detail to walls only.</video:description>
+      <video:player_loc>https://www.youtube.com/embed/vhiVY0EkPu4</video:player_loc>
+      <video:duration>126</video:duration>
+      <video:publication_date>2026-06-19T00:00:00+00:00</video:publication_date>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://learn.bimcore.one/ru/lessons/walls-different-materials/</loc>
+    <video:video>
+      <video:thumbnail_loc>https://i.ytimg.com/vi/VMXZM3STlck/maxresdefault.jpg</video:thumbnail_loc>
+      <video:title>Как убрать линию между стенами из разных материалов на плане в Revit</video:title>
+      <video:description>Как убрать линию стыка между стенами из разных материалов на плане в Revit: соединение стен, сплошная заливка при низкой детализации и низкий уровень только для стен.</video:description>
+      <video:player_loc>https://www.youtube.com/embed/VMXZM3STlck</video:player_loc>
+      <video:duration>103</video:duration>
+      <video:publication_date>2026-06-08T00:00:00+00:00</video:publication_date>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://learn.bimcore.one/es/lessons/walls-different-materials/</loc>
+    <video:video>
+      <video:thumbnail_loc>https://i.ytimg.com/vi/vhiVY0EkPu4/maxresdefault.jpg</video:thumbnail_loc>
+      <video:title>Cómo quitar la línea de unión entre muros de distintos materiales en planta en Revit</video:title>
+      <video:description>Cómo quitar la línea de unión entre muros de distintos materiales en planta en Revit: unir, relleno sólido a escala gruesa y nivel de detalle Bajo solo para muros.</video:description>
+      <video:player_loc>https://www.youtube.com/embed/vhiVY0EkPu4</video:player_loc>
+      <video:duration>126</video:duration>
+      <video:publication_date>2026-06-19T00:00:00+00:00</video:publication_date>
+    </video:video>
+  </url>
+</urlset>
