@@ -21,10 +21,6 @@ una sola. Aquí van ocho soluciones, empezando por las que más funcionan.
 
 <truncate />
 
-Este artículo trata sobre el programa yendo lento. Si Revit responde bien y lo
-que quieres es dedicar menos horas a los mismos planos, ese es otro tema y está
-en [diez formas de trabajar más rápido en Revit](/blog/work-faster-in-revit).
-
 ## Comparación rápida
 
 | Solución | Cuánto lleva | Qué cambia |
@@ -71,6 +67,9 @@ son lentas, déjalas para la hora de comer.
 hora de espera cuando la geometría vinculada está sucia. La frecuencia de sincronización empieza
 a molestar a partir de ocho personas en el mismo modelo. Y una VPN que recorta la
 velocidad triplica los tiempos de sincronización en proyectos en la nube.
+
+Si hoy solo tienes tiempo para una cosa, abre **Patrones de línea** y busca
+nombres que empiecen por IMPORT. Ahí suele estar la causa.
 
 ## 1. Vincula los planos CAD y no los descompongas nunca
 
@@ -145,7 +144,8 @@ un modelo entero, y un sillón de 40 MB ralentiza el proyecto más rápido de lo
 que adorna un render.
 
 Mira el tamaño del archivo antes de cargarlo y abre las descargas dudosas en un
-proyecto vacío. Un sofá que el cliente siempre verá como un rectángulo en planta
+proyecto vacío. Para las familias que ya están dentro de un proyecto, usa el
+truco de la carpeta que aparece en el diagnóstico de arriba. Un sofá que el cliente siempre verá como un rectángulo en planta
 no necesita costuras en los cojines.
 
 ## 5. Mantén la geometría de SketchUp y 3D Warehouse fuera del modelo de trabajo
@@ -198,9 +198,13 @@ sobre el motor de dibujo Hydra y el formato de escena OpenUSD llegaron
 [como avance técnico en Revit 2026](https://www.autodesk.com/blogs/aec/2025/04/09/accelerated-graphics-tech-preview-revit-2026/)
 y pasaron a ser aptos para producción en modelado y navegación en Revit 2027. Autodesk mostró un
 recorrido de 300 fotogramas que bajó de 3 minutos y 18 segundos a 38 segundos.
-Dos advertencias antes de rehacer el presupuesto. La documentación y los efectos
-visuales aún no están cubiertos del todo, y un modelo que no cabe en la memoria
-de la gráfica vuelve al motor anterior.
+Dos advertencias antes de rehacer el presupuesto. Las herramientas de
+documentación y parte de los efectos visuales aún no están cubiertas del todo, y
+un modelo que no cabe en la memoria de la gráfica vuelve al motor anterior.
+
+Un apunte para versiones antiguas. En Revit 2020 o 2022 lo único de esta lista
+que no puedes usar son los gráficos acelerados. Las otras siete soluciones
+funcionan en cualquier versión.
 
 ## Lo que está sobrevalorado
 
@@ -283,5 +287,9 @@ creamos [conjuntos de familias de interiorismo](/blog/best-revit-families-interi
 y documentamos cada uno. Si todavía estás reuniendo archivos, nuestra lista de
 [30 webs con familias de Revit gratuitas](/blog/free-revit-family-websites) es un
 buen punto de partida.
+
+Cuando el programa deje de hacerte esperar, queda la otra mitad de la velocidad,
+la que depende de ti. Esa mitad tiene su propio artículo:
+[diez formas de trabajar más rápido en Revit](/blog/work-faster-in-revit).
 
 <CTA type="blog" />

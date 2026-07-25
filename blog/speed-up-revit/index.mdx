@@ -21,11 +21,6 @@ ones that work best.
 
 <truncate />
 
-This article is about the program running slowly. If Revit itself behaves fine
-and you want to spend fewer hours on the same drawings, that is a different
-subject, and it lives in
-[ten ways to work faster in Revit](/blog/work-faster-in-revit).
-
 ## Quick comparison
 
 | Fix | How long it takes | What changes |
@@ -69,6 +64,9 @@ has grown from months of edits. Both are slow, so run them at lunch.
 turn a sync into a half hour wait when the linked geometry is messy. Sync
 frequency matters once eight or more people work in one model. A VPN that
 throttles your connection triples sync times on cloud-hosted projects.
+
+If you only have time for one thing today, open **Line Patterns** and look for
+names starting with IMPORT. That is where the cause usually sits.
 
 ## 1. Link CAD drawings, never import and never explode them
 
@@ -142,7 +140,8 @@ family can dominate the opening time of a whole model, and a 40 MB armchair
 slows a project faster than it decorates a render.
 
 Check the file size in Explorer before you load anything, and open questionable
-downloads in a blank project first. A sofa that a client will only ever see as a
+downloads in a blank project first. For families already sitting in a project,
+use the folder trick from the diagnosis section above. A sofa that a client will only ever see as a
 rectangle in plan does not need cushion seams.
 
 ## 5. Keep SketchUp and 3D Warehouse geometry out of the working model
@@ -197,6 +196,9 @@ demonstrated a 300 frame walkthrough dropping from 3 minutes 18 seconds to 38
 seconds. Two caveats are worth knowing before you rebuild your budget:
 documentation tools and some visual effects are not fully covered yet, and if a
 model exceeds your GPU memory, Revit falls back to the older pipeline.
+
+A note for older releases. On Revit 2020 or 2022 the only item on this list you
+cannot use is Accelerated Graphics. The other seven fixes work on any version.
 
 ## What is overrated
 
@@ -276,5 +278,9 @@ consistent parameters removes the problem at the source, which is why we build
 document each one. If you are still collecting files, our list of
 [30 sites with free Revit families](/blog/free-revit-family-websites) is a
 reasonable place to start.
+
+Once the program stops making you wait, the other half of speed is up to you.
+That half has its own article:
+[ten ways to work faster in Revit](/blog/work-faster-in-revit).
 
 <CTA type="blog" />
