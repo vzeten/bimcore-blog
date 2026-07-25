@@ -1,7 +1,7 @@
 ---
-title: 12 formas de acelerar Revit que funcionan de verdad en 2026
+title: 8 formas de acelerar Revit cuando el modelo va lento
 slug: speed-up-revit
-description: "Doce soluciones para un modelo de Revit lento en 2026: vínculos CAD, familias pesadas, ajustes de vista y hardware, más los consejos sobrevalorados."
+description: "Ocho soluciones para un modelo de Revit lento en 2026: CAD importado oculto, familias pesadas, ajustes de vista, vínculos y hardware."
 image: /img/social-card.jpg
 date: 2026-07-25
 authors: [ivan]
@@ -9,17 +9,21 @@ tags: [revit, tips]
 keywords:
   - acelerar revit
   - revit lento
+  - revit va lento
   - rendimiento revit
-  - consejos revit
 ---
 
 Para acelerar Revit: inserta los DWG como vínculos en lugar de importarlos,
 cierra las vistas inactivas, mantén las plantas en nivel de detalle Bajo y sin
-sombras, evita las familias de más de 2 MB y configura plantillas de vista. Un
-archivo lento casi siempre viene de una combinación de causas y no de una sola.
-Aquí van doce soluciones, empezando por las que más funcionan.
+sombras, evita las familias de más de 2 MB y descarga los vínculos que ahora no
+usas. Un archivo lento casi siempre viene de una combinación de causas y no de
+una sola. Aquí van ocho soluciones, empezando por las que más funcionan.
 
 <truncate />
+
+Este artículo trata sobre el programa yendo lento. Si Revit responde bien y lo
+que quieres es dedicar menos horas a los mismos planos, ese es otro tema y está
+en [diez formas de trabajar más rápido en Revit](/blog/work-faster-in-revit).
 
 ## Comparación rápida
 
@@ -31,10 +35,6 @@ Aquí van doce soluciones, empezando por las que más funcionan.
 | Comprobar el peso de la familia | 30 segundos por familia | Una silla deja de costarte diez segundos en cada apertura |
 | Dejar fuera las mallas de SketchUp | Según el caso | Evita geometría para la que Revit no está pensado |
 | Familias cargables en lugar de in situ | Una vez por elemento | Cincuenta copias dejan de ser cincuenta geometrías |
-| Plantillas de vista | 1 hora una sola vez | Veinte ajustes gráficos con un clic |
-| Plantilla de proyecto propia | 2 o 3 horas una sola vez | Cada proyecto nuevo arranca configurado |
-| Atajos de teclado propios | 20 minutos una sola vez | Miles de viajes a la cinta desaparecen |
-| pyRevit | 10 minutos de instalación | Operaciones por lotes que Revit no trae |
 | Descargar vínculos y subproyectos | 10 segundos al abrir | Aperturas más cortas en proyectos de equipo |
 | Hardware y versión | Según presupuesto | Navegación más fluida con gráficos acelerados |
 
@@ -172,66 +172,21 @@ Reserva el modelo in situ para formas realmente únicas, como una bóveda
 existente en una rehabilitación. Todo lo que se repite, incluido tu propio
 mobiliario, pertenece a un archivo de familia.
 
-## 7. Configura las plantillas de vista una vez
-
-Una plantilla de vista guarda nivel de detalle, escala, visibilidad, filtros y
-reemplazos gráficos, y los aplica a tantas vistas como quieras. En lugar de
-ajustar veinte parámetros vista por vista, aplicas la plantilla y sigues.
-Modificarla más tarde actualiza todas las vistas que la usan.
-
-Un proyecto de interiorismo se cubre con un conjunto pequeño. Planta de
-mobiliario, planta de acabados, plano de techos, alzados interiores y una vista
-3D de trabajo. Este punto no cambia nada en la velocidad del modelo y es el que
-más horas ahorra a lo largo del proyecto.
-
-## 8. Crea tu propia plantilla de proyecto
-
-La plantilla por defecto te da un archivo en blanco. La tuya te da los
-materiales de siempre, los estilos de anotación, las plantillas de vista del
-punto anterior, la maquetación de planos y las familias que colocas en todos los
-proyectos.
-
-Dos o tres horas invertidas una sola vez eliminan ese trabajo de todos los
-proyectos futuros. Guarda la plantilla en una carpeta conocida, versiónala por
-fecha y actualízala en cuanto te descubras repitiendo un ajuste.
-
-## 9. Crea tus propios atajos de teclado
-
-Escribe **KS** o abre **Vista**, **Interfaz de usuario**, **Métodos abreviados de
-teclado**. Asigna combinaciones de dos letras a los comandos que usas decenas de
-veces al día y colócalas cerca de la mano izquierda para que la derecha siga en
-el ratón.
-
-El paso que casi todo el mundo se salta. Exporta los atajos a XML antes de
-actualizar de versión. El archivo está en `%APPDATA%\Autodesk\Revit\<versión>` y
-se importa en el siguiente Revit, así que una distribución aprendida una vez te
-acompaña durante años.
-
-## 10. Instala pyRevit
-
-pyRevit es gratuito y de código abierto, y añade las operaciones por lotes que
-Revit no trae. Exportar grandes conjuntos de planos, renombrar vistas por regla,
-limpiar líneas CAD importadas, gestionar notas clave. Quienes lo usan lo echan
-de menos el día que se sientan en un equipo sin él.
-
-Instálalo, dedica veinte minutos a recorrer sus fichas y quédate con dos o tres
-herramientas. No hace falta programar.
-
-## 11. Descarga vínculos y abre solo los subproyectos necesarios
+## 7. Descarga vínculos y abre solo los subproyectos necesarios
 
 Este punto aplica cuando el modelo se comparte entre varias personas. Un
 subproyecto agrupa elementos de un modelo compartido bajo un nombre, y puedes
 dejar grupos enteros cerrados mientras trabajas. En el diálogo de apertura pon
 **Especificar** en la opción de subproyectos que abrir y carga solo los que
-necesitas para la tarea. Un subproyecto cerrado no entra en memoria ni se regenera, lo que
-rinde más que ocultar esos mismos elementos en la vista, porque lo oculto sigue
-evaluándose.
+necesitas para la tarea. Un subproyecto cerrado no entra en memoria ni se
+regenera, lo que rinde más que ocultar esos mismos elementos en la vista, porque
+lo oculto sigue evaluándose.
 
 Para los vínculos, **Gestionar vínculos** permite descargar solo para tu sesión.
 Tu Revit se aligera y tus compañeros no notan nada. Si cada vínculo vive en su
 propio subproyecto, la operación lleva dos segundos.
 
-## 12. Dale a Revit el hardware y la versión adecuados
+## 8. Dale a Revit el hardware y la versión adecuados
 
 El hardware no salvará un modelo lleno de CAD descompuesto, y a un modelo limpio
 sí le ayuda. Quienes montan estos equipos manejan tres referencias. Memoria RAM
@@ -312,11 +267,12 @@ dependen de la memoria de la tarjeta, así que un modelo mayor que esa memoria
 vuelve al motor anterior. Arreglar importaciones y peso de familias no cuesta
 nada y suele rendir más.
 
-### ¿Merece la pena configurar atajos de teclado?
+### ¿Dibujaré más rápido después de estos arreglos?
 
-Sí, y el motivo es la repetición. Diez comandos diarios con dos segundos
-ahorrados cada uno suman bastante a lo largo de un proyecto, y exportar el XML
-lleva tu distribución a cada versión siguiente.
+No. Lo que quitan es la espera que impone el programa. La velocidad de tu trabajo
+depende de cómo lo organizas: plantillas, tablas de planificación, filtros y
+atajos. Eso está en
+[diez formas de trabajar más rápido en Revit](/blog/work-faster-in-revit).
 
 ### ¿Qué frena en concreto a los proyectos de interiorismo?
 

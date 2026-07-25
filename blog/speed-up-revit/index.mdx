@@ -1,7 +1,7 @@
 ---
-title: 12 Ways to Speed Up Revit That Actually Work in 2026
+title: 8 Ways to Speed Up a Slow Revit Model in 2026
 slug: speed-up-revit
-description: "Twelve fixes for a slow Revit model in 2026, from CAD links and heavy families to view settings and hardware, plus the advice that is overrated."
+description: "Eight fixes for a Revit model that lags: hidden CAD imports, heavy families, view settings, links and hardware, plus the advice that is overrated."
 image: /img/social-card.jpg
 date: 2026-07-25
 authors: [ivan]
@@ -9,16 +9,22 @@ tags: [revit, tips]
 keywords:
   - speed up revit
   - revit slow
+  - revit running slow
   - revit performance tips
-  - revit tips
 ---
 
 To speed up Revit: insert DWG files as links instead of imports, close inactive
 views, keep plans at Coarse detail with shadows off, avoid families over 2 MB, and
-use view templates. A slow file almost always comes from a combination of causes
-rather than one. Here are twelve fixes, starting with the ones that work best.
+unload the links you are not using. A slow file almost always comes from a
+combination of causes rather than one. Here are eight fixes, starting with the
+ones that work best.
 
 <truncate />
+
+This article is about the program running slowly. If Revit itself behaves fine
+and you want to spend fewer hours on the same drawings, that is a different
+subject, and it lives in
+[ten ways to work faster in Revit](/blog/work-faster-in-revit).
 
 ## Quick comparison
 
@@ -30,10 +36,6 @@ rather than one. Here are twelve fixes, starting with the ones that work best.
 | Check family weight before loading | 30 seconds per family | Prevents one oversized chair family from slowing every file open |
 | Keep SketchUp meshes out of the model | Varies | Avoids geometry Revit was never built to handle |
 | Loadable families instead of Model In-Place | Once per repeated element | Fifty copies stop being fifty unique geometries |
-| View templates | 1 hour once | Twenty graphic settings applied with one click |
-| Your own project template | 2 to 3 hours once | Every new project starts furnished and configured |
-| Custom keyboard shortcuts | 20 minutes once | Removes thousands of ribbon trips per project |
-| pyRevit | 10 minutes to install | Batch operations that Revit has no command for |
 | Unload links, open fewer worksets | 10 seconds at open | Shorter opening times on team projects |
 | Hardware and version | Budget dependent | Faster navigation, especially with Accelerated Graphics |
 
@@ -130,9 +132,9 @@ Shading while you work in a busy view.
 
 ## 4. Weigh a family before it enters the project
 
-Manufacturer families are modeled for the manufacturer, not for your deadline.
-They carry every screw, dozens of parameters you will never schedule, and
-occasionally a nested CAD import.
+Manufacturer families are modeled for the manufacturer's catalog. Nobody there
+had your deadline in mind. They carry every screw, dozens of parameters you will
+never schedule, and occasionally a nested CAD import.
 
 The working rule among BIM managers is blunt. A furniture family above 1 to 2 MB
 needs a reason, and above 2 to 3 MB it needs a very good one. A single bloated
@@ -166,51 +168,7 @@ Keep Model In-Place for genuinely one-off shapes, such as an existing vault in a
 renovation. Anything repeated, including your own furniture pieces, belongs in a
 family file.
 
-## 7. Set up view templates once
-
-A view template stores detail level, scale, visibility, filters and graphic
-overrides, then applies them to any number of views at once. Instead of adjusting
-twenty settings per view by hand, you apply one template and move on. Change the
-template later and every view using it follows.
-
-For an interior project a small set covers almost everything: furniture plan,
-finishes plan, reflected ceiling plan (RCP), interior elevations and a working 3D
-view. This is the fix that saves
-the most hours over the life of a project even though it changes nothing about
-model speed.
-
-## 8. Build your own project template
-
-A default template gives you a blank file. Your own template gives you the
-materials you always use, the annotation styles, the view templates from the
-point above, the sheet layout, and the families you place in every project.
-
-Two or three hours spent once removes the same setup work from every future
-project. Keep the template in a known folder, version it by date, and update it
-whenever you notice yourself repeating a setup step.
-
-## 9. Make your own keyboard shortcuts
-
-Type **KS** to open the shortcut editor, or go to **View**, **User Interface**,
-**Keyboard Shortcuts**. Assign two-letter combinations to the commands you use
-dozens of times a day, and keep them near your left hand so the right stays on
-the mouse.
-
-The step most people skip: export the shortcuts to XML before you upgrade. The
-file lives in `%APPDATA%\Autodesk\Revit\<release>` and imports into the next
-version, so a layout you learned once stays with you for years.
-
-## 10. Install pyRevit
-
-pyRevit is free and open source, and it adds the batch operations Revit lacks:
-exporting large sheet sets, renaming views by rule, wiping imported CAD linework,
-managing keynotes. Teams that use it describe it as the tool they notice only
-when they move to a machine without it.
-
-Install it, spend twenty minutes on the tabs, and adopt two or three tools.
-Nothing about it requires programming.
-
-## 11. Unload links and open only the worksets you need
+## 7. Unload links and open only the worksets you need
 
 This one applies when you share a model with other people. A workset is a named
 group of elements in a shared model, and you can leave whole groups closed while
@@ -223,23 +181,22 @@ For links, **Manage Links** offers **Unload for me**, which unloads a link for
 your session only and leaves colleagues unaffected. Putting each link on its own
 workset makes this a two second operation.
 
-## 12. Give Revit the hardware and the version it needs
+## 8. Give Revit the hardware and the version it needs
 
 Hardware will not rescue a model full of exploded CAD, and a clean model still
-benefits from sensible specs. The rules of thumb that circulate among people who
-buy these machines: RAM roughly twenty times your RVT file size, an NVMe SSD for
-project files and local caches, and a CPU with high clock speed rather than a
-large core count.
+benefits from sensible specs. People who buy these machines work with three rules
+of thumb. RAM roughly twenty times your RVT file size, an NVMe SSD for project
+files and local caches, and a CPU with high clock speed rather than a large core
+count.
 
 The GPU question changed recently. Accelerated Graphics, built on the Hydra
 rendering framework and the OpenUSD scene format, arrived as a
 [tech preview in Revit 2026](https://www.autodesk.com/blogs/aec/2025/04/09/accelerated-graphics-tech-preview-revit-2026/)
 and became production ready for modeling and navigation in Revit 2027. Autodesk
 demonstrated a 300 frame walkthrough dropping from 3 minutes 18 seconds to 38
-seconds. Two caveats are
-worth knowing before you rebuild your budget: documentation and visual effects
-are not fully covered yet, and if a model exceeds your GPU memory, Revit falls
-back to the older pipeline.
+seconds. Two caveats are worth knowing before you rebuild your budget:
+documentation tools and some visual effects are not fully covered yet, and if a
+model exceeds your GPU memory, Revit falls back to the older pipeline.
 
 ## What is overrated
 
@@ -255,8 +212,8 @@ groups.
 **Chasing every warning.** Warning counts are a symptom more than a cause. The
 ones that genuinely cost you are duplicates and overlapping elements, because
 Revit rechecks them on every regeneration. A model past roughly 900 to 1,000
-warnings signals something structurally wrong, and a model with 40 tidy warnings
-does not need a cleanup afternoon.
+warnings points to something structurally wrong, and a model with 40 harmless
+warnings needs no cleanup session.
 
 **Groups versus links debates.** Practitioners land on both sides, and the honest
 summary is that small repeated layouts with shared annotation suit groups, while
@@ -304,11 +261,11 @@ for modeling and navigation and it relies on GPU memory, so a model larger than
 your VRAM falls back to the previous pipeline. Fixing imports and family weight
 costs nothing and often helps more.
 
-### Are keyboard shortcuts worth setting up?
+### Will these fixes make me draw faster?
 
-Yes, and the reason is repetition rather than raw speed. Ten daily commands at
-two seconds saved each add up quietly across a project, and exporting the XML
-carries the layout into every future version.
+No. They stop Revit from making you wait. Drawing time depends on how you work:
+templates, schedules, filters and shortcuts. Those are covered in
+[ten ways to work faster in Revit](/blog/work-faster-in-revit).
 
 ### What slows down interior design projects specifically?
 

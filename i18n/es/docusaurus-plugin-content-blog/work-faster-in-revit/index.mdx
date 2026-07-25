@@ -1,0 +1,218 @@
+---
+title: 10 formas de trabajar más rápido en Revit
+slug: work-faster-in-revit
+description: "Diez formas de dedicar menos horas a los mismos planos de Revit: plantillas, tablas de claves, filtros, selección, atajos, pyRevit y exportación por lotes."
+image: /img/social-card.jpg
+date: 2026-07-25
+authors: [ivan]
+tags: [revit, tips]
+keywords:
+  - trabajar más rápido en revit
+  - consejos revit
+  - productividad revit
+  - revit interiorismo
+---
+
+Para trabajar más rápido en Revit: guarda la gráfica en plantillas de vista,
+arranca los proyectos desde tu propia plantilla, rellena los acabados con una
+tabla de claves, colorea las plantas con filtros en lugar de a mano y aprende tres
+comandos de selección. Nada de esto acelera el programa. Lo que quita es el
+trabajo que estás haciendo dos veces.
+
+<truncate />
+
+Si Revit se atasca, se congela y tarda minutos en abrir un archivo, ese problema
+es otro y tiene otras soluciones. Están en
+[ocho formas de acelerar Revit cuando el modelo va lento](/blog/speed-up-revit).
+
+## Comparación rápida
+
+| Hábito | Coste de configurarlo | Lo que dejas de hacer |
+|---|---|---|
+| Plantillas de vista | 1 hora una sola vez | Ajustar veinte parámetros gráficos vista por vista |
+| Plantilla de proyecto propia | 2 o 3 horas una sola vez | Rehacer la misma configuración en cada proyecto |
+| Tabla de claves para acabados | 30 minutos por proyecto | Escribir el mismo acabado en cada estancia |
+| Tablas como herramienta de edición | 10 minutos de aprendizaje | Buscar elementos en planta para cambiar un parámetro |
+| Filtros y esquemas de color | 30 minutos una sola vez | Colorear a mano y recolorear tras cada cambio |
+| Tres comandos de selección | 5 minutos de aprendizaje | Rebuscar en el selector de tipo para cada elemento |
+| Atajos de teclado propios | 20 minutos una sola vez | Miles de viajes a la cinta por proyecto |
+| pyRevit | 10 minutos de instalación | Repetir trabajo por lotes elemento a elemento |
+| Exportación PDF por lotes con regla de nombre | 20 minutos una sola vez | Renombrar a mano los planos exportados |
+| Una biblioteca de familias lista | Continuo | Modelar mobiliario que ya está modelado |
+
+## 1. Lleva tu gráfica a las plantillas de vista
+
+Una plantilla de vista guarda nivel de detalle, escala, visibilidad, filtros y
+reemplazos gráficos, y lo aplica a tantas vistas como quieras. En lugar de ajustar
+veinte parámetros vista por vista, aplicas la plantilla y sigues. Si la modificas
+más tarde, todas las vistas que la usan se actualizan.
+
+Un proyecto de interiorismo se cubre con un conjunto pequeño. Planta de
+mobiliario, planta de acabados, plano de techos, alzados interiores y una vista 3D
+de trabajo. Las plantillas también dan coherencia, así que dos planos del mismo
+conjunto dejan de parecer obra de dos estudios distintos.
+
+## 2. Arranca cada proyecto desde tu propia plantilla
+
+La plantilla por defecto te da un archivo en blanco. La tuya te da los materiales
+de siempre, los estilos de anotación, las plantillas de vista del punto anterior,
+la maquetación de planos y las familias que colocas en todos los proyectos.
+
+Dos o tres horas invertidas una vez eliminan ese trabajo de todos los proyectos
+futuros. Guarda el archivo en una carpeta conocida, versiónalo por fecha y
+actualízalo en cuanto te descubras repitiendo un ajuste.
+
+Para un proyecto ya empezado, la ficha **Gestionar** permite traer configuraciones
+desde otro archivo abierto (Transfer Project Standards). Una limitación honesta.
+No arrastra las vistas de leyenda, así que las leyendas siguen copiándose entre
+proyectos abiertos a mano o con un complemento.
+
+## 3. Rellena los acabados con una tabla de planificación de claves
+
+Es el mayor ahorro de tiempo en documentación de interiorismo y casi nadie lo usa.
+
+Una **tabla de planificación de claves** es una tabla pequeña con juegos de
+valores ya preparados. Creas una fila por tipo de estancia, rellenas una vez los
+acabados de suelo, pared, rodapié y techo, y en la tabla de estancias solo eliges
+la clave. Todos los parámetros que hay detrás se rellenan solos. Si cambias el
+acabado en la clave, todas las estancias que la llevan se actualizan.
+
+Se crea desde **Vista**, **Tablas de planificación**, **Tabla de planificación de
+cantidades**, eligiendo la categoría y el tipo de tabla de claves. Desde Revit 2022
+funcionan los parámetros compartidos dentro de estas tablas, lo que amplía bastante
+lo que puedes controlar así.
+
+## 4. Usa las tablas para editar, no solo para contar
+
+Una tabla de planificación es una vista viva de la base de datos, así que lo que
+escribes en una celda entra directamente en el modelo. Renombrar veinte estancias,
+corregir marcas de mobiliario, asignar fabricante a toda una categoría. Todo eso
+va más rápido en una tabla, porque no tienes que localizar elementos en pantalla.
+
+Ordena por la columna que estés depurando y rellena los huecos ahí mismo. Una
+celda vacía se ve al instante, un dato que falta en el modelo puede pasar
+desapercibido hasta la entrega.
+
+## 5. Colorea las plantas con filtros y esquemas de color
+
+Los reemplazos manuales funcionan hasta el primer cambio de proyecto, cuando hay
+que volver a buscar cada elemento recoloreado.
+
+Los esquemas de color sirven para estancias, zonas y áreas, es decir, para las
+plantas que se apoyan en datos de estancia. Los filtros cubren todo lo demás.
+Defines una regla del tipo «parámetro igual a valor» y Revit colorea según el
+parámetro, de modo que la gráfica sigue a los datos y no a tu memoria. El
+resultado se guarda en una plantilla de vista y se extiende a todo el conjunto.
+
+Dos advertencias prácticas. Crea un filtro que capture los elementos sin valor,
+así los huecos los encuentras tú antes que el cliente. Y mantén el número de
+filtros razonable, porque las listas largas de reglas añaden trabajo en cada
+regeneración de la vista.
+
+## 6. Aprende tres comandos que sustituyen a media sesión de clics
+
+**Crear un elemento similar** (teclas CS). Seleccionas un elemento ya configurado,
+pulsas CS y Revit empieza a colocar el mismo tipo con los mismos parámetros.
+
+**Emparejar tipo** (teclas MA). Asigna a otros elementos el tipo del elemento de
+origen con un clic. Es la forma más rápida de ordenar tipos casi idénticos antes de
+que se multipliquen.
+
+**Seleccionar todos los ejemplares.** Clic derecho sobre un elemento o sobre un
+tipo de familia en el navegador de proyectos, y luego **Visibles en vista** o
+**En todo el proyecto**. Junto con la paleta de propiedades, cambia cientos de
+elementos de una vez.
+
+Añade la tecla Tab. Pasas el cursor, pulsas Tab y recorres los candidatos que hay
+debajo, así que dejas de acercarte para seleccionar lo correcto.
+
+## 7. Crea tus propios atajos de teclado
+
+Escribe **KS** o abre **Vista**, **Interfaz de usuario**, **Métodos abreviados de
+teclado**. Asigna combinaciones de dos letras a los comandos que usas decenas de
+veces al día y colócalas cerca de la mano izquierda para que la derecha siga en el
+ratón.
+
+El paso que casi todo el mundo se salta. Exporta los atajos a XML antes de
+actualizar de versión. El archivo está en `%APPDATA%\Autodesk\Revit\<versión>` y se
+importa en el siguiente Revit, así que una distribución aprendida una vez te
+acompaña durante años.
+
+## 8. Instala pyRevit
+
+pyRevit es gratuito y de código abierto, y añade las operaciones por lotes que
+Revit no trae. Exportar grandes conjuntos de planos, renombrar vistas por regla,
+limpiar líneas CAD importadas, gestionar notas clave. Quienes lo usan lo echan de
+menos el día que se sientan en un equipo sin él.
+
+Instálalo, dedica veinte minutos a recorrer sus fichas y quédate con dos o tres
+herramientas. No hace falta programar.
+
+## 9. Configura la exportación PDF por lotes una vez
+
+Revit exporta PDF por su cuenta desde la versión 2022, y lo que merece la pena
+configurar es la regla de nombre. Compón el nombre con número de plano, título y
+revisión, guarda la configuración de exportación y cada entrega sale bien nombrada
+sin un solo renombrado manual.
+
+Acompáñalo de conjuntos de vistas y planos. Así una entrega es una selección
+guardada y no una nueva búsqueda por el navegador cada vez.
+
+## 10. Deja de modelar mobiliario que ya existe
+
+Modelar una cocina desde cero da gusto y casi nunca se factura. Una biblioteca
+probada te da piezas paramétricas con categorías y parámetros homogéneos, así que
+entran bien en las tablas y se adaptan a medidas reales.
+
+Lo digo claro, esto es lo que hacemos nosotros. Nuestros
+[conjuntos de familias de interiorismo](/blog/best-revit-families-interior-design)
+cubren las estancias que más dibujan los interioristas y cada conjunto lleva su
+instrucción. Si de momento reúnes contenido gratuito, empieza por
+[30 webs con familias de Revit gratuitas](/blog/free-revit-family-websites) y
+revisa cada archivo antes de meterlo en un proyecto.
+
+## Por dónde empezar si solo tienes una hora
+
+1. Crea plantillas de vista para las cuatro o cinco vistas que realmente entregas.
+2. Asigna atajos a tus diez comandos más usados y exporta el XML.
+3. Monta una tabla de claves de acabados en el proyecto actual.
+4. Instala pyRevit y quédate con dos herramientas.
+
+Lo demás puede esperar a la siguiente tarde tranquila.
+
+## Preguntas frecuentes
+
+### ¿En qué se diferencian la plantilla de proyecto y la plantilla de vista?
+
+La plantilla de proyecto es el archivo de partida: materiales, familias, planos y
+configuración. La plantilla de vista es un conjunto de ajustes gráficos que se
+aplica a vistas dentro de un proyecto. Lo normal es guardar tus plantillas de vista
+dentro de tu plantilla de proyecto.
+
+### ¿Sirve una tabla de claves para mobiliario?
+
+Sí. Las tablas de claves se crean por categoría, así que los parámetros de
+mobiliario se rellenan igual, por ejemplo con un juego de valores por clase de
+mueble. La condición es que los parámetros pertenezcan a la categoría que estás
+planificando.
+
+### ¿Puedo editar el modelo desde una tabla?
+
+Sí, la tabla muestra datos vivos del modelo. Escribir en una celda cambia el
+elemento y borrar una fila borra elementos, así que trátala con el mismo cuidado
+que a una planta.
+
+### ¿Los filtros ralentizan las vistas?
+
+Un conjunto razonable no lo hace. Las listas largas con reglas complejas sí añaden
+trabajo en cada regeneración, y por eso aparecen en las conversaciones sobre
+[modelos de Revit lentos](/blog/speed-up-revit).
+
+### ¿Es seguro instalar pyRevit en el ordenador del trabajo?
+
+Es de código abierto y está muy extendido en estudios, se instala en el perfil del
+usuario y no toca la instalación de Revit. Si en tu empresa los complementos se
+gestionan de forma centralizada, consulta antes con tu BIM manager, porque ahí la
+cuestión es de normas y no técnica.
+
+<CTA type="blog" />
