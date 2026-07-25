@@ -1,7 +1,8 @@
 ---
 title: 12 Ways to Speed Up Revit That Actually Work in 2026
 slug: speed-up-revit
-description: "Twelve fixes for a slow Revit model in 2026: CAD links, oversized families, view settings, templates, shortcuts and hardware, plus the popular advice that gives back far less than people expect."
+description: "Twelve fixes for a slow Revit model in 2026, from CAD links and heavy families to view settings and hardware, plus the advice that is overrated."
+image: /img/social-card.jpg
 date: 2026-07-25
 authors: [ivan]
 tags: [revit, tips]
@@ -12,13 +13,14 @@ keywords:
   - revit tips
 ---
 
-A slow Revit file usually comes from a short list of habits rather than from one
-dramatic problem: CAD drawings imported instead of linked, furniture families
-that weigh more than the walls of the whole apartment, a dozen views left open
-in the background, and every plan drawn at Fine detail with shadows on. The
-twelve fixes below are ordered by how much they give back for the minutes they
-cost. At the end you will find the advice that circulates in every Revit
-discussion and delivers much less than its reputation suggests.
+To speed up Revit: link CAD drawings instead of importing them, close inactive
+views, keep plans at Coarse detail with shadows off, refuse families heavier than
+a couple of megabytes, and use view templates. A slow file usually comes from
+that short list of habits rather than from one dramatic problem. The twelve fixes
+below are ordered by how much they give back for the minutes they cost, starting
+with a diagnosis for a model that is slow right now, and ending with the advice
+that circulates in every Revit discussion and delivers less than its reputation
+suggests.
 
 <truncate />
 
@@ -39,6 +41,37 @@ discussion and delivers much less than its reputation suggests.
 | Unload links, open fewer worksets | 10 seconds at open | Shorter opening times on team projects |
 | Hardware and version | Budget dependent | Faster navigation, especially with Accelerated Graphics |
 
+## Find out what is wrong with your file first
+
+The list below builds good habits. If a specific model is slow today, spend ten
+minutes on diagnosis before you change anything.
+
+**Check for imported CAD, because it hides.** Imported drawings never appear in
+**Manage Links**, so a file can look clean while carrying hundreds of them. Open
+**Manage**, **Additional Settings**, **Line Patterns** and scroll the list. Every
+pattern whose name starts with IMPORT came from an imported CAD file. This trick
+comes from a Revit user who tracked down exactly this problem on the Autodesk
+forums, and it needs no plugins.
+
+**Look inside the links too.** In the same discussion, the office fixed its own
+model and the opening time stayed bad. The remaining culprit sat in a consultant's
+link that carried two imported CAD files and about three hundred imported line
+styles.
+
+**Find the heavy families.** Revit gives you no list sorted by weight. Use
+**File**, **Save As**, **Library**, **Family** to write every family in the
+project into a folder, then sort that folder by file size in Explorer. The
+offenders are usually obvious.
+
+**Open with Audit, then compact.** Audit on open checks the database for
+corruption, and saving with the compact option rewrites a worksharing file that
+has grown from months of edits. Both are slow, so run them at lunch.
+
+**On team projects, check three more things.** Links marked Room Bounding can
+turn a sync into a half hour wait when the linked geometry is messy. Sync
+frequency matters once eight or more people work in one model. A VPN that
+throttles your connection triples sync times on cloud-hosted projects.
+
 ## 1. Link CAD drawings, never import and never explode them
 
 This is the fix with the largest gap between effort and result. An imported DWG
@@ -46,11 +79,13 @@ drops its entire content into your project: line styles, text styles, layers,
 hatches. Explode it and every line becomes a native Revit element that the
 database now has to track forever.
 
-The consequences show up on the Autodesk forums with painful regularity. One
-office described a project that took 10 to 15 minutes to open while comparable
-models opened in under 5, with sync times above 5 minutes instead of under 2.
-The cause turned out to be roughly a thousand imported CAD line styles that had
-accumulated in the file.
+The consequences show up on the Autodesk forums with painful regularity. In
+[one thread](https://forums.autodesk.com/t5/revit-architecture-forum/slow-revit-model/td-p/11666870),
+an office ran sixteen near-identical projects on BIM 360 and one of them took 10
+to 15 minutes to open while the rest opened in under 5, with syncs above 5
+minutes instead of under 2. The cleanup turned up roughly a thousand imported CAD
+line styles. As another participant in the same thread put it, a 5 minute sync
+already sounds like a dream when your tower model syncs for 30 to 40 minutes.
 
 Use **Insert** and then **Link CAD** for anything you need as a background.
 Links can be unloaded, reloaded and deleted cleanly, and they leave no line
@@ -87,7 +122,9 @@ nobody will see at 1:100.
 rendering feature that costs you on every redraw.
 
 **View depth.** Reduce the depth of plans, sections and elevations, and use back
-clipping. In 3D views, the section box limits the geometry Revit has to hold.
+clipping, which stops a view from drawing everything behind a chosen distance. In
+3D views, tick Section Box in the view properties to get a draggable box that
+crops the model to the part you are working on.
 
 **Draw visible elements only.** This graphics option speeds up panning, zooming
 and orbiting and is off in some installations.
@@ -123,9 +160,11 @@ sane polygon count.
 
 ## 6. Use loadable families instead of Model In-Place
 
-Model In-Place is convenient and expensive. Copy an in-place element fifty times
-and Revit stores fifty unique geometric definitions, each regenerated
-separately. A loadable family loads once and every instance points back to it.
+Model In-Place builds geometry directly inside the project, which feels quick and
+costs you later. Copy an in-place element fifty times and Revit stores fifty
+unique geometric definitions, each regenerated separately. A loadable family
+lives in its own RFA file, loads once, and every instance points back to that one
+definition.
 
 Keep Model In-Place for genuinely one-off shapes, such as an existing vault in a
 renovation. Anything repeated, including your own furniture pieces, belongs in a
@@ -176,11 +215,12 @@ Nothing about it requires programming.
 
 ## 11. Unload links and open only the worksets you need
 
-This one applies when you share a model with other people. In the **Open**
-dialog, set the workset option to **Specify** and load only what you need for the
-task. A closed workset is never loaded into memory or regenerated, which is a
-larger saving than hiding the same elements in a view, because hidden elements
-still have to be evaluated.
+This one applies when you share a model with other people. A workset is a named
+group of elements in a shared model, and you can leave whole groups closed while
+you work. In the **Open** dialog, set the workset option to **Specify** and load
+only what you need for the task. A closed workset is never loaded into memory or
+regenerated, which is a larger saving than hiding the same elements in a view,
+because hidden elements still have to be evaluated.
 
 For links, **Manage Links** offers **Unload for me**, which unloads a link for
 your session only and leaves colleagues unaffected. Putting each link on its own
@@ -194,10 +234,12 @@ buy these machines: RAM roughly twenty times your RVT file size, an NVMe SSD for
 project files and local caches, and a CPU with high clock speed rather than a
 large core count.
 
-The GPU question changed recently. Accelerated Graphics, built on Hydra and
-OpenUSD, arrived as a tech preview in Revit 2026 and became production ready for
-modeling and navigation in Revit 2027. Autodesk demonstrated a 300 frame
-walkthrough dropping from 3 minutes 18 seconds to 38 seconds. Two caveats are
+The GPU question changed recently. Accelerated Graphics, built on the Hydra
+rendering framework and the OpenUSD scene format, arrived as a
+[tech preview in Revit 2026](https://www.autodesk.com/blogs/aec/2025/04/09/accelerated-graphics-tech-preview-revit-2026/)
+and became production ready for modeling and navigation in Revit 2027. Autodesk
+demonstrated a 300 frame walkthrough dropping from 3 minutes 18 seconds to 38
+seconds. Two caveats are
 worth knowing before you rebuild your budget: documentation and visual effects
 are not fully covered yet, and if a model exceeds your GPU memory, Revit falls
 back to the older pipeline.
@@ -251,11 +293,12 @@ It shrinks the file and removes unused types, and speed improvements are usually
 modest. Treat it as maintenance before archiving rather than as a cure for a slow
 model.
 
-### How much RAM do I need for Revit?
+### How do I know whether my model contains imported CAD?
 
-A common rule among BIM specialists is around twenty times your RVT file size,
-which puts a 500 MB model near 32 GB and a 1 GB model near 64 GB. Storage matters
-too: an NVMe SSD changes opening and saving times more than most upgrades.
+Open **Manage**, **Additional Settings**, **Line Patterns** and scroll through the
+list. Patterns beginning with IMPORT mean imported CAD is sitting in the file.
+Imported drawings never show up in **Manage Links**, which is why so many people
+believe their model is clean.
 
 ### Do I need a new graphics card for Revit 2027?
 

@@ -1,7 +1,8 @@
 ---
 title: 12 formas de acelerar Revit que funcionan de verdad en 2026
 slug: speed-up-revit
-description: "Doce soluciones para un modelo de Revit lento en 2026: vínculos CAD, familias pesadas, ajustes de vista, plantillas, atajos y hardware, más los consejos cuya fama supera su efecto real."
+description: "Doce soluciones para un modelo de Revit lento en 2026: vínculos CAD, familias pesadas, ajustes de vista y hardware, más los consejos sobrevalorados."
+image: /img/social-card.jpg
 date: 2026-07-25
 authors: [ivan]
 tags: [revit, tips]
@@ -12,14 +13,14 @@ keywords:
   - consejos revit
 ---
 
-Un archivo de Revit lento casi nunca tiene una única causa dramática. Suele
-acumular una lista corta de hábitos. Planos CAD importados en lugar de
-vinculados, familias de mobiliario que pesan más que todos los muros del piso,
-una docena de vistas abiertas en segundo plano y planos dibujados con nivel de
-detalle Alto y sombras activadas. Las doce soluciones siguientes están ordenadas
-por lo que devuelven frente a los minutos que cuestan. Al final encontrarás los
-consejos que se repiten en cualquier debate sobre Revit y rinden bastante menos
-de lo que prometen.
+Para acelerar Revit: vincula los planos CAD en lugar de importarlos, cierra las
+vistas inactivas, mantén las plantas en nivel de detalle Bajo y sin sombras,
+rechaza las familias de más de un par de megabytes y configura plantillas de
+vista. Un archivo lento suele salir de esa lista corta de hábitos y no de una
+única causa dramática. Las doce soluciones siguientes están ordenadas por lo que
+devuelven frente a los minutos que cuestan. Empezamos por diagnosticar un modelo
+que ya va lento hoy y terminamos con los consejos que se repiten en cualquier
+debate sobre Revit y rinden bastante menos de lo que prometen.
 
 <truncate />
 
@@ -40,18 +41,55 @@ de lo que prometen.
 | Descargar vínculos y subproyectos | 10 segundos al abrir | Aperturas más cortas en proyectos de equipo |
 | Hardware y versión | Según presupuesto | Navegación más fluida con gráficos acelerados |
 
+## Primero averigua qué le pasa a tu archivo
+
+La lista siguiente construye buenos hábitos. Si un modelo concreto va lento hoy,
+dedica diez minutos al diagnóstico antes de cambiar nada.
+
+**Busca el CAD importado, porque se esconde.** Los planos importados nunca
+aparecen en **Gestionar vínculos**, así que un archivo puede parecer limpio
+mientras arrastra cientos de ellos. Abre **Gestionar**, **Configuración
+adicional**, **Estilos de línea** y recorre la lista. Cada patrón cuyo nombre
+empieza por IMPORT viene de un CAD importado. El truco lo compartió un usuario de
+Revit que localizó justo este problema en los foros de Autodesk, y no necesita
+complementos.
+
+**Mira también dentro de los vínculos.** En ese mismo hilo, el estudio limpió su
+modelo y el tiempo de apertura siguió igual. La causa restante estaba en el
+vínculo de un consultor, que llevaba dos CAD importados y unos trescientos
+estilos de línea importados.
+
+**Encuentra las familias pesadas.** Revit no ofrece ninguna lista ordenada por
+peso. Usa **Archivo**, **Guardar como**, **Biblioteca**, **Familia** para volcar
+todas las familias del proyecto en una carpeta y ordénala por tamaño en el
+explorador. Los culpables suelen saltar a la vista.
+
+**Abre con auditoría y luego compacta.** La auditoría al abrir revisa la base de
+datos en busca de daños, y guardar con la opción de compactar reescribe un
+archivo de trabajo compartido que ha crecido durante meses. Las dos operaciones
+son lentas, déjalas para la hora de comer.
+
+**En proyectos de equipo revisa tres cosas más.** Los vínculos marcados como
+delimitadores de habitación convierten una sincronización en media hora de espera
+cuando la geometría vinculada está sucia. La frecuencia de sincronización empieza
+a molestar a partir de ocho personas en el mismo modelo. Y una VPN que recorta la
+velocidad triplica los tiempos de sincronización en proyectos en la nube.
+
 ## 1. Vincula los planos CAD y no los descompongas nunca
 
 Aquí está la mayor diferencia entre esfuerzo y resultado. Un DWG importado
 arrastra todo su contenido al proyecto, incluidos estilos de línea, estilos de
 texto, capas y sombreados. Si además lo descompones, cada línea se convierte en
-un elemento nativo que la base de datos tendrá que mantener para siempre.
+un elemento nativo que Revit tendrá que recalcular hasta el final del proyecto.
 
-Las consecuencias aparecen con regularidad en los foros de Autodesk. Un estudio
-describió un proyecto que tardaba entre 10 y 15 minutos en abrirse cuando
-modelos comparables abrían en menos de 5, con sincronizaciones de más de 5
-minutos frente a menos de 2. La causa era cerca de mil estilos de línea CAD
-importados.
+Las consecuencias aparecen con regularidad en los foros de Autodesk. En
+[un hilo](https://forums.autodesk.com/t5/revit-architecture-forum/slow-revit-model/td-p/11666870),
+un estudio llevaba dieciséis proyectos casi idénticos en BIM 360 y uno tardaba
+entre 10 y 15 minutos en abrirse mientras el resto abría en menos de 5, con
+sincronizaciones de más de 5 minutos frente a menos de 2. La limpieza sacó cerca
+de mil estilos de línea CAD importados. Otro participante del mismo hilo comentó
+que cinco minutos de sincronización suenan a sueño cuando tu torre sincroniza
+durante 30 o 40 minutos.
 
 Usa la ficha **Insertar** y el comando **Vincular CAD** para cualquier plano de
 fondo. Un vínculo se descarga, se recarga y se borra limpiamente, y no deja
@@ -85,9 +123,11 @@ nadie verá a escala 1:100.
 **Sombras.** Desactívalas mientras modelas y antes de imprimir. Las sombras
 pertenecen a la visualización y cuestan en cada redibujado.
 
-**Profundidad de vista.** Reduce la profundidad de plantas, secciones y alzados
-y usa el recorte posterior. En vistas 3D, la caja de sección limita la geometría
-que Revit debe mantener.
+**Profundidad de vista.** Reduce la profundidad de plantas, secciones y alzados y
+usa el recorte posterior, que deja de dibujar todo lo que queda más allá de una
+distancia elegida. En vistas 3D, activa la caja de sección en las propiedades de
+la vista y obtendrás un volumen ajustable que recorta el modelo a la parte que
+estás trabajando.
 
 **Dibujar solo elementos visibles.** Esta opción gráfica acelera el encuadre, el
 zoom y la órbita, y en muchas instalaciones está desactivada.
@@ -125,10 +165,11 @@ y un número de polígonos razonable.
 
 ## 6. Familias cargables en lugar de modelo in situ
 
-El **modelo in situ** resulta cómodo y sale caro. Copia un elemento in situ
-cincuenta veces y Revit guardará cincuenta definiciones geométricas únicas, cada
-una regenerada por separado. Una familia cargable se carga una vez y todos los
-ejemplares apuntan a ella.
+El **modelo in situ** construye la geometría dentro del propio proyecto, así que
+parece rápido y sale caro más tarde. Copia un elemento in situ cincuenta veces y
+Revit guardará cincuenta definiciones geométricas únicas, cada una regenerada por
+separado. Una familia cargable vive en su archivo RFA, se carga una vez y todos
+los ejemplares apuntan a esa única definición.
 
 Reserva el modelo in situ para formas realmente únicas, como una bóveda
 existente en una rehabilitación. Todo lo que se repite, incluido tu propio
@@ -181,9 +222,10 @@ herramientas. No hace falta programar.
 
 ## 11. Descarga vínculos y abre solo los subproyectos necesarios
 
-Este punto aplica cuando el modelo se comparte entre varias personas. En el
-diálogo de apertura elige especificar subproyectos y carga solo los que necesitas
-para la tarea. Un subproyecto cerrado no entra en memoria ni se regenera, lo que
+Este punto aplica cuando el modelo se comparte entre varias personas. Un
+subproyecto agrupa elementos de un modelo compartido bajo un nombre, y puedes
+dejar grupos enteros cerrados mientras trabajas. En el diálogo de apertura elige
+especificar subproyectos y carga solo los que necesitas para la tarea. Un subproyecto cerrado no entra en memoria ni se regenera, lo que
 rinde más que ocultar esos mismos elementos en la vista, porque lo oculto sigue
 evaluándose.
 
@@ -199,8 +241,9 @@ RAM en torno a veinte veces el tamaño del archivo RVT, un SSD NVMe para
 proyectos y cachés, y una CPU de frecuencia alta antes que una de muchos núcleos.
 
 Con la tarjeta gráfica el panorama cambió hace poco. Los gráficos acelerados
-sobre Hydra y OpenUSD llegaron como avance técnico en Revit 2026 y pasaron a ser
-aptos para producción en modelado y navegación en Revit 2027. Autodesk mostró un
+sobre el motor de dibujo Hydra y el formato de escena OpenUSD llegaron
+[como avance técnico en Revit 2026](https://www.autodesk.com/blogs/aec/2025/04/09/accelerated-graphics-tech-preview-revit-2026/)
+y pasaron a ser aptos para producción en modelado y navegación en Revit 2027. Autodesk mostró un
 recorrido de 300 fotogramas que bajó de 3 minutos y 18 segundos a 38 segundos.
 Dos advertencias antes de rehacer el presupuesto. La documentación y los efectos
 visuales aún no están cubiertos del todo, y un modelo que no cabe en la memoria
@@ -257,12 +300,12 @@ plantas están en nivel de detalle Alto con sombras.
 Reduce el archivo y elimina tipos sin usar, y la mejora de velocidad suele ser
 modesta. Trátalo como mantenimiento antes de archivar.
 
-### ¿Cuánta RAM necesita Revit?
+### ¿Cómo sé si mi modelo tiene CAD importado?
 
-Una referencia habitual entre especialistas BIM es unas veinte veces el tamaño
-del archivo RVT, lo que sitúa un modelo de 500 MB cerca de 32 GB y uno de 1 GB
-cerca de 64 GB. El almacenamiento pesa igual. Un SSD NVMe cambia los tiempos de
-apertura y guardado más que la mayoría de mejoras.
+Abre **Gestionar**, **Configuración adicional**, **Estilos de línea** y recorre la
+lista. Los nombres que empiezan por IMPORT indican CAD importado dentro del
+archivo. Los planos importados no aparecen en **Gestionar vínculos**, y por eso
+mucha gente cree que su modelo está limpio.
 
 ### ¿Necesito una gráfica nueva para Revit 2027?
 
