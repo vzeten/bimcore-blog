@@ -1,0 +1,290 @@
+---
+title: 12 formas de acelerar Revit que funcionan de verdad en 2026
+slug: speed-up-revit
+description: "Doce soluciones para un modelo de Revit lento en 2026: vínculos CAD, familias pesadas, ajustes de vista, plantillas, atajos y hardware, más los consejos cuya fama supera su efecto real."
+date: 2026-07-25
+authors: [ivan]
+tags: [revit, tips]
+keywords:
+  - acelerar revit
+  - revit lento
+  - rendimiento revit
+  - consejos revit
+---
+
+Un archivo de Revit lento casi nunca tiene una única causa dramática. Suele
+acumular una lista corta de hábitos. Planos CAD importados en lugar de
+vinculados, familias de mobiliario que pesan más que todos los muros del piso,
+una docena de vistas abiertas en segundo plano y planos dibujados con nivel de
+detalle Alto y sombras activadas. Las doce soluciones siguientes están ordenadas
+por lo que devuelven frente a los minutos que cuestan. Al final encontrarás los
+consejos que se repiten en cualquier debate sobre Revit y rinden bastante menos
+de lo que prometen.
+
+<truncate />
+
+## Comparación rápida
+
+| Solución | Cuánto lleva | Qué cambia |
+|---|---|---|
+| Vincular CAD en lugar de importar | 5 minutos por plano | Elimina la causa más común de lentitud |
+| Cerrar vistas inactivas | 2 segundos | Libera la RAM que ocupan las vistas abiertas |
+| Aligerar la vista | 1 minuto por vista | Encuadre, zoom y apertura más rápidos |
+| Comprobar el peso de la familia | 30 segundos por familia | Una silla deja de costarte diez segundos en cada apertura |
+| Dejar fuera las mallas de SketchUp | Según el caso | Evita geometría para la que Revit no está pensado |
+| Familias cargables en lugar de in situ | Una vez por elemento | Cincuenta copias dejan de ser cincuenta geometrías |
+| Plantillas de vista | 1 hora una sola vez | Veinte ajustes gráficos con un clic |
+| Plantilla de proyecto propia | 2 o 3 horas una sola vez | Cada proyecto nuevo arranca configurado |
+| Atajos de teclado propios | 20 minutos una sola vez | Miles de viajes a la cinta desaparecen |
+| pyRevit | 10 minutos de instalación | Operaciones por lotes que Revit no trae |
+| Descargar vínculos y subproyectos | 10 segundos al abrir | Aperturas más cortas en proyectos de equipo |
+| Hardware y versión | Según presupuesto | Navegación más fluida con gráficos acelerados |
+
+## 1. Vincula los planos CAD y no los descompongas nunca
+
+Aquí está la mayor diferencia entre esfuerzo y resultado. Un DWG importado
+arrastra todo su contenido al proyecto, incluidos estilos de línea, estilos de
+texto, capas y sombreados. Si además lo descompones, cada línea se convierte en
+un elemento nativo que la base de datos tendrá que mantener para siempre.
+
+Las consecuencias aparecen con regularidad en los foros de Autodesk. Un estudio
+describió un proyecto que tardaba entre 10 y 15 minutos en abrirse cuando
+modelos comparables abrían en menos de 5, con sincronizaciones de más de 5
+minutos frente a menos de 2. La causa era cerca de mil estilos de línea CAD
+importados.
+
+Usa la ficha **Insertar** y el comando **Vincular CAD** para cualquier plano de
+fondo. Un vínculo se descarga, se recarga y se borra limpiamente, y no deja
+estilos de línea detrás. Si un plano tiene que descomponerse, hazlo en un
+archivo aparte y copia de ahí solo la geometría que necesitas.
+
+## 2. Cierra las vistas inactivas
+
+Revit mantiene vivas todas las vistas abiertas y las actualiza mientras modelas.
+Diez planos abiertos significan diez recálculos cada vez que mueves un muro.
+
+El comando está en la ficha **Vista**, grupo **Ventanas**. Los materiales
+antiguos lo llaman Cerrar ocultas; desde Revit 2019 cierra todas las vistas
+salvo la activa y se llama **Cerrar vistas inactivas**. Quienes lo asignan a un
+atajo y lo pulsan varias veces por hora describen la mejora más clara en la
+respuesta diaria del programa. El motivo es sencillo. La memoria que ocupa una
+vista abierta solo se libera al cerrarla.
+
+Las vistas 3D merecen atención aparte. La propia documentación de Autodesk
+señala que con una vista 3D abierta la mayor parte del archivo pasa a la RAM y
+recomienda cerrarlas antes de sincronizar.
+
+## 3. Dale menos trabajo a cada vista
+
+Cada vista carga con un trabajo invisible. Cuatro ajustes lo controlan.
+
+**Nivel de detalle.** Autodesk recomienda **Bajo** mientras el plano no necesite
+más, porque Medio y Alto obligan a resolver las capas de unión de muros que
+nadie verá a escala 1:100.
+
+**Sombras.** Desactívalas mientras modelas y antes de imprimir. Las sombras
+pertenecen a la visualización y cuestan en cada redibujado.
+
+**Profundidad de vista.** Reduce la profundidad de plantas, secciones y alzados
+y usa el recorte posterior. En vistas 3D, la caja de sección limita la geometría
+que Revit debe mantener.
+
+**Dibujar solo elementos visibles.** Esta opción gráfica acelera el encuadre, el
+zoom y la órbita, y en muchas instalaciones está desactivada.
+
+Un hábito más de la misma familia. Cambia los modelos vinculados a estructura
+alámbrica o sombreado mientras trabajas en una vista cargada.
+
+## 4. Pesa la familia antes de que entre en el proyecto
+
+Las familias de fabricante están modeladas para el catálogo del fabricante y no
+para tu entrega. Traen cada tornillo, decenas de parámetros que nunca vas a
+medir y, a veces, una importación CAD anidada.
+
+La regla que manejan los gestores BIM es tajante. Una familia de mobiliario por
+encima de 1 o 2 MB necesita una justificación y por encima de 2 o 3 MB necesita
+una muy buena. Una sola familia hinchada puede dominar el tiempo de apertura de
+un modelo entero, y un sillón de 40 MB ralentiza el proyecto más rápido de lo
+que adorna un render.
+
+Mira el tamaño del archivo antes de cargarlo y abre las descargas dudosas en un
+proyecto vacío. Un sofá que el cliente siempre verá como un rectángulo en planta
+no necesita costuras en los cojines.
+
+## 5. Mantén la geometría de SketchUp y 3D Warehouse fuera del modelo de trabajo
+
+Los proyectos de interiorismo atraen geometría de malla. Una lámpara decorativa
+de 3D Warehouse, una silla modelada en SketchUp, un jarrón escaneado. Revit
+guarda las mallas como sólidos importados que no puede simplificar, medir en
+tablas ni controlar bien por categorías.
+
+Si una pieza hace falta para un render concreto, vincúlala en lugar de
+importarla, mantenla fuera de los planos y elimínala al terminar. Si la pieza
+reaparece en varios proyectos, merece una familia de Revit con parámetros reales
+y un número de polígonos razonable.
+
+## 6. Familias cargables en lugar de modelo in situ
+
+El **modelo in situ** resulta cómodo y sale caro. Copia un elemento in situ
+cincuenta veces y Revit guardará cincuenta definiciones geométricas únicas, cada
+una regenerada por separado. Una familia cargable se carga una vez y todos los
+ejemplares apuntan a ella.
+
+Reserva el modelo in situ para formas realmente únicas, como una bóveda
+existente en una rehabilitación. Todo lo que se repite, incluido tu propio
+mobiliario, pertenece a un archivo de familia.
+
+## 7. Configura las plantillas de vista una vez
+
+Una plantilla de vista guarda nivel de detalle, escala, visibilidad, filtros y
+reemplazos gráficos, y los aplica a tantas vistas como quieras. En lugar de
+ajustar veinte parámetros vista por vista, aplicas la plantilla y sigues.
+Modificarla más tarde actualiza todas las vistas que la usan.
+
+Un proyecto de interiorismo se cubre con un conjunto pequeño. Planta de
+mobiliario, planta de acabados, plano de techos, alzados interiores y una vista
+3D de trabajo. Este punto no cambia nada en la velocidad del modelo y es el que
+más horas ahorra a lo largo del proyecto.
+
+## 8. Crea tu propia plantilla de proyecto
+
+La plantilla por defecto te da un archivo en blanco. La tuya te da los
+materiales de siempre, los estilos de anotación, las plantillas de vista del
+punto anterior, la maquetación de planos y las familias que colocas en todos los
+proyectos.
+
+Dos o tres horas invertidas una sola vez eliminan ese trabajo de todos los
+proyectos futuros. Guarda la plantilla en una carpeta conocida, versiónala por
+fecha y actualízala en cuanto te descubras repitiendo un ajuste.
+
+## 9. Crea tus propios atajos de teclado
+
+Escribe **KS** o abre **Vista**, **Interfaz de usuario**, **Métodos abreviados de
+teclado**. Asigna combinaciones de dos letras a los comandos que usas decenas de
+veces al día y colócalas cerca de la mano izquierda para que la derecha siga en
+el ratón.
+
+El paso que casi todo el mundo se salta. Exporta los atajos a XML antes de
+actualizar de versión. El archivo está en `%APPDATA%\Autodesk\Revit\<versión>` y
+se importa en el siguiente Revit, así que una distribución aprendida una vez te
+acompaña durante años.
+
+## 10. Instala pyRevit
+
+pyRevit es gratuito y de código abierto, y añade las operaciones por lotes que
+Revit no trae. Exportar grandes conjuntos de planos, renombrar vistas por regla,
+limpiar líneas CAD importadas, gestionar notas clave. Quienes lo usan lo echan
+de menos el día que se sientan en un equipo sin él.
+
+Instálalo, dedica veinte minutos a recorrer sus fichas y quédate con dos o tres
+herramientas. No hace falta programar.
+
+## 11. Descarga vínculos y abre solo los subproyectos necesarios
+
+Este punto aplica cuando el modelo se comparte entre varias personas. En el
+diálogo de apertura elige especificar subproyectos y carga solo los que necesitas
+para la tarea. Un subproyecto cerrado no entra en memoria ni se regenera, lo que
+rinde más que ocultar esos mismos elementos en la vista, porque lo oculto sigue
+evaluándose.
+
+Para los vínculos, **Gestionar vínculos** permite descargar solo para tu sesión.
+Tu Revit se aligera y tus compañeros no notan nada. Si cada vínculo vive en su
+propio subproyecto, la operación lleva dos segundos.
+
+## 12. Dale a Revit el hardware y la versión adecuados
+
+El hardware no salvará un modelo lleno de CAD descompuesto, y a un modelo limpio
+sí le ayuda. Las referencias que manejan quienes montan estos equipos. Memoria
+RAM en torno a veinte veces el tamaño del archivo RVT, un SSD NVMe para
+proyectos y cachés, y una CPU de frecuencia alta antes que una de muchos núcleos.
+
+Con la tarjeta gráfica el panorama cambió hace poco. Los gráficos acelerados
+sobre Hydra y OpenUSD llegaron como avance técnico en Revit 2026 y pasaron a ser
+aptos para producción en modelado y navegación en Revit 2027. Autodesk mostró un
+recorrido de 300 fotogramas que bajó de 3 minutos y 18 segundos a 38 segundos.
+Dos advertencias antes de rehacer el presupuesto. La documentación y los efectos
+visuales aún no están cubiertos del todo, y un modelo que no cabe en la memoria
+de la gráfica vuelve al motor anterior.
+
+## Lo que está sobrevalorado
+
+Algunos consejos se repiten en todos los debates y rinden menos de lo anunciado.
+Ser honesto aquí te ahorra una tarde limpiando donde no toca.
+
+**Limpiar elementos no utilizados.** La herramienta de la ficha **Gestionar**
+reduce el tamaño del archivo y quita ruido, aunque rara vez transforma la
+velocidad por sí sola. Muchos gestores BIM la describen como una tirita sobre
+hábitos que vuelven a llenar el archivo. Límpialo antes de archivar o de enviar
+el modelo, y trata las causas aparte. Importaciones, familias pesadas, grupos
+sueltos.
+
+**Perseguir cada aviso.** El número de avisos es más síntoma que causa. Los que
+cuestan de verdad son los duplicados y los solapamientos, porque Revit los
+revisa en cada regeneración. Un modelo que pasa de unos 900 o 1.000 avisos
+indica algo estructuralmente mal, y un modelo con cuarenta avisos ordenados no
+necesita una tarde de limpieza.
+
+**El debate entre grupos y vínculos.** Los profesionales se reparten entre ambos
+bandos y el resumen honesto es este. Los fragmentos pequeños y repetidos con
+anotación compartida encajan mejor con grupos, y los volúmenes grandes repetidos
+encajan mejor con vínculos. Ninguna de las dos opciones arregla un modelo lento
+por los motivos anteriores.
+
+**El tamaño del archivo como medida de velocidad.** Un modelo de 300 MB con
+geometría nativa limpia responde mejor que uno de 120 MB lleno de líneas
+descompuestas.
+
+## Una rutina semanal de 15 minutos
+
+1. Cierra las vistas inactivas y comprueba qué sigue abierto.
+2. Abre **Gestionar vínculos** y descarga lo que no necesitas esta semana.
+3. Ordena las familias cargadas por tamaño y revisa las sorpresas.
+4. Busca importaciones CAD que deberían haber sido vínculos.
+5. Revisa los avisos de duplicados y solapamientos, ignora los cosméticos.
+6. Limpia lo no utilizado antes de archivar o enviar el archivo.
+
+## Preguntas frecuentes
+
+### ¿Por qué mi modelo de Revit se ha vuelto lento de repente?
+
+Busca primero una importación reciente. Un DWG descompuesto, una familia de
+fabricante cargada la semana pasada o un modelo de SketchUp explican la mayoría
+de las caídas repentinas. Después revisa cuántas vistas tienes abiertas y si tus
+plantas están en nivel de detalle Alto con sombras.
+
+### ¿Limpiar lo no utilizado acelera Revit de verdad?
+
+Reduce el archivo y elimina tipos sin usar, y la mejora de velocidad suele ser
+modesta. Trátalo como mantenimiento antes de archivar.
+
+### ¿Cuánta RAM necesita Revit?
+
+Una referencia habitual entre especialistas BIM es unas veinte veces el tamaño
+del archivo RVT, lo que sitúa un modelo de 500 MB cerca de 32 GB y uno de 1 GB
+cerca de 64 GB. El almacenamiento pesa igual. Un SSD NVMe cambia los tiempos de
+apertura y guardado más que la mayoría de mejoras.
+
+### ¿Necesito una gráfica nueva para Revit 2027?
+
+Solo si tu cuello de botella está en la navegación. Los gráficos acelerados
+dependen de la memoria de la tarjeta, así que un modelo mayor que esa memoria
+vuelve al motor anterior. Arreglar importaciones y peso de familias no cuesta
+nada y suele rendir más.
+
+### ¿Merece la pena configurar atajos de teclado?
+
+Sí, y el motivo es la repetición. Diez comandos diarios con dos segundos
+ahorrados cada uno suman bastante a lo largo de un proyecto, y exportar el XML
+lleva tu distribución a cada versión siguiente.
+
+### ¿Qué frena en concreto a los proyectos de interiorismo?
+
+El mobiliario. Familias de fabricante con detalle innecesario, modelos de malla
+de 3D Warehouse y decoración modelada in situ. Una biblioteca de familias
+probada y con parámetros homogéneos resuelve el problema en origen, y por eso
+creamos [conjuntos de familias de interiorismo](/blog/best-revit-families-interior-design)
+y documentamos cada uno. Si todavía estás reuniendo archivos, nuestra lista de
+[30 webs con familias de Revit gratuitas](/blog/free-revit-family-websites) es un
+buen punto de partida.
+
+<CTA type="blog" />
