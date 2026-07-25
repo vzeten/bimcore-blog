@@ -14,8 +14,8 @@ keywords:
 ---
 
 To speed up Revit: link CAD drawings instead of importing them, close inactive
-views, keep plans at Coarse detail with shadows off, refuse families heavier than
-a couple of megabytes, and use view templates. A slow file usually comes from
+views, keep plans at Coarse detail with shadows off, avoid loading families over a
+couple of megabytes, and use view templates. A slow file usually comes from
 that short list of habits rather than from one dramatic problem. The twelve fixes
 below are ordered by how much they give back for the minutes they cost, starting
 with a diagnosis for a model that is slow right now, and ending with the advice
@@ -31,7 +31,7 @@ suggests.
 | Link CAD instead of importing | 5 minutes per drawing | Removes the single most common cause of a sluggish model |
 | Close inactive views | 2 seconds | Frees the RAM held by every view Revit keeps live |
 | Give views less to draw | 1 minute per view | Faster pan, zoom and view opening |
-| Check family weight before loading | 30 seconds per family | Prevents one chair from costing you ten seconds on every open |
+| Check family weight before loading | 30 seconds per family | Prevents one oversized chair family from slowing every file open |
 | Keep SketchUp meshes out of the model | Varies | Avoids geometry Revit was never built to handle |
 | Loadable families instead of Model In-Place | Once per repeated element | Fifty copies stop being fifty unique geometries |
 | View templates | 1 hour once | Twenty graphic settings applied with one click |
@@ -123,7 +123,7 @@ rendering feature that costs you on every redraw.
 
 **View depth.** Reduce the depth of plans, sections and elevations, and use back
 clipping, which stops a view from drawing everything behind a chosen distance. In
-3D views, tick Section Box in the view properties to get a draggable box that
+3D views, enable Section Box in the view properties to get a draggable box that
 crops the model to the part you are working on.
 
 **Draw visible elements only.** This graphics option speeds up panning, zooming
@@ -178,7 +178,8 @@ twenty settings per view by hand, you apply one template and move on. Change the
 template later and every view using it follows.
 
 For an interior project a small set covers almost everything: furniture plan,
-finishes plan, RCP, elevations and a working 3D view. This is the fix that saves
+finishes plan, reflected ceiling plan (RCP), interior elevations and a working 3D
+view. This is the fix that saves
 the most hours over the life of a project even though it changes nothing about
 model speed.
 
