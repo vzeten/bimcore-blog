@@ -186,25 +186,36 @@ Para los vínculos, **Gestionar vínculos** permite descargar solo para tu sesi�
 Tu Revit se aligera y tus compañeros no notan nada. Si cada vínculo vive en su
 propio subproyecto, la operación lleva dos segundos.
 
-## 8. Dale a Revit el hardware y la versión adecuados
+## 8. Revisa la memoria, el disco y la gráfica de tu equipo
 
-El hardware no salvará un modelo lleno de CAD descompuesto, y a un modelo limpio
-sí le ayuda. Quienes montan estos equipos manejan tres referencias. Memoria RAM
-en torno a veinte veces el tamaño del archivo RVT, un SSD NVMe para proyectos y
-cachés, y una CPU de frecuencia alta antes que una de muchos núcleos.
+Un ordenador nuevo no cura un modelo lleno de CAD descompuesto. A un modelo limpio
+sí le ayuda, y conviene revisar cuatro cosas.
 
-Con la tarjeta gráfica el panorama cambió hace poco. Los gráficos acelerados
-sobre el motor de dibujo Hydra y el formato de escena OpenUSD llegaron
-[como avance técnico en Revit 2026](https://www.autodesk.com/blogs/aec/2025/04/09/accelerated-graphics-tech-preview-revit-2026/)
-y pasaron a ser aptos para producción en modelado y navegación en Revit 2027. Autodesk mostró un
-recorrido de 300 fotogramas que bajó de 3 minutos y 18 segundos a 38 segundos.
-Dos advertencias antes de rehacer el presupuesto. Las herramientas de
-documentación y parte de los efectos visuales aún no están cubiertas del todo, y
-un modelo que no cabe en la memoria de la gráfica vuelve al motor anterior.
+**Memoria.** La regla práctica es unas veinte veces el tamaño del archivo de
+proyecto. Un archivo de 500 MB pide 32 GB y uno de 1 GB pide 64 GB. Cuando falta
+memoria, Windows empieza a volcar datos al disco y Revit se atasca en acciones
+simples.
 
-Un apunte para versiones antiguas. En Revit 2020 o 2022 lo único de esta lista
-que no puedes usar son los gráficos acelerados. Las otras siete soluciones
-funcionan en cualquier versión.
+**Disco.** Guarda proyectos y archivos temporales en un SSD, mejor NVMe. Abrir y
+guardar dependen de la velocidad del disco más que de nada, y por eso pasar de un
+disco mecánico a un SSD se nota más que cualquier otra mejora.
+
+**Procesador.** Revit hace casi todo su trabajo en un solo núcleo, así que una
+frecuencia alta rinde más que muchos núcleos. Al comprar, mira la frecuencia.
+
+**Tarjeta gráfica.** Antes apenas influía; ahora sí.
+[Revit 2026 estrenó](https://www.autodesk.com/blogs/aec/2025/04/09/accelerated-graphics-tech-preview-revit-2026/)
+un modo de dibujo nuevo que en Revit 2027 pasó a ser apto para producción.
+Acelera el giro y el zoom del modelo: Autodesk mostró un recorrido de 300
+fotogramas que tardaba 3 minutos y 18 segundos y ahora tarda 38 segundos.
+
+Dos cosas que conviene saber del modo nuevo. Parte de las herramientas de
+documentación y de los efectos visuales aún no están cubiertas. Y si el modelo no
+cabe en la memoria de la gráfica, Revit vuelve al modo anterior y la mejora
+desaparece.
+
+En Revit 2020 o 2022 lo único que no puedes usar es el modo de dibujo nuevo. Las
+otras siete soluciones funcionan en cualquier versión.
 
 ## Lo que está sobrevalorado
 

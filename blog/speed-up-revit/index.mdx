@@ -180,25 +180,34 @@ For links, **Manage Links** offers **Unload for me**, which unloads a link for
 your session only and leaves colleagues unaffected. Putting each link on its own
 workset makes this a two second operation.
 
-## 8. Give Revit the hardware and the version it needs
+## 8. Check the memory, disk and graphics card in your machine
 
-Hardware will not rescue a model full of exploded CAD, and a clean model still
-benefits from sensible specs. People who buy these machines work with three rules
-of thumb. RAM roughly twenty times your RVT file size, an NVMe SSD for project
-files and local caches, and a CPU with high clock speed rather than a large core
-count.
+A new computer will not cure a model full of exploded CAD. It does help a clean
+model, and four things are worth checking.
 
-The GPU question changed recently. Accelerated Graphics, built on the Hydra
-rendering framework and the OpenUSD scene format, arrived as a
-[tech preview in Revit 2026](https://www.autodesk.com/blogs/aec/2025/04/09/accelerated-graphics-tech-preview-revit-2026/)
-and became production ready for modeling and navigation in Revit 2027. Autodesk
-demonstrated a 300 frame walkthrough dropping from 3 minutes 18 seconds to 38
-seconds. Two caveats are worth knowing before you rebuild your budget:
-documentation tools and some visual effects are not fully covered yet, and if a
-model exceeds your GPU memory, Revit falls back to the older pipeline.
+**Memory.** The working rule is roughly twenty times the size of your project
+file. A 500 MB file wants 32 GB, a 1 GB file wants 64 GB. When memory runs short,
+Windows starts swapping to disk and Revit stalls on simple actions.
 
-A note for older releases. On Revit 2020 or 2022 the only item on this list you
-cannot use is Accelerated Graphics. The other seven fixes work on any version.
+**Disk.** Keep projects and temporary files on an SSD, ideally NVMe. Opening and
+saving depend on disk speed more than on anything else, which is why moving off a
+spinning drive feels bigger than any other upgrade.
+
+**Processor.** Revit does most of its work on a single core, so a high clock
+speed beats a high core count. Look at the frequency when you buy.
+
+**Graphics card.** It used to matter very little; now it does.
+[Revit 2026 introduced](https://www.autodesk.com/blogs/aec/2025/04/09/accelerated-graphics-tech-preview-revit-2026/)
+a new display mode that became production ready in Revit 2027. It speeds up
+orbiting and zooming: Autodesk showed a 300 frame walkthrough that took 3 minutes
+18 seconds and now takes 38 seconds.
+
+Two things to know about the new mode. Some documentation tools and visual
+effects are not covered yet. And if a model does not fit into your graphics
+memory, Revit returns to the old mode and the speed-up disappears.
+
+On Revit 2020 or 2022 the only item you cannot use is the new display mode. The
+other seven fixes work on any version.
 
 ## What is overrated
 

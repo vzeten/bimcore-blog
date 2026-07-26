@@ -1,0 +1,149 @@
+{
+  "$comment": "Машинные правила качества статей. Человеческий стандарт — в базе My_brain: it/web/learn/content-quality-standard.md. Живые правки владельца — content/data/owner-edits.md. Термины — it/web/learn/data/revit-glossary.md. Правила пополняются каждый раз, когда владелец правит текст.",
+  "version": 2,
+  "updated": "2026-07-26",
+
+  "severity": {
+    "$comment": "Решение владельца 2026-07-26: блокируют только проверяемые факты. Стиль пока предупреждение, потому что библиотека фраз маленькая и легко даёт ложные срабатывания. Все предупреждения помощник обязан показать владельцу в отчёте перед публикацией.",
+    "terms": "error",
+    "structure": "error",
+    "links": "error",
+    "headingNumerals": "warning",
+    "phrases": "warning",
+    "summaryTablePhrases": "warning"
+  },
+
+  "structure": {
+    "numberedHeadingPattern": "^## \\d+\\. ",
+    "titleNumberPattern": "(\\d+)",
+    "checkTitleCountMatchesSections": true,
+    "checkSummaryTableMatchesSections": true,
+    "checkNoLinksInHeadings": true,
+    "checkLocaleParity": true,
+    "parityExceptions": {
+      "free-revit-family-websites": "RU-версия намеренно шире: 31 источник против 30, добавлен BIMLIB для русского рынка (решение владельца 2026-07-23)"
+    },
+    "$comment": "Число в заголовке сверяется ТОЛЬКО с нумерованными H2 вида '## 1. '. FAQ, лид, сводная таблица и служебные разделы не считаются (уточнение владельца 2026-07-26)."
+  },
+
+  "links": {
+    "internalPrefixes": ["/blog/", "/lessons/", "/guides/", "/docs/"],
+    "allowedExternalDomains": [
+      "bimcore.one",
+      "int-lines.ru",
+      "int-lines.com",
+      "help.autodesk.com",
+      "www.autodesk.com",
+      "autodesk.com",
+      "forums.autodesk.com",
+      "pyrevitlabs.io",
+      "github.com",
+      "www.bimobject.com",
+      "www.archiproducts.com",
+      "www.archdaily.com",
+      "www.arcat.com",
+      "market.bimsmith.com",
+      "source.thenbs.com",
+      "www.bimandco.com",
+      "www.mepcontent.com",
+      "www.caddetails.com",
+      "www.bimstore.co",
+      "www.revitcity.com",
+      "www.modlar.com",
+      "bimlib.pro",
+      "www.hermanmiller.com",
+      "www.knoll.com",
+      "www.teknion.com",
+      "www.steelcase.com",
+      "www.haworth.com",
+      "professionals.muuto.com",
+      "downloads.fritzhansen.com",
+      "download.erco.com",
+      "www.trilux.com",
+      "www.zumtobel.com",
+      "www.cooperlighting.com",
+      "www.studiokohler.com",
+      "www.geberit-global.com",
+      "pro.hansgrohe.com",
+      "www.roca.com",
+      "www.grohe.us",
+      "www.subzero-wolf.com"
+    ],
+    "botBlockedDomains": ["forums.autodesk.com", "www.autodesk.com", "autodesk.com"],
+    "$comment": "botBlockedDomains отдают 403 роботам, но живы для людей. Их проверять браузером, скрипт код 403 у них не считает ошибкой."
+  },
+
+  "phrases": {
+    "error": [
+      { "bad": "чинить параметры", "good": "исправлять параметры / править параметры / заполнять параметры", "why": "Чинят поломку, файл, ошибку. Параметры правят или заполняют.", "lang": "ru" },
+      { "bad": "чинить семейств", "good": "исправлять семейства / переделывать семейства", "why": "То же самое, семейства не чинят.", "lang": "ru" },
+      { "bad": "храните графику", "good": "используйте шаблоны видов / сохраняйте настройки вида в шаблоне", "why": "Искусственное словосочетание, так не говорят.", "lang": "ru" },
+      { "bad": "графика следует за", "good": "отображение берётся из данных / Revit меняет цвет по параметру", "why": "Калька, человек так не пишет.", "lang": "ru" },
+      { "bad": "важно понимать", "good": "убрать фразу, дать факт", "why": "Канцелярит из правил владельца.", "lang": "ru" },
+      { "bad": "стоит отметить", "good": "убрать фразу, дать факт", "why": "Канцелярит из правил владельца.", "lang": "ru" },
+      { "bad": "следует учитывать", "good": "убрать фразу, дать факт", "why": "Канцелярит из правил владельца.", "lang": "ru" },
+      { "bad": "в современном мире", "good": "убрать фразу", "why": "Канцелярит из правил владельца.", "lang": "ru" },
+      { "bad": "таким образом", "good": "убрать фразу или переписать предложение", "why": "Канцелярит из правил владельца.", "lang": "ru" },
+      { "bad": "в конечном итоге", "good": "убрать фразу", "why": "Канцелярит из правил владельца.", "lang": "ru" },
+      { "bad": "это не просто", "good": "переписать без конструкции", "why": "Прямой запрет владельца.", "lang": "ru" },
+      { "bad": "—", "good": "обычное предложение без тире-связки", "why": "Длинное тире как связка запрещено правилами владельца.", "lang": "ru" },
+      { "bad": "delve", "good": "look at / go through", "why": "ИИ-маркер в английском.", "lang": "en" },
+      { "bad": "in conclusion", "good": "убрать или переписать", "why": "ИИ-маркер в английском.", "lang": "en" },
+      { "bad": "moreover", "good": "and / also", "why": "ИИ-маркер в английском.", "lang": "en" },
+      { "bad": "seamless", "good": "конкретика вместо оценки", "why": "ИИ-маркер в английском.", "lang": "en" },
+      { "bad": "game-changer", "good": "конкретика вместо оценки", "why": "ИИ-маркер в английском.", "lang": "en" }
+    ],
+    "warning": [
+      { "bad": "экономит время", "good": "назвать, за счёт чего именно", "why": "Пустая польза без действия.", "lang": "ru" },
+      { "bad": "упрощает процесс", "good": "назвать, что больше не надо делать", "why": "Канцелярит без факта.", "lang": "ru" },
+      { "bad": "повышает эффективность", "good": "назвать измеримый результат", "why": "Пустая формула.", "lang": "ru" },
+      { "bad": "оптимизирует работу", "good": "назвать конкретное действие", "why": "Пустая формула.", "lang": "ru" },
+      { "bad": "ускоряет работу", "good": "назвать, что именно ускоряется и насколько", "why": "Пустая формула, особенно в сводной таблице.", "lang": "ru" },
+      { "bad": "съедает", "good": "тратится на / уходит на", "why": "Образный глагол там, где нужен прямой смысл (правило владельца по лиду).", "lang": "ru" },
+      { "bad": "по убыванию отдачи", "good": "просто пообещать результат: «10 способов ускорить вашу работу»", "why": "Механика ранжирования в лиде звучит как редакторская пометка.", "lang": "ru" },
+      { "bad": "пожиратель времени", "good": "назвать, на что уходит время", "why": "Образность вместо факта.", "lang": "ru" },
+      { "bad": "допиливать", "good": "дорабатывать", "why": "Жаргон, владелец правил в сторону «доработка».", "lang": "ru" },
+      { "bad": "реально экономят время", "good": "перечислить, что именно входит", "why": "Общая формула в description, лучше конкретика.", "lang": "ru" },
+      { "bad": "hunt for", "good": "look for / search for", "why": "Быстро скатывается в ИИ-стиль в техтексте.", "lang": "en" },
+      { "bad": "saves time", "good": "say what exactly stops taking time", "why": "Пустая польза без действия.", "lang": "en" },
+      { "bad": "streamlines", "good": "say what step disappears", "why": "Пустая формула.", "lang": "en" },
+      { "bad": "ahorra tiempo", "good": "decir qué deja de hacerse", "why": "Пустая польза без действия.", "lang": "es" }
+    ]
+  },
+
+  "terms": {
+    "$comment": "wrong — то, что писать нельзя; right — проверенное локализованное имя из справки Autodesk. Источник каждого термина — it/web/learn/data/revit-glossary.md.",
+    "ru": [
+      { "wrong": ["типы линий"], "right": "Образцы линий", "context": "Line Patterns, Управление → Дополнительные параметры", "requiresContext": ["Дополнительные параметры", "IMPORT"], "$comment": "«Типы линий» — законный термин AutoCAD. Ошибкой считается только когда речь о диалоге Revit." },
+      { "wrong": ["создать подобный", "создание подобного элемента"], "right": "Создать аналог", "context": "Create Similar" },
+      { "wrong": ["копирование свойств типа", "совпадение свойств", "сравнение типа"], "right": "Сопоставление свойств типа", "context": "Match Type Properties, кнопка на ленте" },
+      { "wrong": ["выделить все экземпляры", "выбрать все элементы типа"], "right": "Выбрать все экземпляры", "context": "Select All Instances" },
+      { "wrong": ["секущая рамка", "секущий бокс", "Section Box"], "right": "Границы 3D-вида", "context": "Section Box в свойствах 3D-вида" },
+      { "wrong": ["закрыть скрытые окна"], "right": "Закрыть неактивные виды", "context": "Close Inactive Views, с Revit 2019" },
+      { "wrong": ["ключевые спецификации помещений", "спецификация ключей"], "right": "Ключевая спецификация", "context": "Key Schedule" },
+      { "wrong": ["менеджер связей", "управление связями"], "right": "Диспетчер связей", "context": "Manage Links" },
+      { "wrong": ["формообразующий на месте", "модель на месте"], "right": "Модель в контексте", "context": "Model In-Place" },
+      { "wrong": ["подпроекты"], "right": "Рабочие наборы", "context": "Worksets" }
+    ],
+    "es": [
+      { "wrong": ["Emparejar tipo", "Coincidir tipo"], "right": "Igualar propiedades de tipo", "context": "Match Type Properties, ficha Modificar, grupo Portapapeles" },
+      { "wrong": ["Estilos de línea"], "right": "Patrones de línea", "context": "Line Patterns (Estilos de línea = Line Styles, другое)", "requiresContext": ["Configuración adicional", "IMPORT"] },
+      { "wrong": ["Seleccionar todas las instancias"], "right": "Seleccionar todos los ejemplares", "context": "Select All Instances" },
+      { "wrong": ["Crear parecido"], "right": "Crear similar", "context": "Create Similar" },
+      { "wrong": ["Cerrar ventanas ocultas"], "right": "Cerrar vistas inactivas", "context": "Close Inactive Views" }
+    ]
+  },
+
+  "headingNumerals": {
+    "$comment": "Числительное словом внутри заголовка раздела должно сходиться с числом жирных подпунктов в этом разделе. Ловит случаи вида «Освойте пять команд», где команд на самом деле четыре.",
+    "ru": { "два": 2, "две": 2, "три": 3, "четыре": 4, "пять": 5, "шесть": 6, "семь": 7 },
+    "en": { "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7 },
+    "es": { "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7 }
+  },
+
+  "summaryTable": {
+    "requiredColumns": 3,
+    "$comment": "что сделать | когда важно | какой конкретный результат",
+    "bannedCellPhrases": ["экономит время", "ускоряет работу", "упрощает процесс", "saves time", "speeds up work", "ahorra tiempo"]
+  }
+}

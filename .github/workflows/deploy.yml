@@ -21,6 +21,10 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # Качество контента. Блокируют: термины Revit, число нумерованных пунктов,
+      # порядок сводной таблицы, битые внутренние ссылки, ссылки в заголовках.
+      # Стиль печатается предупреждением и сборку не валит (решение владельца 2026-07-26).
+      - run: npm run content:check
       - run: npm run build
         env:
           ECWID_PUBLIC_TOKEN: ${{ secrets.ECWID_PUBLIC_TOKEN }}
