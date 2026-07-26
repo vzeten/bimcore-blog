@@ -1,7 +1,7 @@
 ---
 title: 10 Ways to Work Faster in Revit in 2026
 slug: work-faster-in-revit
-description: "Ten ways to spend fewer hours on the same Revit drawings: templates, key schedules, filters, selection tricks, shortcuts, pyRevit and batch export."
+description: "Ten habits that actually save hours in Revit: a ready family library, a project template, view templates, shortcuts, schedules, filters and pyRevit."
 image: /img/social-card.jpg
 date: 2026-07-25
 authors: [ivan]
@@ -13,162 +13,183 @@ keywords:
   - revit workflow
 ---
 
-To work faster in Revit: put your graphics in view templates, start projects from
-your own template, fill finish parameters with a key schedule, colour plans with
-filters instead of by hand, and learn three selection commands. None of this makes
-the program itself quicker. It removes work you are doing twice.
+The biggest time sink in Revit is hunting for families and fixing them up for the
+project. Setting up every new file from scratch comes second, and configuring the
+same views floor after floor comes third. Below are ten habits in order of real
+payoff, starting with the largest.
 
 <truncate />
 
-## Quick comparison
+## What to do and what it gives you
 
-| Habit | Setup cost | What you stop doing |
+| What to do | When it matters most | What you get |
 |---|---|---|
-| View templates | 1 hour once | Adjusting twenty graphic settings view by view |
-| Your own project template | 2 to 3 hours once | Rebuilding the same setup in every project |
-| Key schedules for finishes | 30 minutes per project | Typing the same finish into every room |
-| Schedules as an editing tool | 10 minutes to learn | Hunting elements in plans to change a parameter |
-| Filters and colour schemes | 30 minutes once | Colouring plans by hand and recolouring after changes |
-| Create Similar, Match Type, Select All Instances | 5 minutes to learn | Digging through the type selector for every element |
-| Custom keyboard shortcuts | 20 minutes once | Thousands of ribbon trips per project |
-| pyRevit | 10 minutes to install | Repeating batch work one element at a time |
-| Batch PDF export with naming rules | 20 minutes once | Renaming exported sheets by hand |
-| A ready family library | Ongoing | Modelling furniture that someone already modelled |
+| Get a ready family library | Interiors, where furniture outnumbers walls | You stop hunting for families and reworking them each project |
+| Work from a specialised project template | When every project starts from an empty file | The project opens configured and you go straight to drawing |
+| Set up view templates | Multi-storey work, where views repeat floor by floor | A view is configured once for the whole building |
+| Build your own keyboard shortcuts | Any project longer than a week | Speed grows daily because your hands learn the combinations |
+| Learn five selection and editing commands | Everyday drawing and revisions | Half of your trips to the type selector disappear |
+| Fill data in schedules | Finish, furniture and equipment schedules | Every row is visible at once, so nothing slips through |
+| Colour elements with filters | Checking a project by type and parameter | Rules are set once and graphics follow the model |
+| Put colour schemes on room plans | Space planning and zoning drawings | A new room gets its colour automatically |
+| Install pyRevit | Routine work Revit has no command for | Hatch patterns from lines and coloured tabs in one click |
+| Build a key schedule | Many similar rooms sharing the same set of parameters | One key fills the whole parameter set |
 
-## 1. Move your graphics into view templates
+## 1. Get a ready family library
+
+Finding families and adapting them eats more design time than anything else. You
+download a sofa and it turns out to be a 30 MB mesh. You find a wardrobe with no
+usable dimensions. You model a kitchen yourself and it lands in the schedule as a
+generic model. Each of these rounds costs hours, and it repeats on every project.
+
+A tested library closes that loop. Parametric families flex to real dimensions,
+sit in the correct categories and count properly in schedules.
+
+Full disclosure: this is what we do. Which sets interior designers use most is
+covered in our article on
+[interior Revit family sets](/blog/best-revit-families-interior-design), and if
+you are still collecting free content, start with
+[30 sites with free Revit families](/blog/free-revit-family-websites) and check
+every download before it enters a project. The complete 21-set collection sits
+[in the shop](https://bimcore.one/products/all-revit-families-set-21).
+
+## 2. Work from a specialised project template
+
+The default Revit template gives you an empty file. An interior template gives
+you materials, annotation styles, view templates, sheet layout and schedules that
+are already set up for interior work. What remains is learning Revit itself and
+drawing.
+
+A library together with a template produces the largest jump in speed, because
+there is nothing left to configure. Ours lives
+[in the shop](https://bimcore.one/products/revit-interior-design-template).
+
+Building your own works too. Two or three hours once, then the file lives in a
+known folder, gets versioned by date and grows every time you catch yourself
+repeating a setup step. For a project already under way, **Manage** and then
+**Transfer Project Standards** brings settings from another open file. It does
+not carry legend views, so legends still have to be copied by hand.
+
+## 3. Set up view templates
+
+On a multi-storey building this is not optional. Without templates you configure
+the first floor plan, then repeat the same twenty settings on the second, then on
+the third.
 
 A view template stores detail level, scale, visibility, filters and graphic
-overrides, then applies all of it to any number of views at once. Instead of
-adjusting twenty settings per view by hand, you apply one template and move on.
-Edit the template later and every view using it follows.
+overrides. Apply it to the next floor and the view matches. Edit the template and
+every view using it updates at once.
 
 For an interior project a small set covers almost everything: furniture plan,
 finishes plan, reflected ceiling plan, interior elevations and a working 3D view.
-Templates are also where consistency comes from, so two plans in the same set stop
-looking like the work of two different offices.
 
-## 2. Start every project from your own template
+## 4. Build your own keyboard shortcuts
 
-The default template gives you a blank file. Your own gives you the materials you
-always use, annotation styles, the view templates from the point above, the sheet
-layout and the families you place in every project.
+You set them up once and the speed keeps growing, because hands memorise
+combinations faster than heads do.
 
-Two or three hours spent once removes that setup from every future project. Keep
-the file in a known folder, version it by date, and update it whenever you notice
-yourself repeating a setup step.
-
-For a project that already exists, **Manage** and then **Transfer Project
-Standards** copies settings from another open file. One honest limitation: it does
-not carry legend views, so legends still have to be copied between open projects
-by hand or with an add-in.
-
-## 3. Fill finishes with a key schedule instead of typing them
-
-This is the biggest single time saver in interior documentation, and most people
-never touch it.
-
-A key schedule is a small table of ready-made value sets. You build one row per
-room style, fill in floor, wall, skirting and ceiling finishes once, and then in
-the room schedule you only choose the key. Every parameter behind that key fills
-itself. Change the finish in the key later and every room carrying it updates.
-
-Create it from **View**, **Schedules**, **Schedule/Quantities**, choose the
-category and switch the schedule type to keys. Shared parameters work inside key
-schedules from Revit 2022 onwards, which widened what you can drive this way.
-
-## 4. Treat schedules as an editing tool, not a report
-
-A Revit schedule is a live view of the database, so anything you type in a cell
-goes straight into the model. Renaming twenty rooms, fixing furniture marks,
-assigning a manufacturer to a whole category: all of it is faster in a schedule
-than in plans, because you never hunt for elements on screen.
-
-Sort by the column you are cleaning, use the schedule to spot blanks, and fix them
-in place. A missing value in a schedule is easier to see than a missing value in a
-project browser.
-
-## 5. Colour plans with filters and colour schemes
-
-Manual overrides look fine until the design changes and every recoloured element
-has to be found again.
-
-Colour schemes work for rooms, areas and spaces, which covers occupancy and
-finish plans driven by room data. View filters cover everything else: set a rule
-like "Parameter equals Value" and Revit colours by parameter, so graphics follow
-the data instead of your memory. Save the result in a view template and it spreads
-across the whole set.
-
-Two practical notes. Build a filter that catches elements with no value, because
-that is how you find missing data before the client does. And keep the filter
-count sane, since long filter lists slow view regeneration.
-
-## 6. Learn three commands that replace most clicking
-
-**Create Similar (CS).** Select an element that is already configured, press CS,
-and Revit starts placing the same type with the same settings.
-
-**Match Type Properties (MA).** Assign one element's type to others by clicking
-them. This is the fastest way to clean up near-duplicate types before they breed.
-
-**Select All Instances.** Right-click an element or a family type in the project
-browser, then choose Visible in View or In Entire Project. Combined with the
-Properties palette it changes hundreds of elements in one move.
-
-Add the Tab key to that list. Hover, press Tab to cycle through candidates under
-the cursor, and you stop zooming in to select the right thing.
-
-## 7. Make your own keyboard shortcuts
-
-Type **KS** to open the editor, or go to **View**, **User Interface**, **Keyboard
-Shortcuts**. Assign two-letter combinations to the commands you use dozens of
-times a day, and keep them near your left hand so the right stays on the mouse.
+Type **KS** or go to **View**, **User Interface**, **Keyboard Shortcuts**. Assign
+two-letter combinations to the commands you use dozens of times a day, and keep
+them near your left hand so the right stays on the mouse.
 
 The step most people skip: export the shortcuts to XML before you upgrade. The
 file lives in `%APPDATA%\Autodesk\Revit\<release>` and imports into the next
 version, so a layout learned once stays with you for years.
 
-## 8. Install pyRevit
+## 5. Learn five commands that speed up drawing
 
-pyRevit is free and open source, and it adds the batch operations Revit lacks:
-exporting large sheet sets, renaming views by rule, wiping imported CAD linework,
-managing keynotes. People who use it notice its value the day they sit at a
-machine without it.
+**Create Similar.** Right-click a configured element and pick Create Similar;
+Revit starts placing the same type with the same settings. The button also sits on
+the **Modify** tab, **Create** panel.
 
-It installs from the pyrevitlabs site with an ordinary installer, sits in your
-user profile and appears as its own ribbon tab. Spend twenty minutes on the tabs
-and adopt two or three tools. Nothing about it requires programming.
+**Match Type Properties.** **Modify** tab, **Clipboard** panel, shortcut MA. The
+cursor turns into a brush: click the source element, then click the ones that
+should match it. This is the fastest way to tidy up near-identical types before
+they multiply.
 
-## 9. Set up batch PDF export once
+**Select All Instances.** Right-click an element, or a family type in the project
+browser, then choose Visible in View or In Entire Project. Combined with the
+Properties palette it edits hundreds of elements in one move.
+
+**Tab.** Hover and cycle through the candidates under the cursor, so you stop
+zooming in to select the right thing. Tab also picks up chains of connected
+elements.
+
+## 6. Fill your data in schedules
+
+Filling parameters in a schedule is easier than doing it in plans, and missing an
+element is much harder. Every row is visible at once, an empty cell stands out,
+and you never hunt for elements on screen.
+
+A schedule shows live model data, so typing in a cell changes the element itself.
+Sort by the column you are cleaning up and work top to bottom. Deleting a row
+deletes elements, so treat the table with the same care as a drawing.
+
+## 7. Colour elements with filters
+
+A filter sets display rules for every element that matches a condition. It works
+inside a view template and on a single view.
+
+A simple working example: walls coloured by type, so a plan shows at a glance
+what is structural, what is a partition and what is a lining. The rule is written
+once and the graphics follow the model, which means no manual overrides to find
+and redo after each design change.
+
+This takes an understanding of Revit above beginner level, and it pays back
+accordingly. One habit worth building early: add a filter that catches elements
+with no parameter value. That way you find the gaps before your client does.
+
+## 8. Put colour schemes on room plans
+
+A colour scheme works for rooms, areas and spaces. It colours a plan by parameter
+value and keeps the legend for you.
+
+The real convenience is elsewhere: add a new room and the scheme gives it the
+next colour in order, with no manual recolouring. For space planning and zoning
+drawings this is the quickest way to show the structure of a project.
+
+## 9. Install pyRevit
+
+pyRevit is a free plugin with a large set of tools. Two of the most popular: one
+builds a hatch pattern out of drawn lines, so your own pattern takes a minute
+instead of a session with a text file; the other colours the tabs of open views,
+so you find the right view by eye rather than by cycling through them.
+
+It installs from [pyrevitlabs](https://pyrevitlabs.io/) with an ordinary
+installer, sits in your user profile and appears as its own ribbon tab. Nothing
+about it requires programming.
+
+## 10. Build a key schedule
+
+This tool takes effort to understand and comes up rarely. In return it saves a lot
+of time whenever one type of room or element needs a whole set of parameters
+assigned at once.
+
+A key schedule holds ready-made sets of values. You create a row per room type,
+fill in floor, wall, skirting and ceiling finishes once, and in the room schedule
+you only pick the key. Every parameter behind it fills itself, and editing the key
+updates every room carrying it.
+
+Create it from **View**, **Schedules**, **Schedule/Quantities**, choose the
+category and switch the schedule type to keys. Shared parameters work inside key
+schedules from Revit 2022 onwards, which widened what you can drive this way.
+
+## One more thing, if you issue sheet sets
 
 Revit exports PDF natively since the 2022 release, and the part worth setting up
-is the naming rule. Build the file name from sheet number, sheet name and revision,
-save the export setup, and issue after issue comes out named correctly without a
-single manual rename.
-
-Pair it with view and sheet sets so an issue package is a saved selection rather
-than a fresh hunt through the browser every time.
-
-## 10. Stop modelling furniture that already exists
-
-Modelling a kitchen from scratch is satisfying and rarely billable. A tested
-library gives you parametric pieces with consistent categories and parameters, so
-they schedule correctly and flex to real dimensions.
-
-Full disclosure: this is what we do. Our
-[interior Revit family sets](/blog/best-revit-families-interior-design) cover the
-rooms interior designers draw most often, and every set comes with an instruction.
-If you are collecting free content first, start with
-[30 sites with free Revit families](/blog/free-revit-family-websites), and check
-each download before it enters a project.
+is the naming rule. Build the file name from sheet number, sheet name and
+revision, save the export setup, and every issue comes out named correctly
+without a single manual rename.
 
 ## What to do first if you only have an hour
 
-1. Build view templates for the four or five views you actually issue.
-2. Assign shortcuts to your ten most used commands and export the XML.
-3. Set up one key schedule for room finishes on the current project.
+1. Assign shortcuts to your ten most used commands and export the XML.
+2. Build view templates for the views you actually issue.
+3. Learn Create Similar, Match Type Properties and Select All Instances.
 4. Install pyRevit and pick two tools from it.
 
-Everything else can wait for the next quiet afternoon.
+A library and a template need a decision and a budget, so leave those for a quiet
+evening.
 
 If Revit itself lags and takes minutes to open a file, that is a different
 problem with different fixes. It has its own article:
@@ -176,17 +197,17 @@ problem with different fixes. It has its own article:
 
 ## FAQ
 
+### What pays off faster, a family library or a project template?
+
+The library, if you draw a lot of furniture and equipment. The template, if every
+new project starts with the same setup work. Together they give the largest jump,
+because after buying both there is nothing left to configure.
+
 ### What is the difference between a project template and a view template?
 
 A project template is the starting file: materials, families, sheets, settings. A
 view template is a set of graphic settings applied to views inside a project. You
 usually keep your view templates inside your project template.
-
-### Does a key schedule work for furniture, not just rooms?
-
-Yes. Key schedules exist per category, so you can drive furniture parameters the
-same way, for example a set of values for each furniture class. The rule is that
-the parameters have to belong to the category you are scheduling.
 
 ### Can I edit the model from a schedule?
 
