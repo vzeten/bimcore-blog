@@ -178,8 +178,8 @@ function checkPhrases(entry, doc) {
       }
     }
   };
-  check(RULES.phrases.error, 'phrases');
-  check(RULES.phrases.warning, 'phrases');
+  check(RULES.phrases.strict, 'phrasesStrict');
+  check(RULES.phrases.soft, 'phrasesSoft');
 }
 
 function checkTerms(entry, doc) {
@@ -232,7 +232,7 @@ function checkLinks(entry, doc, routes) {
     if (href.startsWith('http')) {
       const domain = href.replace(/^https?:\/\//, '').split('/')[0];
       if (!RULES.links.allowedExternalDomains.includes(domain)) {
-        add('links', rel, `внешний домен вне белого списка: ${domain}`, 'добавить домен в content-quality-rules.json или убрать ссылку');
+        add('linksExternal', rel, `внешний домен вне белого списка: ${domain}`, 'добавить домен в content-quality-rules.json или убрать ссылку');
       }
       continue;
     }
@@ -242,7 +242,7 @@ function checkLinks(entry, doc, routes) {
     const isInternal = RULES.links.internalPrefixes.some((p) => clean.startsWith(p));
     if (!isInternal) continue;
     if (!routes.has(clean)) {
-      add('links', rel, `внутренняя ссылка ведёт в никуда: ${href}`, 'проверить slug целевой статьи');
+      add('linksInternal', rel, `внутренняя ссылка ведёт в никуда: ${href}`, 'проверить slug целевой статьи');
     }
   }
 }
