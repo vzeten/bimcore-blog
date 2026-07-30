@@ -126,7 +126,7 @@ const config = {
           blogDescription:
             'What we learn about Revit on real interior projects: practical tips, workflows and family guides for interior designers.',
           // Custom truncate marker — <truncate /> JSX-тег вместо {/* truncate */} или <!-- -->
-          // Sveltia rich-editor не экранирует JSX-теги, MDX парсер их валидирует.
+          // Старый визуальный редактор не экранировал JSX-теги; MDX парсер их валидирует.
           // См. decisions «Truncate-маркер = <truncate /> JSX-тег».
           truncateMarker: /<truncate\s*\/>/,
         },

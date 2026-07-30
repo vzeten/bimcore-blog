@@ -20,11 +20,11 @@ export default {
   ...MDXComponents,
   // CTA — call-to-action блок (см. src/components/CTA.jsx).
   // Используется в .mdx как: <CTA type="blog" /> (или lesson | course | guide | help).
-  // В Sveltia CMS — кнопка «CTA блок» в редакторе.
+  // В редакторе статей должна быть быстрая вставка этого блока.
   CTA,
   // YouTube — адаптивное 16:9 видео с ленивой загрузкой (см. src/components/YouTube.jsx).
   // Используется в .mdx как: <YouTube id="ifJtfM3LgGg" title="..." />.
-  // В Sveltia CMS — кнопка «YouTube видео» в редакторе.
+  // В редакторе статей должна быть быстрая вставка этого блока.
   YouTube,
   // ProductCard — лёгкая карточка товара с витриной и ссылками (см. src/components/ProductCard.jsx).
   // Используется в .mdx как: <ProductCard name="..." image="..." buyUrl="..." ecwidProductId="660642703" />.

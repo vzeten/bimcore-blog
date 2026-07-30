@@ -18,7 +18,7 @@ import styles from '../css/youtube.module.css';
  * Использование в .mdx (import не нужен — зарегистрирован глобально):
  *   <YouTube id="ifJtfM3LgGg" title="Розетки для Revit" />
  *
- * Вставляется кнопкой «YouTube видео» в редакторе Sveltia CMS.
+ * Вставляется через быструю вставку редактора статей.
  *
  * @param {string} id      ID видео из URL (?v=ID). Обязательный.
  * @param {string} title   Подпись для accessibility и schema.org. По умолчанию 'YouTube video'.
