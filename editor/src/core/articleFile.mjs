@@ -1,0 +1,63 @@
+// Разбор и сборка файла статьи. Единственное место, где это правило записано.
+// Главное требование: открыть и сохранить без правок — файл не меняется ни на байт.
+// Поэтому шапка хранится ровно тем куском текста, каким была в файле.
+
+// Невидимая метка в начале файла: её оставляют Windows-редакторы. Это байты файла, а не текст статьи,
+// поэтому она не настройка, а часть чужого формата. Без неё разбор шапки промахивается,
+// и вся шапка уезжает в тело статьи.
+const МЕТКА = '\uFEFF';
+
+export function splitArticle(raw) {
+  const метка = String(raw).startsWith(МЕТКА) ? МЕТКА : '';
+  const text = String(raw).slice(метка.length);
+  const match = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(text);
+  if (!match) return {head: '', frontmatterRaw: '', body: raw, eol: dominantEol(raw), метка};
+
+  const inner = /^---\r?\n([\s\S]*?)\r?\n---/.exec(match[0]);
+
+  return {
+    head: метка + match[0],
+    frontmatterRaw: inner ? inner[1] : '',
+    body: text.slice(match[0].length),
+    eol: dominantEol(raw),
+    метка,
+  };
+}
+
+export function joinArticle({head, body}) {
+  return head + body;
+}
+
+/**
+ * Собрать шапку обратно в текст файла. Правило живёт здесь, а не в сервере:
+ * иначе невидимая метка и вид перевода строки теряются при сохранении.
+ */
+export function buildHead({frontmatterRaw, eol, метка = ''}) {
+  return `${метка}---${eol}${frontmatterRaw}${eol}---${eol}`;
+}
+
+/** Какой перевод строки в файле главный. Нужен, чтобы вернуть текст из редактора в том же виде. */
+export function dominantEol(raw) {
+  const crlf = (raw.match(/\r\n/g) || []).length;
+  const lf = (raw.match(/(?<!\r)\n/g) || []).length;
+  return crlf > lf ? '\r\n' : '\n';
+}
+
+/** Совпадает ли текст с точностью до переводов строк. */
+export function sameText(a, b) {
+  return a.replace(/\r\n/g, '\n') === b.replace(/\r\n/g, '\n');
+}
+
+/**
+ * Изменилось ли в статье хоть что-нибудь.
+ * Смотреть только на тело нельзя: тогда правка одной шапки молча теряется.
+ */
+export function nothingChanged(current, next) {
+  return sameText(current.body, next.body) && sameText(current.frontmatterRaw, next.frontmatterRaw);
+}
+
+export function readField(frontmatterRaw, field) {
+  const line = frontmatterRaw.split(/\r?\n/).find((item) => item.startsWith(`${field}:`));
+  if (!line) return '';
+  return line.slice(field.length + 1).trim().replace(/^["']|["']$/g, '');
+}

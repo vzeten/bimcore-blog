@@ -1,0 +1,144 @@
+// Имя каждого теста повторяет формулировку правила.
+// Проверяем поведение действий сохранения и видимости без React: успех зовёт ok, ошибка зовёт fail.
+import {describe, expect, it, vi} from 'vitest';
+import {autosaveDraft, saveArticle, setVisibility} from '../src/ui/actions';
+
+const тело = {path: 'docs/a/index.mdx', body: 'x', frontmatterRaw: 'title: A'};
+
+describe('сохранение статьи', () => {
+  it('при ошибке сервера не подтверждает успех: ok не вызывается, dirty снимать нечем', async () => {
+    const request = vi.fn().mockRejectedValue(new Error('нет такой статьи'));
+    const ok = vi.fn();
+    const fail = vi.fn();
+
+    await saveArticle(тело, {ok, fail}, request as never);
+
+    expect(ok).not.toHaveBeenCalled();
+    expect(fail).toHaveBeenCalledWith('нет такой статьи');
+  });
+
+  it('при успехе сервера вызывает ok, чтобы снять признак несохранённого', async () => {
+    const request = vi.fn().mockResolvedValue({saved: true});
+    const ok = vi.fn();
+    const fail = vi.fn();
+
+    await saveArticle(тело, {ok, fail}, request as never);
+
+    expect(ok).toHaveBeenCalledTimes(1);
+    expect(fail).not.toHaveBeenCalled();
+  });
+});
+
+describe('смена видимости', () => {
+  it('при ошибке сервера состояние не меняется: ok не вызывается', async () => {
+    const request = vi.fn().mockRejectedValue(new Error('нет такой статьи'));
+    const ok = vi.fn();
+    const fail = vi.fn();
+
+    await setVisibility(['docs/a/index.mdx'], true, {ok, fail}, request as never);
+
+    expect(ok).not.toHaveBeenCalled();
+    expect(fail).toHaveBeenCalledWith('нет такой статьи');
+  });
+
+  it('при успехе сервера вызывает ok, чтобы поменять надпись видимости', async () => {
+    const request = vi.fn().mockResolvedValue({changed: []});
+    const ok = vi.fn();
+    const fail = vi.fn();
+
+    await setVisibility(['docs/a/index.mdx'], true, {ok, fail}, request as never);
+
+    expect(ok).toHaveBeenCalledTimes(1);
+    expect(fail).not.toHaveBeenCalled();
+  });
+});
+
+describe('автосохранение черновика', () => {
+  const черновик = {
+    path: 'docs/a/index.mdx',
+    body: 'правка',
+    frontmatterRaw: 'title: A',
+    отпечатокБазы: 'ОТП1',
+  };
+
+  it('сбой автосохранения не подтверждает успех: ok не вызывается, признак несохранённого остаётся', async () => {
+    const request = vi.fn().mockRejectedValue(new Error('нет такой статьи'));
+    const ok = vi.fn();
+    const fail = vi.fn();
+
+    await autosaveDraft(черновик, {ok, fail}, request as never);
+
+    expect(ok).not.toHaveBeenCalled();
+    expect(fail).toHaveBeenCalledWith('нет такой статьи');
+  });
+
+  it('автосохранение шлёт черновик и не трогает настоящий файл статьи', async () => {
+    const request = vi.fn().mockResolvedValue({автосохранено: '2026-08-04T10:00:00.000Z'});
+    const ok = vi.fn();
+    const fail = vi.fn();
+
+    await autosaveDraft(черновик, {ok, fail}, request as never);
+
+    expect(ok).toHaveBeenCalledTimes(1);
+    // Черновик уходит на свою ручку, а не на сохранение статьи.
+    expect(request).toHaveBeenCalledWith('/api/draft', expect.objectContaining({method: 'POST'}));
+    expect(request).not.toHaveBeenCalledWith('/api/article/save', expect.anything());
+  });
+});
+
+describe('сохранение поверх внешней правки', () => {
+  it('файл изменён снаружи — сохранение не подтверждается, человеку предлагается выбор', async () => {
+    const конфликт = Object.assign(new Error('файл изменён снаружи'), {конфликт: true});
+    const request = vi.fn().mockRejectedValue(конфликт);
+    const ok = vi.fn();
+    const fail = vi.fn();
+    const conflict = vi.fn();
+
+    await saveArticle(тело, {ok, fail, conflict}, request as never);
+
+    expect(ok).not.toHaveBeenCalled();
+    // Конфликт — не обычная ошибка: показываем выбор, а не только сообщение.
+    expect(conflict).toHaveBeenCalledWith('файл изменён снаружи');
+    expect(fail).not.toHaveBeenCalled();
+  });
+
+  it('отпечаток базы уходит на сервер вместе с текстом', async () => {
+    const request = vi.fn().mockResolvedValue({saved: true});
+
+    await saveArticle({...тело, отпечатокБазы: 'ОТП1'}, {ok: vi.fn(), fail: vi.fn()}, request as never);
+
+    const посланное = JSON.parse((request.mock.calls[0][1] as {body: string}).body);
+    expect(посланное.отпечатокБазы).toBe('ОТП1');
+  });
+
+  it('обычная ошибка остаётся обычной, а не превращается в конфликт', async () => {
+    const request = vi.fn().mockRejectedValue(new Error('нет такой статьи'));
+    const conflict = vi.fn();
+    const fail = vi.fn();
+
+    await saveArticle(тело, {ok: vi.fn(), fail, conflict}, request as never);
+
+    expect(conflict).not.toHaveBeenCalled();
+    expect(fail).toHaveBeenCalledWith('нет такой статьи');
+  });
+});
+
+describe('отпечаток базы после сохранения', () => {
+  it('новый отпечаток от сервера доходит до окна, иначе следующая правка даст ложный конфликт', async () => {
+    const request = vi.fn().mockResolvedValue({saved: true, отпечаток: 'НОВЫЙ'});
+    const ok = vi.fn();
+
+    await saveArticle({...тело, отпечатокБазы: 'СТАРЫЙ'}, {ok, fail: vi.fn()}, request as never);
+
+    expect(ok).toHaveBeenCalledWith(expect.objectContaining({отпечаток: 'НОВЫЙ'}));
+  });
+
+  it('сохранение поверх помечается явным решением человека', async () => {
+    const request = vi.fn().mockResolvedValue({saved: true});
+
+    await saveArticle({...тело, отпечатокБазы: 'СТАРЫЙ', перезаписать: true}, {ok: vi.fn(), fail: vi.fn()}, request as never);
+
+    const посланное = JSON.parse((request.mock.calls[0][1] as {body: string}).body);
+    expect(посланное.перезаписать).toBe(true);
+  });
+});
