@@ -10,10 +10,12 @@ import {ConflictBars, ErrorBar} from './zones/ConflictBar';
 import {buildFrontmatter, parseFrontmatter, type Field} from './zones/Properties';
 import {pasteImage} from './editor/images';
 import {requestJson} from './api';
+import {nothingChanged} from '../core/articleFile.mjs';
 import {saveArticle, setVisibility} from './actions';
 import {useAutosave} from './useAutosave';
 import {label, setLabels} from './labels';
 import {makeReporter} from './errors';
+import {useConflictChoice} from './useConflictChoice';
 import type {Article, ArticleRow, PanelMode, SaveState, Settings} from './types';
 
 export function App() {
@@ -31,8 +33,12 @@ export function App() {
   const [конфликтСохранения, setКонфликтСохранения] = useState(false);
   const {runSafe, сПричиной} = makeReporter(setОшибка);
   const автосохранение = useAutosave(settings?.хранение.автосохранениеСек ?? 0, setСостояниеСохранения);
-  // Текст и шапка в ref: пока запрос идёт, человек печатает, и ответу нужно сравнить
-  // «что сохраняли» с «что в окне сейчас», а не с замыканием момента отправки.
+  const {взятьЧерновик, взятьФайл} = useConflictChoice({
+    article, roots: settings?.контент ?? [], setArticle, setText, setFields,
+    setDirty, setСостояние: setСостояниеСохранения,
+  });
+  // Текст и шапка в ref: пока запрос идёт, человек печатает, и ответ должен сравнить
+  // «что сохраняли» с «что в окне сейчас».
   const текстСейчас = useRef('');
   const шапкаСейчас = useRef('');
   // Какая статья открыта прямо сейчас: ответ запроса по прошлой статье не должен трогать новую.
@@ -97,7 +103,7 @@ export function App() {
 
       <ErrorBar settings={settings} текст={ошибка} onЗакрыть={() => setОшибка(null)} />
 
-      {/* Файл разошёлся с окном: выбор делает человек, молча не подменяем и не перезаписываем. */}
+      {/* Файл разошёлся с окном: выбор делает человек, молча ничего не трогаем. */}
       <ConflictBars
         settings={settings}
         article={реестр ? null : article}
@@ -125,13 +131,15 @@ export function App() {
               fields={fields}
               onFields={(next) => {
                 setFields(next);
-                setDirty(true);
-                вЧерновик(text, buildFrontmatter(article!.frontmatterRaw, next, article!.path, settings.контент));
+                // Тело берём из ref: обработчик текста живёт в замыкании редактора и мог не успеть
+                // отдать сюда свежее значение через состояние.
+                правка(текстСейчас.current, buildFrontmatter(article!.frontmatterRaw, next, article!.path, settings.контент));
               }}
               onText={(next) => {
                 setText(next);
-                setDirty(next !== article!.body);
-                вЧерновик(next, buildFrontmatter(article!.frontmatterRaw, fields, article!.path, settings.контент));
+                // Шапку берём из ref по той же причине: редактор создаётся один раз и держит
+                // те свойства, что были при открытии статьи.
+                правка(next, шапкаСейчас.current);
               }}
               onDeletions={setDeletions}
               onPaste={(file, view) => void runSafe(() => pasteImage(file, article!.path, view))}
@@ -145,7 +153,7 @@ export function App() {
   );
 
   async function refresh(): Promise<void> {
-    // Провал обновления списка не должен подменять список объектом ошибки — оставляем прежний.
+    // Провал не должен подменить список объектом ошибки — оставляем прежний.
     await runSafe(async () => {
       setArticles(await requestJson<ArticleRow[]>('/api/articles'));
     });
@@ -168,10 +176,12 @@ export function App() {
     setFields(parseFrontmatter(art.frontmatterRaw, path, s.контент));
     setText(art.body);
     setDeletions([]);
+    // Исходное состояние окна: от него считается «есть несохранённое».
+    текстСейчас.current = art.body;
+    шапкаСейчас.current = art.frontmatterRaw;
     setMode(null);
 
-    // Ждущая запись относится к прошлой статье — снимаем, иначе черновик уйдёт не туда.
-    автосохранение.отменить();
+    автосохранение.отменить(); // ждущая запись относится к прошлой статье
     // Продолжили с автосохранения — это несохранённая работа, так и показываем.
     const изЧерновика = art.черновикРешение === 'черновик';
     setDirty(изЧерновика);
@@ -186,9 +196,8 @@ export function App() {
   }
 
   /**
-   * Правка уходит в очередь автосохранения; настоящий файл при этом не трогается.
-   * Без аргументов — вернуть в очередь то, что уже в окне: так работа не теряется,
-   * когда сохранение не прошло, а ждущий черновик был снят перед запросом.
+   * Правка уходит в очередь автосохранения; настоящий файл не трогается.
+   * Без аргументов — вернуть в очередь то, что уже в окне (сохранение не прошло).
    */
   function вЧерновик(body = текстСейчас.current, frontmatterRaw = шапкаСейчас.current): void {
     if (!article) return;
@@ -197,28 +206,15 @@ export function App() {
     автосохранение.запланировать({path: article.path, body, frontmatterRaw, отпечатокБазы: article.отпечаток});
   }
 
-  /** Конфликт: продолжаем с автосохранения. Тело меняем целиком — редактор пересоздастся по ключу. */
-  function взятьЧерновик(): void {
-    if (!article?.черновик) return;
-    const черновик = article.черновик;
-    setText(черновик.body);
-    setFields(parseFrontmatter(черновик.frontmatterRaw, article.path, settings!.контент));
-    setArticle({
-      ...article,
-      body: черновик.body,
-      frontmatterRaw: черновик.frontmatterRaw,
-      черновикРешение: 'нет',
-    });
-    setDirty(true);
-    setСостояниеСохранения('естьНесохранённые');
-  }
-
-  /** Конфликт: человек выбрал открыть файл с диска, автосохранение отбрасывается. */
-  function взятьФайл(): void {
+  /**
+   * Любая правка окна: текста или свойств. Несохранённость считается по паре «тело + шапка»
+   * тем же правилом, что и на сервере: иначе возврат текста к исходному стёр бы признак
+   * несохранённых свойств, и правка шапки молча потерялась бы.
+   */
+  function правка(body: string, frontmatterRaw: string): void {
     if (!article) return;
-    setArticle({...article, черновикРешение: 'нет'});
-    setDirty(false);
-    setСостояниеСохранения('сохранено');
+    setDirty(!nothingChanged({body: article.body, frontmatterRaw: article.frontmatterRaw}, {body, frontmatterRaw}));
+    вЧерновик(body, frontmatterRaw);
   }
 
   /** Видимость меняем в состоянии только после того, как сервер подтвердил запись в файлы. */

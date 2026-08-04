@@ -1,7 +1,7 @@
 // Имя каждого теста повторяет формулировку правила.
 import {describe, expect, it} from 'vitest';
 import {EventEmitter} from 'node:events';
-import {ApiError, badPath, errorResponse, readBody} from '../src/adapters/httpBody.mjs';
+import {ApiError, badFields, badPath, errorResponse, readBody} from '../src/adapters/httpBody.mjs';
 
 // Тексты — как из настроек: в самом модуле пользовательских строк нет.
 const ТЕКСТЫ = {
@@ -90,5 +90,33 @@ describe('проверка путей перед записью видимост
 
   it('все пути безопасны и существуют — ошибки нет', () => {
     expect(badPath(['docs/a/index.mdx'], safe, exists, ТЕКСТЫ)).toBeNull();
+  });
+});
+
+describe('проверка полей запроса', () => {
+  it('отсутствующее поле — плохой запрос 400, а не падение', () => {
+    expect(badFields({article: 'docs/a/index.mdx'}, ['article', 'base64'], ТЕКСТЫ))
+      .toEqual({status: 400, error: 'плохой запрос'});
+  });
+
+  it('поле неправильного типа — плохой запрос 400', () => {
+    for (const плохое of [null, 123, {}, [], true]) {
+      expect(badFields({article: плохое, base64: 'AA=='}, ['article', 'base64'], ТЕКСТЫ))
+        .toEqual({status: 400, error: 'плохой запрос'});
+    }
+  });
+
+  it('пустая строка не считается заполненным полем', () => {
+    expect(badFields({article: '', base64: 'AA=='}, ['article', 'base64'], ТЕКСТЫ))
+      .toEqual({status: 400, error: 'плохой запрос'});
+  });
+
+  it('тело запроса не объект — плохой запрос 400', () => {
+    expect(badFields(null, ['article'], ТЕКСТЫ)).toEqual({status: 400, error: 'плохой запрос'});
+    expect(badFields('строка', ['article'], ТЕКСТЫ)).toEqual({status: 400, error: 'плохой запрос'});
+  });
+
+  it('все поля на месте — ошибки нет', () => {
+    expect(badFields({article: 'docs/a/index.mdx', base64: 'AA=='}, ['article', 'base64'], ТЕКСТЫ)).toBeNull();
   });
 });

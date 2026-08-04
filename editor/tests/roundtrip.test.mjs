@@ -5,7 +5,7 @@ import {describe, expect, it} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {buildHead, joinArticle, splitArticle} from '../src/core/articleFile.mjs';
+import {buildHead, joinArticle, nothingChanged, splitArticle} from '../src/core/articleFile.mjs';
 import {walk} from '../src/adapters/library.mjs';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -52,5 +52,29 @@ describe('сохранение без правок ничего не меняе�
     const head = buildHead({frontmatterRaw: parts.frontmatterRaw, eol: parts.eol, метка: parts.метка});
 
     expect(joinArticle({head, body: parts.body})).toBe(raw);
+  });
+});
+
+describe('признак несохранённых изменений', () => {
+  const файл = {body: 'текст статьи', frontmatterRaw: 'title: A\nsidebar_label: Б'};
+
+  it('правка свойств считается несохранённой, даже если тело статьи не менялось', () => {
+    expect(nothingChanged(файл, {body: файл.body, frontmatterRaw: 'title: A\nsidebar_label: Другое'})).toBe(false);
+  });
+
+  it('возврат тела к исходному не стирает несохранённую правку свойств', () => {
+    // Так теряется работа: человек поправил заголовок, потом отменил правку текста —
+    // окно не имеет права показать «Сохранено», пока шапка отличается от файла.
+    const вОкне = {body: файл.body, frontmatterRaw: 'title: Новый\nsidebar_label: Б'};
+
+    expect(nothingChanged(файл, вОкне)).toBe(false);
+  });
+
+  it('совпали и тело, и шапка — сохранять нечего', () => {
+    expect(nothingChanged(файл, {...файл})).toBe(true);
+  });
+
+  it('разница только в переводах строк не считается изменением', () => {
+    expect(nothingChanged(файл, {body: 'текст статьи', frontmatterRaw: 'title: A\r\nsidebar_label: Б'})).toBe(true);
   });
 });

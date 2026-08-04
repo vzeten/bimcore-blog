@@ -5,6 +5,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import {badFields} from './httpBody.mjs';
+
 /** Какие картинки умеет отдавать программа. Типы чужого формата, а не наша настройка. */
 const ТИПЫ = {
   png: 'image/png',
@@ -23,6 +25,14 @@ export async function assetRoute({req, res, url, repo, settings, тело, insid
   // Замена файла картинки: имя остаётся прежним, поэтому все ссылки на неё продолжают работать.
   if (url.pathname === '/api/asset/replace' && req.method === 'POST') {
     const payload = await тело(req);
+    // Поля проверяем ДО path.join и Buffer.from: иначе не-строка роняет их с TypeError,
+    // и человек получает внутреннюю ошибку вместо понятного «неверный запрос».
+    const плохо = badFields(payload, ['article', 'src', 'base64'], settings['ошибкиСервера']);
+    if (плохо) {
+      send(res, плохо.status, {error: плохо.error});
+      return true;
+    }
+
     const target = path.join(repo, path.dirname(payload.article), payload.src);
     if (!insideRepo(target) || !fs.existsSync(target)) {
       send(res, 404, {error: settings['ошибкиСервера']['нетКартинки']});
@@ -36,6 +46,12 @@ export async function assetRoute({req, res, url, repo, settings, тело, insid
   // Вставка картинки из буфера. Имя даёт программа: правило проекта — img-NN, только латиница.
   if (url.pathname === '/api/asset/paste' && req.method === 'POST') {
     const payload = await тело(req);
+    const плохо = badFields(payload, ['article', 'base64'], settings['ошибкиСервера']);
+    if (плохо) {
+      send(res, плохо.status, {error: плохо.error});
+      return true;
+    }
+
     const dir = path.join(repo, path.dirname(payload.article));
     if (!insideRepo(dir) || !fs.existsSync(dir)) {
       send(res, 404, {error: settings['ошибкиСервера']['нетПапкиСтатьи']});

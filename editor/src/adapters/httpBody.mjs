@@ -63,6 +63,23 @@ export function errorResponse(error, внутреннийТекст) {
  * или `null`, если все пути безопасны и существуют. Небезопасный путь — 400, отсутствующий — 404,
  * пустой список — 400. Предикаты `safe`/`exists` инъектируются, поэтому правило проверяется без диска.
  */
+/**
+ * Проверяет, что в запросе пришли нужные строковые поля и они не пусты.
+ * Возвращает {status, error} для плохого запроса или `null`, если всё на месте.
+ * Без этой проверки `path.join` и `Buffer.from` получают не-строку и бросают TypeError,
+ * а человек видит внутреннюю ошибку вместо понятного «неверный запрос».
+ */
+export function badFields(payload, поля, тексты) {
+  if (payload === null || typeof payload !== 'object') return {status: 400, error: тексты['плохойЗапрос']};
+
+  for (const поле of поля) {
+    const значение = payload[поле];
+    if (typeof значение !== 'string' || значение === '') return {status: 400, error: тексты['плохойЗапрос']};
+  }
+
+  return null;
+}
+
 export function badPath(paths, safe, exists, тексты) {
   if (!Array.isArray(paths) || paths.length === 0) return {status: 400, error: тексты['плохойЗапрос']};
   for (const rel of paths) {
