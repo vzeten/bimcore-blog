@@ -36,6 +36,10 @@ export function App() {
   const {взятьЧерновик, взятьФайл} = useConflictChoice({
     article, roots: settings?.контент ?? [], setArticle, setText, setFields,
     setDirty, setСостояние: setСостояниеСохранения,
+    запомнить: (body, frontmatterRaw) => {
+      текстСейчас.current = body;
+      шапкаСейчас.current = frontmatterRaw;
+    },
   });
   // Текст и шапка в ref: пока запрос идёт, человек печатает, и ответ должен сравнить
   // «что сохраняли» с «что в окне сейчас».

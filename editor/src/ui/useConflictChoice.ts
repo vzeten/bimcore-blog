@@ -14,6 +14,11 @@ export function useConflictChoice(deps: {
   setFields: (fields: Field[]) => void;
   setDirty: (dirty: boolean) => void;
   setСостояние: (state: SaveState) => void;
+  /**
+   * Запомнить, что теперь в окне. Без этого следующая правка возьмёт устаревшее значение
+   * и запишет в черновик смесь «тело от одного источника, шапка от другого».
+   */
+  запомнить: (body: string, frontmatterRaw: string) => void;
 }) {
   /** Продолжаем с автосохранения. Тело меняем целиком — редактор пересоздастся по ключу. */
   const взятьЧерновик = (): void => {
@@ -29,6 +34,7 @@ export function useConflictChoice(deps: {
       frontmatterRaw: черновик.frontmatterRaw,
       черновикРешение: 'нет',
     });
+    deps.запомнить(черновик.body, черновик.frontmatterRaw);
     // Это несохранённая работа: она есть только в черновике, но не в файле.
     deps.setDirty(true);
     deps.setСостояние('естьНесохранённые');
@@ -40,6 +46,8 @@ export function useConflictChoice(deps: {
     if (!article) return;
 
     deps.setArticle({...article, черновикРешение: 'нет'});
+    // В окне остаётся то, что пришло из файла, — это и есть новая точка отсчёта.
+    deps.запомнить(article.body, article.frontmatterRaw);
     deps.setDirty(false);
     deps.setСостояние('сохранено');
   };
