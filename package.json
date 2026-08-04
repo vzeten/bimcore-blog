@@ -12,7 +12,11 @@
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "content:check": "node scripts/content-check.js"
+    "content:check": "node scripts/content-check.js",
+    "review": "node scripts/review-page.js",
+    "editor:dev": "npm --prefix editor run dev",
+    "editor:test": "npm --prefix editor run test",
+    "editor:typecheck": "npm --prefix editor run typecheck"
   },
   "dependencies": {
     "@docusaurus/core": "3.10.1",

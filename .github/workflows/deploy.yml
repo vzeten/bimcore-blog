@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    # Редактор статей — локальная программа, сайт её не собирает и о ней не знает.
+    # Правки в editor/ не должны запускать пересборку и деплой сайта.
+    paths-ignore:
+      - 'editor/**'
   workflow_dispatch:
 
 permissions:

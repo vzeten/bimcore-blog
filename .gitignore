@@ -20,6 +20,14 @@
 # Бинарные .docx в репозиторий не коммитим.
 /_word_inbox
 
+# Страница ревью правок (генерируется скриптом review-page.js под конкретный показ владельцу)
+/review
+/review-notes.json
+
+# Локальный редактор статей: зависимости и сборка не коммитятся.
+/editor/node_modules
+/editor/dist
+
 # Misc
 .DS_Store
 .env.local
@@ -34,3 +42,10 @@ yarn-error.log*
 # knowledge-redirect: сборка и зависимости FastEdge-функции (в git только исходники)
 scripts/knowledge-redirect/node_modules/
 scripts/knowledge-redirect/dist/
+
+
+
+# Черновые снимки правок редактора: после публикации не нужны, в репозиторий не идут
+/editor/.history
+# Автосохранённые черновики редактора: рабочее состояние до кнопки «Сохранить», в репозиторий не идут
+/editor/.drafts
