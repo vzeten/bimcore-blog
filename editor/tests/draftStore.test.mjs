@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 
-import {countSnapshots, dropDraft, fingerprint, loadDraft, saveDraft, saveSnapshot} from '../src/adapters/draftStore.mjs';
+import {countSnapshots, dropDraft, fingerprint, latestSnapshot, loadDraft, saveDraft, saveSnapshot, snapshotText} from '../src/adapters/draftStore.mjs';
 import {newDraft} from '../src/core/drafts.mjs';
 
 const НАСТРОЙКИ = {
@@ -93,6 +93,35 @@ describe('снимки при сохранении', () => {
     }
 
     expect(countSnapshots(dir, НАСТРОЙКИ, 'docs/a/index.mdx')).toBe(3);
+  });
+
+  it('занятое имя снимка не затирает прежнюю версию', () => {
+    const dir = песочница();
+    // Две версии в одну и ту же миллисекунду с одним автором: молча потерять одну нельзя.
+    saveSnapshot(dir, НАСТРОЙКИ, 'docs/a/index.mdx', 'первый', 'я', '2026-08-04T10:00:00.000Z');
+    saveSnapshot(dir, НАСТРОЙКИ, 'docs/a/index.mdx', 'второй', 'я', '2026-08-04T10:00:00.000Z');
+
+    expect(countSnapshots(dir, НАСТРОЙКИ, 'docs/a/index.mdx')).toBe(2);
+  });
+
+  it('последний снимок отдаёт своё время, автора и содержимое', () => {
+    const dir = песочница();
+    saveSnapshot(dir, НАСТРОЙКИ, 'docs/a/index.mdx', 'старый текст', 'я', '2026-08-04T10:00:00.000Z');
+    saveSnapshot(dir, НАСТРОЙКИ, 'docs/a/index.mdx', 'свежий текст', 'Неизвестный', '2026-08-04T11:00:00.000Z');
+
+    const снимок = latestSnapshot(dir, НАСТРОЙКИ, 'docs/a/index.mdx');
+
+    expect(снимок.когда).toBe('2026-08-04T11:00:00.000Z');
+    expect(снимок.автор).toBe('Неизвестный');
+    expect(snapshotText(dir, НАСТРОЙКИ, 'docs/a/index.mdx', снимок.имя)).toBe('свежий текст');
+  });
+
+  it('снимков ещё нет — последнего снимка не существует, и это не ошибка', () => {
+    expect(latestSnapshot(песочница(), НАСТРОЙКИ, 'docs/нет/index.mdx')).toBeNull();
+  });
+
+  it('снимок пропал с диска — содержимое читается как отсутствующее, программа не падает', () => {
+    expect(snapshotText(песочница(), НАСТРОЙКИ, 'docs/нет/index.mdx', 'нет-такого.mdx')).toBeNull();
   });
 
   it('снимки разных версий статьи не смешиваются', () => {

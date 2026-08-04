@@ -9,6 +9,8 @@ import {isUnlisted} from '../core/frontmatterRules.mjs';
 import {groupArticles} from '../core/articles.mjs';
 import {initialReadiness, readState, stateFileName, writeState} from '../core/articleState.mjs';
 import {ФОРМАТ, parseGitLog, parseGitStatus} from '../core/gitLog.mjs';
+import {авторПравки} from '../core/externalEdit.mjs';
+import {latestSnapshot} from './draftStore.mjs';
 
 /** Файлы и папки с подчёркиванием и точкой — служебные: ни Docusaurus, ни программа их не читают. */
 export function walk(dir, out = []) {
@@ -68,8 +70,13 @@ export function saveState(repo, rel, settings, state) {
  * Кто и когда правил каждый файл. Один запуск git на весь репозиторий, а не по запуску на статью:
  * при тысяче статей поштучные запросы означают тысячу запусков.
  * Файл, изменённый прямо сейчас, свежее любого коммита — время берётся с диска.
+ *
+ * Автор незакоммиченной правки берётся по общему правилу (`core/externalEdit.mjs`), а не из
+ * `git config user.name`: имя коммиттера по умолчанию — не доказательство, кто правил текст,
+ * и такая подпись приписывала бы владельцу правки ИИ. История спрашивается только по тем путям,
+ * которые действительно изменены, поэтому при тысяче статей она не читается тысячу раз.
  */
-export async function editTimes(repo, git) {
+export async function editTimes(repo, git, editorDir, settings) {
   const times = new Map();
 
   try {
@@ -80,13 +87,22 @@ export async function editTimes(repo, git) {
   }
 
   try {
-    const я = (await git.raw(['config', 'user.name'])).trim() || null;
     const status = await git.raw(['-c', 'core.quotepath=false', 'status', '--porcelain']);
 
     for (const rel of parseGitStatus(status)) {
       const file = path.join(repo, rel);
       if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) continue;
-      times.set(rel, {когда: Math.floor(fs.statSync(file).mtimeMs / 1000), правил: я});
+
+      const времяФайла = fs.statSync(file).mtime.toISOString();
+      const правил = авторПравки({
+        файлГрязный: true,
+        авторКоммита: null,
+        снимок: latestSnapshot(editorDir, settings, rel),
+        времяФайла,
+        неизвестный: settings['реестр']['неизвестныйАвтор'],
+      });
+
+      times.set(rel, {когда: Math.floor(Date.parse(времяФайла) / 1000), правил});
     }
   } catch {
     // Без git программа работает дальше, просто без колонки «кто правил».

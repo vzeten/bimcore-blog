@@ -8,15 +8,17 @@ import {createServer as createVite} from 'vite';
 import {simpleGit} from 'simple-git';
 
 import {buildHead, joinArticle, nothingChanged, readField, splitArticle} from './src/core/articleFile.mjs';
-import {articlePlace, safeFrontmatter} from './src/core/frontmatterRules.mjs';
-import {versionStates} from './src/core/articles.mjs';
+import {safeFrontmatter} from './src/core/frontmatterRules.mjs';
 import {afterEdit} from './src/core/articleState.mjs';
+import {articleFacts} from './src/adapters/articleFacts.mjs';
 import {editTimes, listArticles, loadState, publishedFiles, saveState} from './src/adapters/library.mjs';
-import {badPath, errorResponse, readBody} from './src/adapters/httpBody.mjs';
+import {badFields, badPath, errorResponse, readBody} from './src/adapters/httpBody.mjs';
 import {draftDecision, newDraft} from './src/core/drafts.mjs';
 import {dropDraft, fingerprint, loadDraft, saveDraft, saveSnapshot} from './src/adapters/draftStore.mjs';
 import {assetRoute} from './src/adapters/assets.mjs';
 import {visibilityRoute} from './src/adapters/visibilityRoute.mjs';
+import {detectPublishedRef, gitAuthor, showFile} from './src/adapters/gitFile.mjs';
+import {фиксироватьВнешнюю} from './src/adapters/externalVersion.mjs';
 
 const EDITOR_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(EDITOR_DIR, '..');
@@ -30,63 +32,26 @@ const roots = () => readSettings()['контент'];
 
 let publishedRef = 'HEAD';
 
-async function detectPublishedRef() {
-  try {
-    await git.revparse(['--verify', 'origin/main']);
-    publishedRef = 'origin/main';
-  } catch {
-    publishedRef = 'HEAD';
-  }
-}
+/** Фиксация внешней правки: одна дверь на все три места, где программа читает и пишет статью. */
+const фиксировать = (rel, обязательно) => фиксироватьВнешнюю({
+  editorDir: EDITOR_DIR, repo: REPO, settings: readSettings(), git, ref: publishedRef, rel, обязательно,
+});
 
 /** Весь свод статей: файлы с диска, собранные в статьи, с временами правок и фактом публикации. */
 async function articles() {
-  const [times, published] = await Promise.all([editTimes(REPO, git), publishedFiles(git, publishedRef)]);
-  return listArticles(REPO, readSettings(), times, published);
-}
-
-async function articleOf(rel) {
   const settings = readSettings();
-  const article = (await articles())
-    .find((item) => Object.values(item.versions).some((v) => v.path === rel));
-
-  if (!article) return {versions: {}, states: {}, category: '', нетНаСайте: false, служебная: false, готовность: null};
-
-  const times = Object.fromEntries(
-    Object.entries(article.versions).map(([locale, version]) => [locale, version.когда]),
-  );
-
-  // Готовность и скрытость открытой версии — как у её файла, а не всегда «первый статус».
-  const своя = article.versions[articlePlace(rel, settings['контент']).locale];
-
-  return {
-    versions: Object.fromEntries(Object.entries(article.versions).map(([l, v]) => [l, v.path])),
-    states: versionStates(article, times, settings),
-    category: article.category,
-    нетНаСайте: article.нетНаСайте,
-    служебная: article.служебная,
-    готовность: своя?.готовность ?? null,
-    скрыта: своя?.скрыта ?? false,
-  };
+  const [times, published] = await Promise.all([
+    editTimes(REPO, git, EDITOR_DIR, settings),
+    publishedFiles(git, publishedRef),
+  ]);
+  return listArticles(REPO, settings, times, published);
 }
 
-/** Кто автор снимка. Нет имени в git — снимок всё равно нужен, просто без автора. */
-async function gitAuthor() {
-  try {
-    return (await git.raw(['config', 'user.name'])).trim() || null;
-  } catch {
-    return null;
-  }
-}
-
-async function publishedBody(rel) {
-  try {
-    const raw = await git.show([`${publishedRef}:${rel}`]);
-    return splitArticle(raw).body;
-  } catch {
-    return null; // статьи ещё нет на сайте
-  }
-}
+/** Тело статьи в опубликованной версии сайта. `null` — статьи там ещё нет. */
+const publishedBody = async (rel) => {
+  const raw = await showFile(git, publishedRef, rel);
+  return raw === null ? null : splitArticle(raw).body;
+};
 
 function send(res, code, data, type = 'application/json; charset=utf-8') {
   res.writeHead(code, {'Content-Type': type});
@@ -111,7 +76,7 @@ async function api(req, res, url) {
   if (url.pathname === '/api/articles') return send(res, 200, await articles());
 
   // Видимость статьи — отдельным модулем: сервер иначе выходит за лимит размера файла.
-  if (await visibilityRoute({req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send})) return;
+  if (await visibilityRoute({req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send, фиксировать})) return;
 
   if (url.pathname === '/api/article') {
     const rel = url.searchParams.get('path');
@@ -120,6 +85,11 @@ async function api(req, res, url) {
     if (!file || !insideRepo(file) || !fs.existsSync(file)) {
       return send(res, 404, {error: settings['ошибкиСервера']['нетСтатьи']});
     }
+
+    // Файл могли изменить снаружи, пока статья была закрыта: сохраняем его состояние версией,
+    // иначе чужая работа нигде не останется. Чтение ничего не теряет, поэтому сбой хранилища
+    // снимков открыть статью не мешает.
+    await фиксировать(rel, false);
 
     const raw = fs.readFileSync(file, 'utf8');
     const {frontmatterRaw, body} = splitArticle(raw);
@@ -148,7 +118,7 @@ async function api(req, res, url) {
       published: await publishedBody(rel),
       title: readField(frontmatterRaw, 'title') || rel,
       state: loadState(REPO, rel, settings),
-      ...(await articleOf(rel)),
+      ...articleFacts(await articles(), rel, settings),
     });
   }
 
@@ -191,8 +161,21 @@ async function api(req, res, url) {
 
   if (url.pathname === '/api/article/save' && req.method === 'POST') {
     const payload = await тело(req);
+    // Поля проверяются до работы с путями: без этого не-строка роняет `path.join` внутренней
+    // ошибкой вместо понятного «неверный запрос» (SPEC 6.4). Пустое тело — законно, поэтому
+    // у него проверяется только тип: статья без текста бывает, статья без пути — нет.
+    const тексты = readSettings()['ошибкиСервера'];
+    const плохое = badFields(payload, ['path'], тексты)
+      ?? (typeof payload.body === 'string' ? null : {status: 400, error: тексты['плохойЗапрос']});
+    if (плохое) return send(res, плохое.status, {error: плохое.error});
+
     const file = path.join(REPO, payload.path);
-    if (!insideRepo(file) || !fs.existsSync(file)) return send(res, 404, {error: readSettings()['ошибкиСервера']['нетСтатьи']});
+    if (!insideRepo(file) || !fs.existsSync(file)) return send(res, 404, {error: тексты['нетСтатьи']});
+
+    // До проверки отпечатка и до записи: если файл изменили снаружи, его содержимое обязано лечь
+    // в историю. Иначе «Сохранить поверх» затрёт чужую правку насовсем — в git её нет.
+    await фиксировать(payload.path, true);
+
     const raw = fs.readFileSync(file, 'utf8');
     const current = splitArticle(raw);
 
@@ -244,8 +227,10 @@ async function api(req, res, url) {
     fs.writeFileSync(file, текст, 'utf8');
 
     // Настоящее сохранение оставляет версию в истории, а черновик больше не нужен.
+    // Автор известен: файл пишем мы, и подпись берётся у того, кто работает за программой.
     const settings = readSettings();
-    saveSnapshot(EDITOR_DIR, settings, payload.path, текст, await gitAuthor(), new Date().toISOString());
+    const автор = (await gitAuthor(git)) ?? settings['реестр']['неизвестныйАвтор'];
+    saveSnapshot(EDITOR_DIR, settings, payload.path, текст, автор, new Date().toISOString());
     dropDraft(EDITOR_DIR, settings, payload.path);
 
     // Правка после подготовки возвращает версию в черновик.
@@ -268,7 +253,7 @@ const vite = await createVite({
   esbuild: {jsx: 'automatic'},
 });
 
-await detectPublishedRef();
+publishedRef = await detectPublishedRef(git);
 
 // Ожидаемую ошибку (нет статьи, битый запрос) отдаём с её кодом и текстом.
 // Внутреннюю — пишем стек в консоль сервера, а интерфейсу даём спокойный общий текст из настроек без стека.

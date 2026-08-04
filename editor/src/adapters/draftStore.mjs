@@ -6,7 +6,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 import {draftName, extraSnapshots, readDraft, writeDraft} from '../core/drafts.mjs';
-import {historyFolder, snapshotName} from '../core/history.mjs';
+import {historyFolder, parseSnapshotName, свободноеИмя} from '../core/history.mjs';
 
 /**
  * Отпечаток содержимого файла: по нему видно, менялся ли файл под черновиком.
@@ -49,22 +49,50 @@ export function dropDraft(editorDir, settings, rel) {
   if (fs.existsSync(file)) fs.rmSync(file);
 }
 
+const snapshotDir = (editorDir, settings, rel) => path.join(historyDir(editorDir, settings), historyFolder(rel));
+
+/** Имена снимков этой версии по порядку времени: имя начинается со времени, поэтому хватает сортировки. */
+function snapshotNames(dir) {
+  return fs.existsSync(dir) ? fs.readdirSync(dir).sort() : [];
+}
+
 /**
  * Положить снимок сохранённого текста в историю и убрать лишние старые.
  * Снимки нужны, чтобы потом вернуться к прошлому состоянию (В1-13, В1-14).
  */
 export function saveSnapshot(editorDir, settings, rel, text, author, iso) {
-  const dir = path.join(historyDir(editorDir, settings), historyFolder(rel));
+  const dir = snapshotDir(editorDir, settings, rel);
   fs.mkdirSync(dir, {recursive: true});
-  fs.writeFileSync(path.join(dir, snapshotName(iso, author)), text, 'utf8');
+  // Имя берётся свободное: снимок в ту же миллисекунду с тем же автором не должен затереть прежний.
+  fs.writeFileSync(path.join(dir, свободноеИмя(snapshotNames(dir), iso, author)), text, 'utf8');
 
   for (const лишний of extraSnapshots(fs.readdirSync(dir), settings['хранение']['снимковНаВерсию'])) {
     fs.rmSync(path.join(dir, лишний));
   }
 }
 
+/**
+ * Последний известный программе снимок этой версии: время, автор и имя файла.
+ * Содержимое не читается — оно нужно не всегда, а реестру хватает подписи.
+ */
+export function latestSnapshot(editorDir, settings, rel) {
+  const имя = snapshotNames(snapshotDir(editorDir, settings, rel)).at(-1);
+  if (имя === undefined) return null;
+
+  const разобрано = parseSnapshotName(имя);
+  return разобрано === null ? null : {имя, когда: разобрано.iso, автор: разобрано.author};
+}
+
+/** Содержимое снимка. Файл пропал или нечитаем — считаем, что известного состояния нет. */
+export function snapshotText(editorDir, settings, rel, имя) {
+  try {
+    return fs.readFileSync(path.join(snapshotDir(editorDir, settings, rel), имя), 'utf8');
+  } catch {
+    return null;
+  }
+}
+
 /** Сколько снимков хранится у этой версии — нужно проверкам и будущей ленте версий. */
 export function countSnapshots(editorDir, settings, rel) {
-  const dir = path.join(historyDir(editorDir, settings), historyFolder(rel));
-  return fs.existsSync(dir) ? fs.readdirSync(dir).length : 0;
+  return snapshotNames(snapshotDir(editorDir, settings, rel)).length;
 }

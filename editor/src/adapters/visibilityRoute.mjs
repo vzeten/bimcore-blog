@@ -12,8 +12,10 @@ import {badPath} from './httpBody.mjs';
  * Обрабатывает `/api/visibility`. Возвращает true, если запрос её.
  * Плохой или отсутствующий путь — ошибка, а не тихий пропуск: иначе интерфейс сменит
  * видимость, хотя на диске ничего не записалось.
+ * `фиксировать` — сохранение внешней правки версией: ручка переписывает настоящий файл,
+ * поэтому чужая правка обязана лечь в историю до записи, как и при обычном сохранении.
  */
-export async function visibilityRoute({req, res, url, repo, settings, тело, insideRepo, send}) {
+export async function visibilityRoute({req, res, url, repo, settings, тело, insideRepo, send, фиксировать}) {
   if (url.pathname !== '/api/visibility' || req.method !== 'POST') return false;
 
   const payload = await тело(req);
@@ -32,6 +34,8 @@ export async function visibilityRoute({req, res, url, repo, settings, тело, 
 
   const changed = [];
   for (const rel of paths) {
+    await фиксировать(rel, true);
+
     const file = path.join(repo, rel);
     const current = splitArticle(fs.readFileSync(file, 'utf8'));
     const next = setUnlisted(current.frontmatterRaw, payload.скрыть === true);
