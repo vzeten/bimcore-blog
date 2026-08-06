@@ -2,8 +2,7 @@ import {useEffect, useRef} from 'react';
 import {EditorState} from '@codemirror/state';
 import {EditorView, keymap, drawSelection, highlightActiveLine} from '@codemirror/view';
 import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
-import {markdown} from '@codemirror/lang-markdown';
-import {livePreview} from '../livePreview';
+import {запретПравки, чтениеСтатьи} from './reading';
 import {layerColors} from '../layerColors';
 import type {Deletion, Layer} from '../../core/colorize';
 import type {Article} from '../types';
@@ -22,6 +21,12 @@ export function useEditor(options: {
   onDeletions: (deletions: Deletion[]) => void;
   onSelection: (spot: Spot | null) => void;
   onPaste: (file: File, view: EditorView) => void;
+  /**
+   * Правка запрещена, пока человек не выбрал, с чего продолжать (файл или автосохранение).
+   * Иначе набранное в этот момент пропадает при любом из двух выборов: оба подставляют
+   * в окно свой вариант целиком.
+   */
+  толькоЧтение?: boolean;
 }) {
   const host = useRef<HTMLDivElement | null>(null);
   const view = useRef<EditorView | null>(null);
@@ -45,9 +50,8 @@ export function useEditor(options: {
           drawSelection(),
           highlightActiveLine(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
-          markdown(),
-          EditorView.lineWrapping,
-          livePreview(() => options.article.path),
+          ...чтениеСтатьи(() => options.article.path),
+          ...(options.толькоЧтение === true ? запретПравки() : []),
           layerColors(() => before, options.onDeletions),
           EditorView.domEventHandlers({
             paste: (event, editor) => {

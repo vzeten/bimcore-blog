@@ -7,7 +7,8 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 
 import {countSnapshots, dropDraft, fingerprint, latestSnapshot, loadDraft, saveDraft, saveSnapshot, snapshotText} from '../src/adapters/draftStore.mjs';
-import {newDraft} from '../src/core/drafts.mjs';
+import {newDraft, writeDraft} from '../src/core/drafts.mjs';
+import {historyFolder} from '../src/core/history.mjs';
 
 const НАСТРОЙКИ = {
   хранение: {папкаЧерновиков: '.drafts', папкаСнимков: '.history', черновикЖивётДней: 14, снимковНаВерсию: 3},
@@ -49,6 +50,25 @@ describe('хранилище черновиков', () => {
     saveDraft(dir, НАСТРОЙКИ, черновик());
 
     expect(loadDraft(dir, НАСТРОЙКИ, 'docs/a/index.mdx').body).toBe('текст черновика');
+  });
+
+  it('незаписанная работа из черновика прежней схемы имён не пропадает', () => {
+    // Смена схемы имён не должна стоить человеку набранного текста.
+    const dir = песочница();
+    fs.mkdirSync(path.join(dir, '.drafts'), {recursive: true});
+    fs.writeFileSync(path.join(dir, '.drafts', 'docs_a_index_mdx.json'), writeDraft(черновик()), 'utf8');
+
+    expect(loadDraft(dir, НАСТРОЙКИ, 'docs/a/index.mdx').body).toBe('текст черновика');
+  });
+
+  it('черновик от другой статьи не подхватывается как свой', () => {
+    // Предохранитель от старых плоских имён: в файле лежит запись с чужим путём.
+    const dir = песочница();
+    saveDraft(dir, НАСТРОЙКИ, черновик());
+    const файл = path.join(dir, '.drafts', fs.readdirSync(path.join(dir, '.drafts'))[0]);
+    fs.writeFileSync(файл, JSON.stringify({...черновик(), path: 'docs/чужая/index.mdx'}), 'utf8');
+
+    expect(loadDraft(dir, НАСТРОЙКИ, 'docs/a/index.mdx')).toBeNull();
   });
 
   it('черновика нет — чтение возвращает пусто и не падает', () => {
@@ -122,6 +142,20 @@ describe('снимки при сохранении', () => {
 
   it('снимок пропал с диска — содержимое читается как отсутствующее, программа не падает', () => {
     expect(snapshotText(песочница(), НАСТРОЙКИ, 'docs/нет/index.mdx', 'нет-такого.mdx')).toBeNull();
+  });
+
+  it('посторонний файл в папке снимков не вытесняет живую версию', () => {
+    // Уборка считала все файлы подряд: чужой файл занимал место в пределе, и лишний
+    // настоящий снимок удалялся раньше срока.
+    const dir = песочница();
+    for (const час of ['10', '11']) {
+      saveSnapshot(dir, НАСТРОЙКИ, 'docs/a/index.mdx', `текст ${час}`, 'я', `2026-08-04T${час}:00:00.000Z`);
+    }
+    const папка = path.join(dir, '.history', historyFolder('docs/a/index.mdx'));
+    fs.writeFileSync(path.join(папка, 'заметка.txt'), 'мусор', 'utf8');
+    saveSnapshot(dir, НАСТРОЙКИ, 'docs/a/index.mdx', 'текст 12', 'я', '2026-08-04T12:00:00.000Z');
+
+    expect(countSnapshots(dir, НАСТРОЙКИ, 'docs/a/index.mdx')).toBe(3);
   });
 
   it('снимки разных версий статьи не смешиваются', () => {

@@ -14,9 +14,19 @@ export function ArticlePane(props: {
   onText: (text: string) => void;
   onDeletions: (deletions: Deletion[]) => void;
   onPaste: (file: File, view: EditorView) => void;
+  /**
+   * Идёт просмотр старой версии: рабочий редактор прячется, но остаётся живым.
+   * Снять его с экрана насовсем нельзя — вместе с ним пропадут несохранённые правки
+   * и вся история отмены: редактор пересоздался бы из текста, каким статья открывалась.
+   */
+  скрыт?: boolean;
 }) {
   const [spot, setSpot] = useState<Spot | null>(null);
   const [menu, setMenu] = useState(false);
+
+  // Пока человек не выбрал, с чего продолжать, документ показывается, но не правится:
+  // любой из двух выборов подставляет свой вариант целиком, и набранное пропало бы.
+  const выборНеСделан = props.article.черновикРешение === 'конфликт' && props.article.черновик !== null;
 
   const {host, view} = useEditor({
     article: props.article,
@@ -24,19 +34,29 @@ export function ArticlePane(props: {
     onDeletions: props.onDeletions,
     onSelection: setSpot,
     onPaste: props.onPaste,
+    толькоЧтение: выборНеСделан,
   });
 
   const blocks = props.settings.вставки.filter((item) => item.группа === 'Блоки');
 
   return (
-    <div className="pane">
+    <div className={props.скрыт ? 'pane pane-away' : 'pane'}>
       <div className="pane-head">
-        <Properties settings={props.settings} fields={props.fields} onChange={props.onFields} />
+        <Properties
+          settings={props.settings}
+          fields={props.fields}
+          onChange={props.onFields}
+          толькоЧтение={выборНеСделан}
+        />
 
+        {/* Кнопки вставки и форматирования меняют текст в обход запрета на набор: они пишут
+            в редактор напрямую. Пока выбор не сделан, их на экране нет вовсе. */}
         <div className="insert">
+          {!выборНеСделан && (
           <button className="insert-open" onClick={() => setMenu(!menu)}>
             + {props.settings.подписи.вставить}
           </button>
+          )}
 
           {menu && (
             <div className="insert-menu">
@@ -60,7 +80,7 @@ export function ArticlePane(props: {
 
       <SelectionToolbar
         settings={props.settings}
-        spot={spot}
+        spot={выборНеСделан ? null : spot}
         view={view.current}
         articlePath={props.article.path}
       />

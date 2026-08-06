@@ -5,6 +5,15 @@ import type {Range} from '@codemirror/state';
 import {colorize, type Deletion, type Layer} from '../core/colorize';
 import {label} from './labels';
 
+/**
+ * Цвета слоёв из настроек — в переменные CSS. Живут здесь, рядом с самим показом слоёв,
+ * а не в окне: окно решает, что показывать, а не какого оно цвета.
+ */
+export function applyLayerColors(слои: Record<string, {цвет: string}>): void {
+  const style = document.documentElement.style;
+  for (const [key, value] of Object.entries(слои)) style.setProperty(`--layer-${key}`, value.цвет);
+}
+
 class DeletionWidget extends WidgetType {
   constructor(private readonly deleted: string) {
     super();

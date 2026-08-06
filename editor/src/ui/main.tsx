@@ -4,6 +4,7 @@ import {App} from './App';
 import './styles.css';
 import './registry.css';
 import './feedback.css';
+import './versions.css';
 
 /** Белый экран вместо программы недопустим: ошибку надо показать словами. */
 class Guard extends Component<{children: ReactNode}, {error: Error | null}> {

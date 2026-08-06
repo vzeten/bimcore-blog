@@ -61,6 +61,28 @@ describe('вставка картинки', () => {
     await pasteImage(fakeFile, 'docs/a/index.mdx', view as never);
     expect(view.dispatch).toHaveBeenCalledTimes(1);
   });
+
+  it('человек ушёл в другую статью — разметка не уезжает в чужой редактор', async () => {
+    // Старый редактор к этому моменту уничтожен, а его текст уже не принадлежит открытой статье.
+    stubFetch({ok: true, json: async () => ({src: './img-01.png'})});
+    const view = fakeView();
+
+    await pasteImage(fakeFile, 'docs/a/index.mdx', view as never, () => false);
+
+    expect(view.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('человек ушёл в просмотр версии — рабочий текст не дописывается', async () => {
+    // Иначе ответ вставки меняет рабочий текст, а это заводит автосохранение и пишет черновик
+    // прямо во время чтения старой версии (правило В1-13).
+    stubFetch({ok: true, json: async () => ({src: './img-01.png'})});
+    const view = fakeView();
+
+    await pasteImage(fakeFile, 'docs/a/index.mdx', view as never, () => false);
+
+    expect(view.dispatch).not.toHaveBeenCalled();
+    expect(view.focus).not.toHaveBeenCalled();
+  });
 });
 
 describe('замена картинки', () => {

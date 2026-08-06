@@ -13,10 +13,12 @@ import {afterEdit} from './src/core/articleState.mjs';
 import {articleFacts} from './src/adapters/articleFacts.mjs';
 import {editTimes, listArticles, loadState, publishedFiles, saveState} from './src/adapters/library.mjs';
 import {badFields, badPath, errorResponse, readBody} from './src/adapters/httpBody.mjs';
-import {draftDecision, newDraft} from './src/core/drafts.mjs';
-import {dropDraft, fingerprint, loadDraft, saveDraft, saveSnapshot} from './src/adapters/draftStore.mjs';
+import {draftDecision, позже, свежееЧерновика} from './src/core/drafts.mjs';
+import {dropDraft, fingerprint, loadDraft, saveSnapshot} from './src/adapters/draftStore.mjs';
+import {draftRoute} from './src/adapters/draftRoute.mjs';
 import {assetRoute} from './src/adapters/assets.mjs';
 import {visibilityRoute} from './src/adapters/visibilityRoute.mjs';
+import {versionsRoute} from './src/adapters/versionsRoute.mjs';
 import {detectPublishedRef, gitAuthor, showFile} from './src/adapters/gitFile.mjs';
 import {фиксироватьВнешнюю} from './src/adapters/externalVersion.mjs';
 
@@ -31,6 +33,40 @@ const git = simpleGit(REPO);
 const roots = () => readSettings()['контент'];
 
 let publishedRef = 'HEAD';
+
+/**
+ * Время последней принятой правки по каждой статье. Живёт в памяти намеренно: нужно только,
+ * чтобы отличить задержавшийся старый запрос от нового, а после перезапуска таких запросов нет.
+ */
+const последняяПравка = new Map();
+
+/**
+ * Служебный шаг после того, как файл статьи уже записан. Его сбой пишется в консоль сервера,
+ * но не отменяет соседние шаги и не выдаётся человеку за неудачу сохранения: текст на диске.
+ */
+function безСрыва(шаг, предупреждения, код) {
+  try {
+    шаг();
+  } catch (error) {
+    console.error(error);
+    // Молчать нельзя: человеку скажут «сохранено», а версия или готовность на диск не легли.
+    // Код — внутренний договор сервера и окна; человеческий текст живёт в настройках.
+    предупреждения.push(код);
+  }
+}
+
+/**
+ * Убрать черновик после настоящего сохранения — но только если он не новее самого сохранения.
+ * Запоздавший запрос иначе стёр бы работу, набранную уже после его отправки.
+ * Порог свежести остаётся в памяти и после удаления черновика: без него поздний запрос
+ * автосохранения воскресил бы черновик поверх только что сохранённой работы.
+ */
+function убратьЧерновик(rel, правкаОт) {
+  const settings = readSettings();
+  const черновик = loadDraft(EDITOR_DIR, settings, rel);
+  if (черновик === null || свежееЧерновика(правкаОт, черновик)) dropDraft(EDITOR_DIR, settings, rel);
+  последняяПравка.set(rel, позже(правкаОт ?? new Date().toISOString(), последняяПравка.get(rel)));
+}
 
 /** Фиксация внешней правки: одна дверь на все три места, где программа читает и пишет статью. */
 const фиксировать = (rel, обязательно) => фиксироватьВнешнюю({
@@ -78,6 +114,9 @@ async function api(req, res, url) {
   // Видимость статьи — отдельным модулем: сервер иначе выходит за лимит размера файла.
   if (await visibilityRoute({req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send, фиксировать})) return;
 
+  // Лента версий и содержимое одной версии — тоже отдельным модулем, по той же причине.
+  if (await versionsRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), insideRepo, send})) return;
+
   if (url.pathname === '/api/article') {
     const rel = url.searchParams.get('path');
     const settings = readSettings();
@@ -122,42 +161,11 @@ async function api(req, res, url) {
     });
   }
 
-  // Автосохранение: пишет черновик рядом с редактором и НЕ трогает настоящий .mdx.
-  if (url.pathname === '/api/draft' && req.method === 'POST') {
-    const payload = await тело(req);
-    const settings = readSettings();
-    const rel = payload.path;
-    const bad = badPath(
-      [rel],
-      (p) => insideRepo(path.join(REPO, p)),
-      (p) => fs.existsSync(path.join(REPO, p)),
-      settings['ошибкиСервера'],
-    );
-    if (bad) return send(res, bad.status, {error: bad.error});
-
-    // Имя «тело» здесь занято чтением запроса, поэтому текст статьи назван иначе.
-    const текстЧерновика = String(payload.body ?? '');
-    const шапка = String(payload.frontmatterRaw ?? '');
-
-    // Черновик, слово в слово равный файлу, хранить незачем. Заодно это закрывает гонку:
-    // запрос, посланный до кнопки «Сохранить», не воскресит черновик уже сохранённой работы.
-    const текущий = splitArticle(fs.readFileSync(path.join(REPO, rel), 'utf8'));
-    if (текущий.body === текстЧерновика && текущий.frontmatterRaw === шапка) {
-      dropDraft(EDITOR_DIR, settings, rel);
-      return send(res, 200, {автосохранено: null, совпадаетСФайлом: true});
-    }
-
-    const когда = new Date().toISOString();
-    saveDraft(EDITOR_DIR, settings, newDraft({
-      path: rel,
-      frontmatterRaw: шапка,
-      body: текстЧерновика,
-      отпечатокБазы: String(payload.отпечатокБазы ?? ''),
-      когда,
-    }));
-
-    return send(res, 200, {автосохранено: когда});
-  }
+  // Автосохранение — отдельным модулем: сервер иначе выходит за лимит размера файла.
+  if (await draftRoute({
+    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(),
+    тело, insideRepo, send, последняяПравка,
+  })) return;
 
   if (url.pathname === '/api/article/save' && req.method === 'POST') {
     const payload = await тело(req);
@@ -207,7 +215,7 @@ async function api(req, res, url) {
     // Ничего не изменилось — файл не трогаем вовсе. Так «открыл и сохранил» не портит статью.
     // Черновик при этом всё равно убираем: продолжать нечего, текст и так совпадает с файлом.
     if (nothingChanged(current, {body: payload.body, frontmatterRaw: safe.frontmatterRaw})) {
-      dropDraft(EDITOR_DIR, readSettings(), payload.path);
+      убратьЧерновик(payload.path, payload.правкаОт);
       // Отпечаток возвращаем и здесь: после «сохранить поверх» текст мог совпасть с внешней
       // правкой, и без свежего отпечатка следующая правка дала бы ложный конфликт.
       return send(res, 200, {saved: true, untouched: true, отпечаток: отпечатокСейчас});
@@ -226,18 +234,23 @@ async function api(req, res, url) {
     const текст = joinArticle({head, body: toEol(payload.body)});
     fs.writeFileSync(file, текст, 'utf8');
 
-    // Настоящее сохранение оставляет версию в истории, а черновик больше не нужен.
+    // Файл записан. Дальше идёт служебное: версия в истории, уборка черновика, готовность.
+    // Каждый шаг отдельно: сбой одного не отменяет остальные и не превращает удавшееся
+    // сохранение в «ничего не сохранилось». Иначе, например, упавший снимок оставлял бы
+    // старый черновик, и при следующем открытии человек получал бы ложный выбор со старым текстом.
     // Автор известен: файл пишем мы, и подпись берётся у того, кто работает за программой.
     const settings = readSettings();
     const автор = (await gitAuthor(git)) ?? settings['реестр']['неизвестныйАвтор'];
-    saveSnapshot(EDITOR_DIR, settings, payload.path, текст, автор, new Date().toISOString());
-    dropDraft(EDITOR_DIR, settings, payload.path);
-
-    // Правка после подготовки возвращает версию в черновик.
+    const сейчас = new Date().toISOString();
     const state = afterEdit(loadState(REPO, payload.path, settings), settings);
-    saveState(REPO, payload.path, settings, state);
 
-    return send(res, 200, {saved: true, fixed: safe.fixed, state, отпечаток: fingerprint(текст)});
+    const предупреждения = [];
+    безСрыва(() => saveSnapshot(EDITOR_DIR, settings, payload.path, текст, автор, сейчас), предупреждения, 'история');
+    безСрыва(() => убратьЧерновик(payload.path, payload.правкаОт), предупреждения, 'черновик');
+    // Правка после подготовки возвращает версию в черновик.
+    безСрыва(() => saveState(REPO, payload.path, settings, state), предупреждения, 'состояние');
+
+    return send(res, 200, {saved: true, fixed: safe.fixed, state, отпечаток: fingerprint(текст), предупреждения});
   }
 
   // Картинки статьи — отдельным модулем: сервер иначе выходит за лимит размера файла.

@@ -11,6 +11,8 @@ export function TopBar(props: {
   onColors: (value: boolean) => void;
   onSave: () => void;
   onVisibility: (скрыть: boolean) => void;
+  /** Идёт просмотр старой версии: писать на диск нельзя ничем, включая видимость. */
+  просмотр: boolean;
 }) {
   const п = props.settings.подписи;
   const в = props.settings.видимость;
@@ -65,7 +67,8 @@ export function TopBar(props: {
             <span className="status" title={п.готовность}>{props.article.готовность}</span>
             <button
               className={props.article.скрыта ? 'ghost ghost-on' : 'ghost'}
-              title={п.переключитьВидимость}
+              title={props.просмотр ? п.идётПросмотр : п.переключитьВидимость}
+              disabled={props.просмотр}
               onClick={() => props.onVisibility(!props.article!.скрыта)}
             >
               {props.article.скрыта ? в.поСсылке : в.вМеню}
@@ -83,7 +86,13 @@ export function TopBar(props: {
           </span>
         )}
 
-        <button className="ghost" disabled={!props.dirty} onClick={props.onSave}>
+        {/* В просмотре версии непонятно, что сохранять — увиденное или набранное. Кнопка заперта. */}
+        <button
+          className="ghost"
+          disabled={!props.dirty || props.просмотр}
+          title={props.просмотр ? п.идётПросмотр : ''}
+          onClick={props.onSave}
+        >
           {props.dirty ? п.сохранить : п.сохранено}
         </button>
 

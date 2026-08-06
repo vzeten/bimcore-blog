@@ -4,18 +4,23 @@ import {Rail} from './zones/Rail';
 import {Registry} from './zones/Registry';
 import {TopBar} from './zones/TopBar';
 import {VersionStrip} from './zones/VersionStrip';
+import {VersionView} from './zones/VersionView';
 import {ArticlePane} from './zones/ArticlePane';
 import {CommentGutter} from './zones/CommentGutter';
 import {ConflictBars, ErrorBar} from './zones/ConflictBar';
-import {buildFrontmatter, parseFrontmatter, type Field} from './zones/Properties';
+import {buildFrontmatter, type Field} from './zones/Properties';
 import {pasteImage} from './editor/images';
 import {requestJson} from './api';
 import {nothingChanged} from '../core/articleFile.mjs';
-import {saveArticle, setVisibility} from './actions';
 import {useAutosave} from './useAutosave';
 import {label, setLabels} from './labels';
 import {makeReporter} from './errors';
 import {useConflictChoice} from './useConflictChoice';
+import {useSaving} from './useSaving';
+import {useNavigation} from './useNavigation';
+import {useVersions} from './useVersions';
+import {applyLayerColors} from './layerColors';
+import {Boot} from './zones/Boot';
 import type {Article, ArticleRow, PanelMode, SaveState, Settings} from './types';
 
 export function App() {
@@ -24,7 +29,8 @@ export function App() {
   const [mode, setMode] = useState<PanelMode>(null);
   const [article, setArticle] = useState<Article | null>(null);
   const [fields, setFields] = useState<Field[]>([]);
-  const [text, setText] = useState('');
+  // Текст живёт в редакторе и в `текстСейчас`; состояние нужно только для пересоздания зоны.
+  const [, setText] = useState('');
   const [deletions, setDeletions] = useState<Deletion[]>([]);
   const [dirty, setDirty] = useState(false);
   const [colors, setColors] = useState(true);
@@ -33,6 +39,11 @@ export function App() {
   const [конфликтСохранения, setКонфликтСохранения] = useState(false);
   const {runSafe, сПричиной} = makeReporter(setОшибка);
   const автосохранение = useAutosave(settings?.хранение.автосохранениеСек ?? 0, setСостояниеСохранения);
+  const версии = useVersions({
+    // Не отменяем, а дописываем: отменённая правка осталась бы только в спрятанном редакторе.
+    дописатьАвтосохранение: автосохранение.дописать,
+    onОшибка: (причина) => setОшибка(сПричиной('ошибкаВерсии', причина)),
+  });
   const {взятьЧерновик, взятьФайл} = useConflictChoice({
     article, roots: settings?.контент ?? [], setArticle, setText, setFields,
     setDirty, setСостояние: setСостояниеСохранения,
@@ -40,18 +51,47 @@ export function App() {
       текстСейчас.current = body;
       шапкаСейчас.current = frontmatterRaw;
     },
+    // Пишем в черновик то, что теперь в окне: оно равно файлу, и сервер такой черновик убирает.
+    отброситьЧерновик: () => {
+      вЧерновик();
+      void автосохранение.дописать();
+    },
   });
   // Текст и шапка в ref: пока запрос идёт, человек печатает, и ответ должен сравнить
   // «что сохраняли» с «что в окне сейчас».
   const текстСейчас = useRef('');
   const шапкаСейчас = useRef('');
-  // Какая статья открыта прямо сейчас: ответ запроса по прошлой статье не должен трогать новую.
+  // Какая статья открыта и идёт ли просмотр — в ref: эти признаки читают замыкания редактора
+  // и поздние ответы запросов, созданные ещё до того, как всё поменялось.
+  // Значение ставит переход (сразу, а не при отрисовке); здесь только начальное состояние.
   const статьяСейчас = useRef<string | null>(null);
-  статьяСейчас.current = article?.path ?? null;
+  // Номер захода в статью: та же статья, открытая заново, — уже другое окно.
+  const открытие = useRef(0);
+  const просмотрРеф = useRef(false);
 
   // Актуальные настройки в ref: обработчик «назад» ставится один раз и иначе поймал бы старое (null) значение.
   const settingsRef = useRef<Settings | null>(null);
   settingsRef.current = settings;
+
+  const {refresh, open, closeArticle} = useNavigation({
+    article, settingsRef, автосохранение, версии, текстСейчас, шапкаСейчас, статьяСейчас, открытие, runSafe,
+    setArticles, setArticle, setFields, setText, setDeletions, setMode, setDirty,
+    setОшибка, setКонфликтСохранения, setСостояние: setСостояниеСохранения,
+  });
+
+  // Свежий обработчик «назад» в ref — сам обработчик ставится один раз (см. useEffect ниже).
+  const переходыРеф = useRef<(event: PopStateEvent) => void>(() => undefined);
+  переходыРеф.current = (event: PopStateEvent) => {
+    const st = event.state as {вид?: string; path?: string} | null;
+    if (st?.вид === 'статья' && st.path) void open(st.path, false);
+    else void closeArticle();
+  };
+
+  const {save, visibility} = useSaving({
+    article, settings, fields, текстСейчас, шапкаСейчас, статьяСейчас, открытие, автосохранение,
+    setArticle, setFields, setDirty, setОшибка, setКонфликтСохранения, setСостояние: setСостояниеСохранения,
+    refresh, сПричиной, вЧерновик: () => вЧерновик(),
+  });
 
   useEffect(() => {
     requestJson<Settings>('/api/settings')
@@ -64,31 +104,31 @@ export function App() {
 
     // Реестр — начальный экран. Кнопка «назад» браузера должна возвращать сюда, а не выходить из программы.
     history.replaceState({вид: 'реестр'}, '');
-    const назад = (event: PopStateEvent) => {
-      const st = event.state as {вид?: string; path?: string} | null;
-      if (st?.вид === 'статья' && st.path) void open(st.path, false);
-      else closeArticle();
-    };
+    // Обработчик ставится один раз, поэтому зовёт свежие переходы через ref: иначе он навсегда
+    // запомнил бы самые первые, у которых открытой статьи ещё не было, — и при сбое записи
+    // черновика не смог бы вернуть шаг истории на статью.
+    const назад = (event: PopStateEvent) => переходыРеф.current(event);
     window.addEventListener('popstate', назад);
     return () => window.removeEventListener('popstate', назад);
   }, []);
 
   useEffect(() => {
-    if (!settings) return;
-    const style = document.documentElement.style;
-    for (const [key, value] of Object.entries(settings.слои)) style.setProperty(`--layer-${key}`, value.цвет);
+    if (settings) applyLayerColors(settings.слои);
   }, [settings]);
 
-  if (!settings) {
-    // Настройки не загрузились — показываем причину словами, а не бесконечную «Загрузку».
-    if (ошибка) return <div className="crash"><h1>Редактор не открылся</h1><pre>{ошибка}</pre></div>;
-    return <div className="loading">Загрузка…</div>;
-  }
+  // Настройки не загрузились — показываем причину словами, а не бесконечную «Загрузку».
+  if (!settings) return <Boot ошибка={ошибка} />;
 
   const title = (fields.find((field) => field.key === 'title')?.display ?? article?.title ?? '');
 
   // Реестр — стартовый экран: пока статья не открыта, показывать больше нечего.
   const реестр = mode === 'статьи' || article === null;
+
+  // Просмотр начинается НАЖАТИЕМ, а не приходом ответа. Всё, что запрещено в просмотре, запрещено
+  // и в щели ожидания: автосохранение там уже снято, редактор спрятан, и оставить живой кнопку,
+  // которая пишет файл или подменяет рабочий текст, значит оставить ту же дыру.
+  const просмотрИдёт = версии.просмотр !== null || версии.занято;
+  просмотрРеф.current = просмотрИдёт;
 
   return (
     <div className={colors ? 'app' : 'app mono'}>
@@ -103,100 +143,113 @@ export function App() {
         onColors={setColors}
         onSave={() => void save()}
         onVisibility={(скрыть) => void visibility(article, скрыть)}
+        // Просмотр версии ничего не пишет: пишущие кнопки шапки на это время заперты.
+        просмотр={просмотрИдёт}
       />
 
       <ErrorBar settings={settings} текст={ошибка} onЗакрыть={() => setОшибка(null)} />
 
-      {/* Файл разошёлся с окном: выбор делает человек, молча ничего не трогаем. */}
-      <ConflictBars
+      {/* Файл разошёлся с окном: выбор делает человек, молча ничего не трогаем.
+          В просмотре версии панель прячется целиком: обе её кнопки пишут на диск или подменяют
+          рабочий текст, а просмотр не меняет ничего. Выбор никуда не девается — он ждёт возврата. */}
+      {!просмотрИдёт && (
+        <ConflictBars
+          settings={settings}
+          article={реестр ? null : article}
+          конфликтСохранения={конфликтСохранения}
+          onВзятьЧерновик={взятьЧерновик}
+          onВзятьФайл={взятьФайл}
+          onСохранитьПоверх={() => void save(true)}
+          onПеречитать={() => void open(article!.path, false)}
+        />
+      )}
+
+      <VersionStrip
         settings={settings}
-        article={реестр ? null : article}
-        конфликтСохранения={конфликтСохранения}
-        onВзятьЧерновик={взятьЧерновик}
-        onВзятьФайл={взятьФайл}
-        onСохранитьПоверх={() => void save(true)}
-        onПеречитать={() => void open(article!.path, false)}
+        visible={mode === 'версии' && article !== null}
+        сеансы={версии.сеансы}
+        выбрано={версии.просмотр?.имя ?? null}
+        onВыбрать={(версия) => void версии.открыть(article!.path, версия)}
+        onСейчас={версии.закрыть}
       />
 
-      <VersionStrip settings={settings} visible={mode === 'версии' && article !== null} />
-
       <div className="body">
-        <Rail settings={settings} mode={mode} articleOpen={article !== null} onMode={setMode} />
+        <Rail
+          settings={settings}
+          mode={mode}
+          articleOpen={article !== null}
+          onMode={(next) => void сменитьРежим(next)}
+        />
 
-        {реестр ? (
+        {article === null ? (
           <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} />
         ) : (
           <>
+            {/* Всё, что показывается вместо открытой статьи, встаёт РЯДОМ с рабочим редактором,
+                а не вместо него: и реестр, и просмотр версии. Убрать редактор с экрана значит
+                пересоздать его при возврате — из текста, каким статья открывалась, — то есть
+                потерять несохранённую правку и всю историю отмены. */}
+            {реестр && (
+              <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} />
+            )}
+
+            {версии.просмотр && (
+              <VersionView
+                settings={settings}
+                версия={версии.просмотр}
+                path={article!.path}
+                onЗакрыть={версии.закрыть}
+              />
+            )}
+
             <ArticlePane
-              // Ключ с решением по черновику: сменили источник текста — редактор пересоздался.
-              key={`${article!.path}|${article!.черновикРешение}`}
+              скрыт={реестр || просмотрИдёт}
+              // Ключ с решением по черновику и номером захода: сменили источник текста или
+              // открыли статью заново — редактор пересоздаётся. Без номера захода повторное
+              // открытие той же статьи оставляло бы в спрятанной зоне текст прошлого раза,
+              // и он затёр бы внешнюю правку при следующем сохранении.
+              key={`${article!.path}|${article!.черновикРешение}|${article!.заход ?? 0}`}
               settings={settings}
               article={article!}
               fields={fields}
+              // Пара «тело + шапка» собирается из ref: обработчики живут в замыкании редактора
+              // и через состояние свежее значение соседа получить не успевают.
               onFields={(next) => {
                 setFields(next);
-                // Тело берём из ref: обработчик текста живёт в замыкании редактора и мог не успеть
-                // отдать сюда свежее значение через состояние.
                 правка(текстСейчас.current, buildFrontmatter(article!.frontmatterRaw, next, article!.path, settings.контент));
               }}
               onText={(next) => {
                 setText(next);
-                // Шапку берём из ref по той же причине: редактор создаётся один раз и держит
-                // те свойства, что были при открытии статьи.
                 правка(next, шапкаСейчас.current);
               }}
               onDeletions={setDeletions}
-              onPaste={(file, view) => void runSafe(() => pasteImage(file, article!.path, view))}
+              // Дописывать картинку можно, только если это всё ещё та же статья и не идёт просмотр:
+              // иначе разметка уедет в чужой или уже уничтоженный редактор.
+              onPaste={(file, view) => void runSafe(() => pasteImage(file, article!.path, view,
+                () => !просмотрРеф.current && статьяСейчас.current === article!.path))}
             />
 
-            <CommentGutter settings={settings} deletions={deletions} />
+            {!реестр && !просмотрИдёт && <CommentGutter settings={settings} deletions={deletions} />}
           </>
         )}
       </div>
     </div>
   );
 
-  async function refresh(): Promise<void> {
-    // Провал не должен подменить список объектом ошибки — оставляем прежний.
-    await runSafe(async () => {
-      setArticles(await requestJson<ArticleRow[]>('/api/articles'));
-    });
-  }
+  /**
+   * Переключение левой полосы. Уход в реестр — это уход из статьи: ждущая правка дописывается,
+   * и при неудаче записи мы остаёмся в статье, как и при закрытии. Иначе человек уже видит
+   * реестр, закрывает вкладку, а последняя правка не попала ни в файл, ни в черновик.
+   * Просмотр версии при уходе прекращается, а не прячется.
+   */
+  async function сменитьРежим(next: PanelMode): Promise<void> {
+    if (next === 'статьи' && article && !(await автосохранение.дописать())) return;
+    if (next === 'статьи') версии.закрыть();
 
-  async function open(path: string, push = true): Promise<void> {
-    const s = settingsRef.current;
-    if (!s) return; // настройки ещё не загрузились — «назад» просто ничего не делает, но не падает
-
-    let loaded: Article | null = null;
-    const ok = await runSafe(async () => {
-      loaded = await requestJson<Article>(`/api/article?path=${encodeURIComponent(path)}`);
-    });
-    if (!ok || !loaded) return;
-    const art: Article = loaded;
-
-    setОшибка(null);
-    setКонфликтСохранения(false);
-    setArticle(art);
-    setFields(parseFrontmatter(art.frontmatterRaw, path, s.контент));
-    setText(art.body);
-    setDeletions([]);
-    // Исходное состояние окна: от него считается «есть несохранённое».
-    текстСейчас.current = art.body;
-    шапкаСейчас.current = art.frontmatterRaw;
-    setMode(null);
-
-    автосохранение.отменить(); // ждущая запись относится к прошлой статье
-    // Продолжили с автосохранения — это несохранённая работа, так и показываем.
-    const изЧерновика = art.черновикРешение === 'черновик';
-    setDirty(изЧерновика);
-    setСостояниеСохранения(изЧерновика ? 'автосохранено' : 'сохранено');
-
-    if (push) history.pushState({вид: 'статья', path}, '');
-  }
-
-  function closeArticle(): void {
-    setArticle(null);
-    setMode(null);
+    setMode(next);
+    // Лента перечитывается при каждом открытии панели: пока она была закрыта, версий могло
+    // прибавиться — и от нашего сохранения, и от правки снаружи.
+    if (next === 'версии' && article) void версии.обновить(article.path);
   }
 
   /**
@@ -219,81 +272,5 @@ export function App() {
     if (!article) return;
     setDirty(!nothingChanged({body: article.body, frontmatterRaw: article.frontmatterRaw}, {body, frontmatterRaw}));
     вЧерновик(body, frontmatterRaw);
-  }
-
-  /** Видимость меняем в состоянии только после того, как сервер подтвердил запись в файлы. */
-  async function visibility(open: Article | null, скрыть: boolean): Promise<void> {
-    if (!open) return;
-    await setVisibility(Object.values(open.versions), скрыть, {
-      ok: () => {
-        setОшибка(null);
-        setArticle({...open, скрыта: скрыть});
-        void refresh();
-      },
-      fail: (reason) => setОшибка(сПричиной('ошибкаВидимости', reason)),
-    });
-  }
-
-  /** «Сохранено» — только после успеха сервера. `поверх` — решение человека записать своё. */
-  async function save(поверх = false): Promise<void> {
-    if (!article) return;
-    const путь = article.path;
-    const шапка = buildFrontmatter(article.frontmatterRaw, fields, путь, settings!.контент);
-    const тело = text;
-    текстСейчас.current = тело;
-    шапкаСейчас.current = шапка;
-    // Снимаем ждущее автосохранение ДО запроса: поздний ответ воскресил бы черновик после записи.
-    автосохранение.отменить();
-
-    await saveArticle(
-      {
-        path: article.path,
-        body: тело,
-        frontmatterRaw: шапка,
-        отпечатокБазы: article.отпечаток,
-        перезаписать: поверх,
-      },
-      {
-        ok: (ответ) => {
-          void refresh();
-          // Пока запрос шёл, могли открыть другую статью: её состояние трогать нельзя.
-          if (статьяСейчас.current !== путь) return;
-
-          setОшибка(null);
-          setКонфликтСохранения(false);
-          setСостояниеСохранения('сохранено');
-          // Сдвигаем базу целиком — и отпечаток, и текст сравнения: иначе возврат к прежнему виду
-          // выглядел бы как «Сохранено», хотя на диске другое.
-          const новыйОтпечаток = ответ?.отпечаток;
-          setArticle((было) => (было
-            ? {...было, body: тело, frontmatterRaw: шапка, отпечаток: новыйОтпечаток ?? было.отпечаток}
-            : было));
-
-          // Человек мог печатать дальше: сохранён старый снимок, новая правка уходит в черновик.
-          const изменилосьПоПути = текстСейчас.current !== тело || шапкаСейчас.current !== шапка;
-          setDirty(изменилосьПоПути);
-          if (изменилосьПоПути) {
-            автосохранение.запланировать({
-              path: путь,
-              body: текстСейчас.current,
-              frontmatterRaw: шапкаСейчас.current,
-              отпечатокБазы: новыйОтпечаток ?? article.отпечаток,
-            });
-          }
-        },
-        // Файл изменился снаружи: ничего не записано, правки в окне, выбор за человеком.
-        conflict: () => {
-          if (статьяСейчас.current !== путь) return;
-          setКонфликтСохранения(true);
-          вЧерновик();
-        },
-        // dirty НЕ снимается — правки в окне не теряются, причину сервера показываем.
-        fail: (reason) => {
-          if (статьяСейчас.current !== путь) return;
-          setОшибка(сПричиной('ошибкаСохранения', reason, 'измененияНаМесте'));
-          вЧерновик();
-        },
-      },
-    );
   }
 }

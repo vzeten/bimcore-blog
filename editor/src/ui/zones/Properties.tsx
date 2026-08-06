@@ -15,6 +15,8 @@ export function Properties(props: {
   settings: Settings;
   fields: Field[];
   onChange: (fields: Field[]) => void;
+  /** Просмотр старой версии: шапка видна, но правке не подлежит — менять можно только текущую работу. */
+  толькоЧтение?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -34,6 +36,7 @@ export function Properties(props: {
               <span title={field.key}>{props.settings.подписиПолей[field.key] ?? field.key}</span>
               <input
                 value={field.display}
+                readOnly={props.толькоЧтение === true}
                 onChange={(event) => {
                   const next = [...props.fields];
                   next[index] = {...field, display: event.target.value};

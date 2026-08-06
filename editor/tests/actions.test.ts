@@ -17,6 +17,16 @@ describe('сохранение статьи', () => {
     expect(fail).toHaveBeenCalledWith('нет такой статьи');
   });
 
+  it('сохранение доносит до сервера метку времени правки', async () => {
+    // По ней сервер отличает запоздавшее сохранение от свежего и не убирает черновик новее себя.
+    const request = vi.fn().mockResolvedValue({saved: true});
+
+    await saveArticle({...тело, правкаОт: '2026-08-05T12:00:00.000Z'}, {ok: vi.fn(), fail: vi.fn()}, request as never);
+
+    const посланное = JSON.parse((request.mock.calls[0][1] as {body: string}).body);
+    expect(посланное.правкаОт).toBe('2026-08-05T12:00:00.000Z');
+  });
+
   it('при успехе сервера вызывает ok, чтобы снять признак несохранённого', async () => {
     const request = vi.fn().mockResolvedValue({saved: true});
     const ok = vi.fn();
@@ -29,7 +39,30 @@ describe('сохранение статьи', () => {
   });
 });
 
+
 describe('смена видимости', () => {
+  it('поздняя ошибка видимости показывается, даже если человек уже ушёл из статьи', async () => {
+    // Он нажал переключатель и вправе знать, что видимость не изменилась.
+    const request = vi.fn().mockRejectedValue(new Error('нет такой статьи'));
+    const fail = vi.fn();
+
+    await setVisibility(['docs/a/index.mdx'], true, {ok: vi.fn(), fail, актуально: () => false}, request as never);
+
+    expect(fail).toHaveBeenCalledWith('нет такой статьи');
+  });
+
+  it('поздний ответ видимости не применяется к уже другой открытой статье', async () => {
+    // Иначе окно станет смесью двух статей: состояние прошлой поверх данных новой.
+    const request = vi.fn().mockResolvedValue({changed: []});
+    const ok = vi.fn();
+    const fail = vi.fn();
+
+    await setVisibility(['docs/a/index.mdx'], true, {ok, fail, актуально: () => false}, request as never);
+
+    expect(ok).not.toHaveBeenCalled();
+    expect(fail).not.toHaveBeenCalled();
+  });
+
   it('при ошибке сервера состояние не меняется: ok не вызывается', async () => {
     const request = vi.fn().mockRejectedValue(new Error('нет такой статьи'));
     const ok = vi.fn();
@@ -70,6 +103,17 @@ describe('автосохранение черновика', () => {
 
     expect(ok).not.toHaveBeenCalled();
     expect(fail).toHaveBeenCalledWith('нет такой статьи');
+  });
+
+  it('отклонённая как устаревшая запись не выдаётся за спасённую работу', async () => {
+    // Сервер отвечает 200 с пометкой «устарел»: на диск ничего не легло, и вызывающий обязан
+    // это увидеть, иначе человеку скажут «правка в черновике», а её там нет.
+    const request = vi.fn().mockResolvedValue({автосохранено: null, устарел: true});
+    const ok = vi.fn();
+
+    await autosaveDraft(черновик, {ok, fail: vi.fn()}, request as never);
+
+    expect(ok).toHaveBeenCalledWith(expect.objectContaining({устарел: true}));
   });
 
   it('автосохранение шлёт черновик и не трогает настоящий файл статьи', async () => {

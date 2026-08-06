@@ -2,9 +2,30 @@
 // Живут вне папок с контентом и в git не попадают: после публикации они не нужны,
 // потому что прошлые публикации хранит сам git.
 
+/**
+ * Плоское имя из пути к статье: разделители и прочие знаки становятся подчёркиванием.
+ * Одного этого мало — `docs/a_b/index.mdx` и `docs/a/b/index.mdx` дали бы одно имя,
+ * и две статьи делили бы один черновик и одну папку снимков. Поэтому к имени добавляется
+ * короткий отпечаток самого пути.
+ */
+export function плоскоеИмя(articlePath) {
+  const путь = String(articlePath).split('\\').join('/');
+  return `${путь.replace(/[^\wа-яё-]+/gi, '_')}__${отпечатокПути(путь)}`;
+}
+
+/** Отпечаток пути: собственный, без внешних средств, потому что правило обязано быть чистым. */
+function отпечатокПути(путь) {
+  let хеш = 0x811c9dc5;
+  for (let i = 0; i < путь.length; i += 1) {
+    хеш ^= путь.charCodeAt(i);
+    хеш = Math.imul(хеш, 0x01000193) >>> 0;
+  }
+  return хеш.toString(16).padStart(8, '0');
+}
+
 /** Куда положить снимки версии статьи: путь к файлу превращается в имя папки. */
 export function historyFolder(articlePath) {
-  return articlePath.split('\\').join('/').replace(/[^\wа-яё-]+/gi, '_');
+  return плоскоеИмя(articlePath);
 }
 
 /**
@@ -52,19 +73,43 @@ export function parseSnapshotName(name) {
 }
 
 /**
+ * Версии из имён файлов снимков, по порядку времени.
+ * Посторонний файл в папке истории не должен ронять ленту, поэтому отбрасывается и неразбираемое
+ * имя, и разобранное с негодным временем: такая отметка встала бы в ленте неизвестно куда.
+ */
+export function версииИзИмён(имена) {
+  return [...имена]
+    .map((имя) => {
+      const разобрано = parseSnapshotName(имя);
+      return разобрано === null ? null : {имя, iso: разобрано.iso, author: разобрано.author};
+    })
+    .filter((версия) => версия !== null && настоящееВремя(версия.iso))
+    .sort((a, b) => a.iso.localeCompare(b.iso));
+}
+
+/**
+ * Строгая проверка времени: разобранное время должно совпасть со своей же записью обратно.
+ * Одного `Date.parse` мало — он молча приводит несуществующее 30 февраля к 2 марта,
+ * и отметка встала бы в ленте не там, где написано в её имени.
+ */
+function настоящееВремя(iso) {
+  const мс = Date.parse(iso);
+  return Number.isFinite(мс) && new Date(мс).toISOString() === iso;
+}
+
+/**
  * Подряд идущие сохранения одного автора — один сеанс.
  * Иначе между двумя публикациями лента превращается в сорок точек.
+ * Единственный признак разрыва — смена автора: так написано в `BUSINESS.md`.
+ * Разрыв по перерыву во времени был убран осознанно, причина — в `DECISIONS.md`.
  */
-export function toSessions(snapshots, gapMinutes) {
+export function toSessions(snapshots) {
   const sessions = [];
 
   for (const snapshot of [...snapshots].sort((a, b) => a.iso.localeCompare(b.iso))) {
     const last = sessions.at(-1);
-    const sameAuthor = last && last.author === snapshot.author;
-    const closeInTime = last
-      && (Date.parse(snapshot.iso) - Date.parse(last.to)) <= gapMinutes * 60_000;
 
-    if (sameAuthor && closeInTime) {
+    if (last && last.author === snapshot.author) {
       last.to = snapshot.iso;
       last.snapshots.push(snapshot);
       continue;

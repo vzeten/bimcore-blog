@@ -1,7 +1,7 @@
 // Имя каждого теста повторяет формулировку правила.
 import {describe, expect, it} from 'vitest';
 import {afterEdit, emptyState, initialReadiness, readState, writeState} from '../src/core/articleState.mjs';
-import {historyFolder, parseSnapshotName, snapshotName, toSessions} from '../src/core/history.mjs';
+import {historyFolder, parseSnapshotName, snapshotName, toSessions, версииИзИмён} from '../src/core/history.mjs';
 
 const НАСТРОЙКИ = {
   статусы: ['Черновик', 'Готова к публикации', 'Опубликована'],
@@ -70,41 +70,55 @@ describe('черновые снимки правок', () => {
   });
 
   it('подряд идущие сохранения одного автора складываются в один сеанс', () => {
-    const sessions = toSessions(
-      [
-        {iso: '2026-07-31T14:00:00.000Z', author: 'я'},
-        {iso: '2026-07-31T14:05:00.000Z', author: 'я'},
-        {iso: '2026-07-31T14:10:00.000Z', author: 'я'},
-      ],
-      30,
-    );
+    const sessions = toSessions([
+      {iso: '2026-07-31T14:00:00.000Z', author: 'я'},
+      {iso: '2026-07-31T14:05:00.000Z', author: 'я'},
+      {iso: '2026-07-31T14:10:00.000Z', author: 'я'},
+    ]);
 
     expect(sessions).toHaveLength(1);
     expect(sessions[0].snapshots).toHaveLength(3);
   });
 
   it('смена автора начинает новый сеанс', () => {
-    const sessions = toSessions(
-      [
-        {iso: '2026-07-31T14:00:00.000Z', author: 'я'},
-        {iso: '2026-07-31T14:05:00.000Z', author: 'claude'},
-        {iso: '2026-07-31T14:10:00.000Z', author: 'я'},
-      ],
-      30,
-    );
+    const sessions = toSessions([
+      {iso: '2026-07-31T14:00:00.000Z', author: 'я'},
+      {iso: '2026-07-31T14:05:00.000Z', author: 'claude'},
+      {iso: '2026-07-31T14:10:00.000Z', author: 'я'},
+    ]);
 
     expect(sessions.map((session) => session.author)).toEqual(['я', 'claude', 'я']);
   });
 
-  it('долгий перерыв начинает новый сеанс того же автора', () => {
-    const sessions = toSessions(
-      [
-        {iso: '2026-07-31T09:00:00.000Z', author: 'я'},
-        {iso: '2026-07-31T18:00:00.000Z', author: 'я'},
-      ],
-      30,
-    );
+  it('перерыв во времени сеанс не рвёт: отметку начинает только смена автора', () => {
+    // Разрыв по времени убран осознанно (см. DECISIONS.md): такого правила нет в BUSINESS.md.
+    const sessions = toSessions([
+      {iso: '2026-07-31T09:00:00.000Z', author: 'я'},
+      {iso: '2026-08-04T18:00:00.000Z', author: 'я'},
+    ]);
 
-    expect(sessions).toHaveLength(2);
+    expect(sessions).toHaveLength(1);
+  });
+});
+
+describe('лента версий из имён снимков', () => {
+  it('версии идут по порядку времени', () => {
+    const версии = версииИзИмён([
+      '2026-08-04T11-00-00-000Z__я.mdx',
+      '2026-08-04T10-00-00-000Z__claude.mdx',
+    ]);
+
+    expect(версии.map((версия) => версия.author)).toEqual(['claude', 'я']);
+  });
+
+  it('посторонний файл в папке снимков в ленту не попадает и её не роняет', () => {
+    const версии = версииИзИмён(['заметка.txt', '2026-08-04T10-00-00-000Z__я.mdx', '.DS_Store']);
+
+    expect(версии).toHaveLength(1);
+  });
+
+  it('имя с негодным временем в ленту не попадает', () => {
+    // Иначе отметка встала бы в ленте неизвестно куда: порядок держится на времени.
+    expect(версииИзИмён(['не-время__я.mdx'])).toEqual([]);
   });
 });

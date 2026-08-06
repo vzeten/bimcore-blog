@@ -18,7 +18,18 @@ export async function toBase64(file: File): Promise<string> {
   return btoa(binary);
 }
 
-export async function pasteImage(file: File, article: string, view: EditorView): Promise<void> {
+/**
+ * Вставка картинки из буфера. `актуально` — можно ли ещё менять рабочий текст: пока запрос шёл,
+ * человек мог уйти в просмотр старой версии, а там правка рабочего текста запрещена — она
+ * заводит автосохранение и дописывает черновик прямо во время чтения версии.
+ * Файл картинки при этом уже загружен и остаётся на месте: терять его незачем.
+ */
+export async function pasteImage(
+  file: File,
+  article: string,
+  view: EditorView,
+  актуально: () => boolean = () => true,
+): Promise<void> {
   const answer = await requestJson<PasteResult>('/api/asset/paste', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -31,6 +42,9 @@ export async function pasteImage(file: File, article: string, view: EditorView):
 
   // Без адреса от сервера картинку не вставляем: `![](undefined)` роняет сборку сайта.
   if (!answer.src) throw new Error(label('ошибкаКартинки'));
+
+  // Человек уже не в рабочем тексте — дописывать в него нельзя, даже свою же картинку.
+  if (!актуально()) return;
 
   // Курсор уводим на следующую строку: пока он на строке картинки, видна разметка, а не картинка.
   const at = view.state.selection.main;

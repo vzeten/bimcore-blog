@@ -1,0 +1,86 @@
+/* Лента версий и просмотр версии. Отдельным файлом: styles.css у предела размера (SPEC 4.9). */
+
+.session {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.session-head {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid var(--line, #e2e5ea);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.session-head:hover {
+  border-color: #b9c0ca;
+}
+
+.session-on {
+  border-color: var(--layer-current, #1257d6);
+  color: var(--layer-current, #1257d6);
+}
+
+.session-author {
+  font-weight: 600;
+}
+
+.session-time,
+.session-count {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.session-count::before {
+  content: '·';
+  margin-right: 4px;
+}
+
+.session-list {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.version {
+  padding: 2px 8px;
+  border: 1px dashed var(--line, #e2e5ea);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.version-on {
+  border-style: solid;
+  border-color: var(--layer-current, #1257d6);
+  color: var(--layer-current, #1257d6);
+}
+
+/* Полоса «вы читаете старое»: она обязана быть заметной, иначе человек примет версию за статью. */
+.version-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 12px;
+  background: #fff8e6;
+  border-bottom: 1px solid #f0dfae;
+  font-size: 13px;
+}
+
+.pane-read .paper {
+  opacity: 0.92;
+}
+
+/* Рабочий редактор на время просмотра прячется, но остаётся живым: вместе с ним ушли бы
+   несохранённые правки и история отмены. Поэтому display: none, а не размонтирование. */
+.pane-away {
+  display: none;
+}
