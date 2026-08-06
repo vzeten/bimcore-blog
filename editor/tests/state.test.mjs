@@ -1,6 +1,6 @@
 // Имя каждого теста повторяет формулировку правила.
 import {describe, expect, it} from 'vitest';
-import {afterEdit, emptyState, initialReadiness, readState, writeState} from '../src/core/articleState.mjs';
+import {afterEdit, emptyState, initialReadiness, readState, writeState, состояниеДляОкна} from '../src/core/articleState.mjs';
 import {historyFolder, parseSnapshotName, snapshotName, toSessions, версииИзИмён} from '../src/core/history.mjs';
 
 const НАСТРОЙКИ = {
@@ -49,6 +49,22 @@ describe('состояние языковой версии', () => {
   it('статья без файла состояния, но уже на сайте, показывается опубликованной, а не черновиком', () => {
     expect(initialReadiness(true, НАСТРОЙКИ)).toBe('Опубликована');
     expect(initialReadiness(false, НАСТРОЙКИ)).toBe('Черновик');
+  });
+
+  it('состояние записалось — окну отдаётся новое', () => {
+    const прежнее = {...emptyState(НАСТРОЙКИ), готовность: 'Опубликована'};
+    const новое = afterEdit(прежнее, НАСТРОЙКИ);
+
+    expect(состояниеДляОкна(новое, []).готовность).toBe('Черновик');
+  });
+
+  it('состояние записать не удалось — окну не отдаётся ничего, надпись остаётся прежней', () => {
+    // Отдавать «прочитанное с диска» нельзя: у версии без своего файла состояния оно всегда
+    // выглядит черновиком, а показывается она опубликованной (SPEC 4.5.2). Программа объявила бы
+    // опубликованную статью черновиком — ровно то враньё, ради которого всё и делалось.
+    const новое = afterEdit({...emptyState(НАСТРОЙКИ), готовность: 'Опубликована'}, НАСТРОЙКИ);
+
+    expect(состояниеДляОкна(новое, ['история', 'состояние'])).toBeNull();
   });
 });
 

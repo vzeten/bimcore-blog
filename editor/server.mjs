@@ -9,7 +9,7 @@ import {simpleGit} from 'simple-git';
 
 import {buildHead, joinArticle, nothingChanged, readField, splitArticle} from './src/core/articleFile.mjs';
 import {safeFrontmatter} from './src/core/frontmatterRules.mjs';
-import {afterEdit} from './src/core/articleState.mjs';
+import {afterEdit, состояниеДляОкна} from './src/core/articleState.mjs';
 import {articleFacts} from './src/adapters/articleFacts.mjs';
 import {editTimes, listArticles, loadState, publishedFiles, saveState} from './src/adapters/library.mjs';
 import {badFields, badPath, errorResponse, readBody} from './src/adapters/httpBody.mjs';
@@ -250,7 +250,10 @@ async function api(req, res, url) {
     // Правка после подготовки возвращает версию в черновик.
     безСрыва(() => saveState(REPO, payload.path, settings, state), предупреждения, 'состояние');
 
-    return send(res, 200, {saved: true, fixed: safe.fixed, state, отпечаток: fingerprint(текст), предупреждения});
+    // Окну отдаём состояние, только если оно ДЕЙСТВИТЕЛЬНО легло на диск (правило — в ядре).
+    const наДиске = состояниеДляОкна(state, предупреждения);
+
+    return send(res, 200, {saved: true, fixed: safe.fixed, state: наДиске, отпечаток: fingerprint(текст), предупреждения});
   }
 
   // Картинки статьи — отдельным модулем: сервер иначе выходит за лимит размера файла.

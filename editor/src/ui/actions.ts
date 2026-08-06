@@ -20,6 +20,11 @@ export interface Effects {
     /** Свежие отпечатки записанных файлов по путям: так отвечает смена видимости. */
     отпечатки?: Record<string, string>;
     предупреждения?: string[];
+    /**
+     * Состояние версии, каким оно теперь лежит на диске. Правка после подготовки возвращает
+     * версию в черновик, и окно обязано показать это сразу, а не до следующего открытия статьи.
+     */
+    state?: {готовность?: string};
     устарел?: boolean;
     /** Нужен ли ещё ответ окну: так отвечает смена видимости, у которой предупреждение важнее экрана. */
     актуально?: boolean;
@@ -55,7 +60,11 @@ export async function saveArticle(
   request: Request = requestJson,
 ): Promise<void> {
   try {
-    const ответ = await request<{отпечаток?: string; предупреждения?: string[]}>('/api/article/save', {
+    const ответ = await request<{
+      отпечаток?: string;
+      предупреждения?: string[];
+      state?: {готовность?: string};
+    }>('/api/article/save', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(body),

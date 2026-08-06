@@ -37,6 +37,17 @@ describe('сохранение статьи', () => {
     expect(ok).toHaveBeenCalledTimes(1);
     expect(fail).not.toHaveBeenCalled();
   });
+
+  it('новая готовность версии доносится до окна вместе с ответом', async () => {
+    // Правка после подготовки возвращает версию в черновик. Без ответа сервера окно показывало бы
+    // «Опубликована» у статьи, которую само же вернуло в черновики, до повторного открытия.
+    const request = vi.fn().mockResolvedValue({saved: true, state: {готовность: 'Черновик'}});
+    const ok = vi.fn();
+
+    await saveArticle(тело, {ok, fail: vi.fn()}, request as never);
+
+    expect(ok.mock.calls[0][0].state).toEqual({готовность: 'Черновик'});
+  });
 });
 
 
