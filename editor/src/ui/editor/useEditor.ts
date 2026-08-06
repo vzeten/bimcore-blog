@@ -3,8 +3,8 @@ import {EditorState, Transaction} from '@codemirror/state';
 import {EditorView, keymap, drawSelection, highlightActiveLine} from '@codemirror/view';
 import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
 import {запретПравки, чтениеСтатьи} from './reading';
-import {layerColors} from '../layerColors';
-import type {Deletion, Layer} from '../../core/colorize';
+import {layerColors, слоиОкна} from '../layerColors';
+import type {Deletion} from '../../core/colorize';
 import type {Article} from '../types';
 
 export interface Spot {
@@ -41,13 +41,6 @@ export function useEditor(options: {
   useEffect(() => {
     if (!host.current) return;
 
-    const before: Layer[] = options.article.published === null
-      ? [{text: options.article.body, kind: 'prevHuman'}]
-      : [
-          {text: options.article.published, kind: 'site'},
-          {text: options.article.body, kind: 'prevHuman'},
-        ];
-
     view.current = new EditorView({
       parent: host.current,
       state: EditorState.create({
@@ -59,7 +52,14 @@ export function useEditor(options: {
           keymap.of([...defaultKeymap, ...historyKeymap]),
           ...чтениеСтатьи(() => свежие.current.article.path),
           ...(options.толькоЧтение === true ? запретПравки() : []),
-          layerColors(() => before, (deletions) => свежие.current.onDeletions(deletions)),
+          // Цепочка слоёв читается свежей на каждый пересчёт, а не запоминается при создании
+          // редактора: иначе после сохранения цвет остался бы прежним до повторного открытия
+          // статьи, и правка, которой человек перекрыл текст ИИ, не сменила бы цвет.
+          // На диск за ней при этом никто не ходит — она приходит с открытием статьи.
+          layerColors(
+            () => слоиОкна(свежие.current.article),
+            (deletions) => свежие.current.onDeletions(deletions),
+          ),
           EditorView.domEventHandlers({
             paste: (event, editor) => {
               const file = [...(event.clipboardData?.items ?? [])]

@@ -253,12 +253,14 @@ button { font: inherit; cursor: pointer; }
 .layer-site { color: var(--layer-site); }
 .layer-prevHuman { color: var(--layer-prevHuman); }
 .layer-prevAi { color: var(--layer-prevAi); }
+.layer-prevOther { color: var(--layer-prevOther); }
 .layer-current { color: var(--layer-current); }
 
 /* Цвета выключены: статья читается одним цветом, как её увидит читатель. */
 .mono .layer-site,
 .mono .layer-prevHuman,
 .mono .layer-prevAi,
+.mono .layer-prevOther,
 .mono .layer-current { color: var(--ink); }
 
 .mono .layer-deleted { display: none; }

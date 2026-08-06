@@ -7,18 +7,18 @@ import {fileURLToPath} from 'node:url';
 import {createServer as createVite} from 'vite';
 import {simpleGit} from 'simple-git';
 
-import {buildHead, joinArticle, nothingChanged, readField, splitArticle} from './src/core/articleFile.mjs';
+import {buildHead, joinArticle, nothingChanged, splitArticle} from './src/core/articleFile.mjs';
 import {safeFrontmatter} from './src/core/frontmatterRules.mjs';
 import {afterEdit, состояниеДляОкна} from './src/core/articleState.mjs';
-import {articleFacts} from './src/adapters/articleFacts.mjs';
 import {editTimes, listArticles, loadState, publishedFiles, saveState} from './src/adapters/library.mjs';
 import {badFields, badPath, errorResponse, readBody} from './src/adapters/httpBody.mjs';
-import {draftDecision, позже, свежееЧерновика} from './src/core/drafts.mjs';
+import {позже, свежееЧерновика} from './src/core/drafts.mjs';
 import {dropDraft, fingerprint, loadDraft, saveSnapshot} from './src/adapters/draftStore.mjs';
 import {draftRoute} from './src/adapters/draftRoute.mjs';
 import {assetRoute} from './src/adapters/assets.mjs';
 import {visibilityRoute} from './src/adapters/visibilityRoute.mjs';
 import {versionsRoute} from './src/adapters/versionsRoute.mjs';
+import {articleRoute} from './src/adapters/articleRoute.mjs';
 import {detectPublishedRef, gitAuthor, showFile} from './src/adapters/gitFile.mjs';
 import {фиксироватьВнешнюю} from './src/adapters/externalVersion.mjs';
 
@@ -117,49 +117,11 @@ async function api(req, res, url) {
   // Лента версий и содержимое одной версии — тоже отдельным модулем, по той же причине.
   if (await versionsRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), insideRepo, send})) return;
 
-  if (url.pathname === '/api/article') {
-    const rel = url.searchParams.get('path');
-    const settings = readSettings();
-    const file = typeof rel === 'string' && rel !== '' ? path.join(REPO, rel) : null;
-    if (!file || !insideRepo(file) || !fs.existsSync(file)) {
-      return send(res, 404, {error: settings['ошибкиСервера']['нетСтатьи']});
-    }
-
-    // Файл могли изменить снаружи, пока статья была закрыта: сохраняем его состояние версией,
-    // иначе чужая работа нигде не останется. Чтение ничего не теряет, поэтому сбой хранилища
-    // снимков открыть статью не мешает.
-    await фиксировать(rel, false);
-
-    const raw = fs.readFileSync(file, 'utf8');
-    const {frontmatterRaw, body} = splitArticle(raw);
-    const отпечаток = fingerprint(raw);
-
-    // Что открывать: файл или автосохранение. Молча подменять файл нельзя — при конфликте решает человек.
-    const draft = loadDraft(EDITOR_DIR, settings, rel);
-    const решение = draftDecision({
-      draft,
-      файл: {frontmatterRaw, body},
-      отпечатокФайла: отпечаток,
-      сейчас: new Date().toISOString(),
-      settings,
-    });
-    const изЧерновика = решение === 'черновик';
-
-    return send(res, 200, {
-      path: rel,
-      // При свежем черновике сразу продолжаем работу с него, без вопроса (критерий 4).
-      frontmatterRaw: изЧерновика ? draft['frontmatterRaw'] : frontmatterRaw,
-      body: изЧерновика ? draft['body'] : body,
-      отпечаток,
-      черновикРешение: решение,
-      // При конфликте отдаём оба варианта: файл выше, автосохранение здесь (критерий 5).
-      черновик: решение === 'нет' ? null : {когда: draft['когда'], frontmatterRaw: draft['frontmatterRaw'], body: draft['body']},
-      published: await publishedBody(rel),
-      title: readField(frontmatterRaw, 'title') || rel,
-      state: loadState(REPO, rel, settings),
-      ...articleFacts(await articles(), rel, settings),
-    });
-  }
+  // Открытие статьи — отдельным модулем: сервер иначе выходит за лимит размера файла.
+  if (await articleRoute({
+    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, publishedRef,
+    insideRepo, send, фиксировать, articles, publishedBody,
+  })) return;
 
   // Автосохранение — отдельным модулем: сервер иначе выходит за лимит размера файла.
   if (await draftRoute({

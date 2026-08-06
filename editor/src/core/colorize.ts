@@ -12,7 +12,11 @@ function tokenize(text: string): string[] {
   return text.match(/\s+|[^\s]+/gu) ?? [];
 }
 
-export type LayerKind = 'site' | 'prevHuman' | 'prevAi' | 'current';
+/**
+ * Кто оставил кусок текста. `prevOther` — правка постороннего автора: не моя и не машинная.
+ * Так выглядит внешняя правка файла и работа человека, которого нет в справочнике настроек.
+ */
+export type LayerKind = 'site' | 'prevHuman' | 'prevAi' | 'prevOther' | 'current';
 
 export interface Layer {
   /** Текст статьи на конец этого слоя. */
