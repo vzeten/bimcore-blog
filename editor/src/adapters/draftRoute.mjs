@@ -5,10 +5,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {splitArticle} from '../core/articleFile.mjs';
+import {nothingChanged, splitArticle} from '../core/articleFile.mjs';
 import {newDraft, позже, свежееЧерновика} from '../core/drafts.mjs';
 import {dropDraft, loadDraft, saveDraft} from './draftStore.mjs';
-import {badPath} from './httpBody.mjs';
+import {badFields, badPath} from './httpBody.mjs';
 
 /**
  * Обрабатывает `/api/draft`. Возвращает true, если запрос был к ней.
@@ -18,6 +18,15 @@ export async function draftRoute({req, res, url, repo, editorDir, settings, те
   if (url.pathname !== '/api/draft' || req.method !== 'POST') return false;
 
   const payload = await тело(req);
+
+  // Тело обязано быть объектом: `null` и число — плохой запрос, а не повод уронить ручку
+  // внутренней ошибкой при чтении полей (SPEC 6.4).
+  const плохоеТело = badFields(payload, [], settings['ошибкиСервера']);
+  if (плохоеТело) {
+    send(res, плохоеТело.status, {error: плохоеТело.error});
+    return true;
+  }
+
   const rel = payload.path;
   const bad = badPath(
     [rel],
@@ -48,7 +57,11 @@ export async function draftRoute({req, res, url, repo, editorDir, settings, те
   // Черновик, слово в слово равный файлу, хранить незачем. Заодно это закрывает гонку:
   // запрос, посланный до кнопки «Сохранить», не воскресит черновик уже сохранённой работы.
   const текущий = splitArticle(fs.readFileSync(path.join(repo, rel), 'utf8'));
-  if (текущий.body === текстЧерновика && текущий.frontmatterRaw === шапка) {
+  // Сравнение тем же правилом, что и у сохранения: переводы строк в счёт не идут (SPEC 3.6).
+  // На диске файл может быть в windows-виде, а в окне текст живёт в unix-виде — при точном
+  // сравнении черновик, слово в слово равный файлу, оставался бы лежать и всплывал бы потом
+  // «продолжением работы», которого не было.
+  if (nothingChanged(текущий, {body: текстЧерновика, frontmatterRaw: шапка})) {
     dropDraft(editorDir, settings, rel);
     send(res, 200, {автосохранено: null, совпадаетСФайлом: true});
     return true;

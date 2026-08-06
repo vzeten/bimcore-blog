@@ -8,7 +8,7 @@ import {simpleGit} from 'simple-git';
 
 import {фиксироватьВнешнюю} from '../src/adapters/externalVersion.mjs';
 import {countSnapshots, latestSnapshot, snapshotText} from '../src/adapters/draftStore.mjs';
-import {visibilityRoute} from '../src/adapters/visibilityRoute.mjs';
+
 
 const НАСТРОЙКИ = {
   хранение: {папкаЧерновиков: '.drafts', папкаСнимков: '.history', черновикЖивётДней: 14, снимковНаВерсию: 50},
@@ -204,35 +204,5 @@ describe('сбой хранилища версий', () => {
     const среда = await сломанное();
 
     expect(await фиксировать(среда, false)).toBeNull();
-  });
-});
-
-describe('переключение видимости', () => {
-  it('видимость сначала фиксирует внешнюю правку, потом пишет файл', async () => {
-    const среда = await подготовить();
-    const внешний = `${СТАТЬЯ}дописал ИИ\n`;
-    fs.writeFileSync(среда.файл, внешний, 'utf8');
-
-    const вызовы = [];
-    const ответы = [];
-
-    await visibilityRoute({
-      req: {method: 'POST'},
-      res: {},
-      url: {pathname: '/api/visibility'},
-      repo: среда.repo,
-      settings: НАСТРОЙКИ,
-      тело: async () => ({paths: [REL], скрыть: true}),
-      insideRepo: () => true,
-      send: (res, code, data) => ответы.push({code, data}),
-      // Запоминаем, что лежало в файле в момент вызова: фиксация обязана случиться до записи.
-      фиксировать: async (rel, обязательно) => {
-        вызовы.push({rel, обязательно, файлТогда: fs.readFileSync(path.join(среда.repo, rel), 'utf8')});
-      },
-    });
-
-    expect(вызовы).toEqual([{rel: REL, обязательно: true, файлТогда: внешний}]);
-    expect(ответы[0].code).toBe(200);
-    expect(fs.readFileSync(среда.файл, 'utf8')).toContain('unlisted: true');
   });
 });

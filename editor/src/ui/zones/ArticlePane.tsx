@@ -1,4 +1,5 @@
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
+import {Transaction} from '@codemirror/state';
 import type {EditorView} from '@codemirror/view';
 import type {Deletion} from '../../core/colorize';
 import {SelectionToolbar, decideEdit} from '../editor/SelectionToolbar';
@@ -20,6 +21,11 @@ export function ArticlePane(props: {
    * и вся история отмены: редактор пересоздался бы из текста, каким статья открывалась.
    */
   скрыт?: boolean;
+  /**
+   * Текст, который надо положить в редактор целиком: возврат к версии или откат возврата.
+   * Номер отличает два возврата к одной и той же версии подряд — по тексту это неразличимо.
+   */
+  подстановка?: {текст: string; номер: number} | null;
 }) {
   const [spot, setSpot] = useState<Spot | null>(null);
   const [menu, setMenu] = useState(false);
@@ -36,6 +42,24 @@ export function ArticlePane(props: {
     onPaste: props.onPaste,
     толькоЧтение: выборНеСделан,
   });
+
+  // Возврат кладёт текст ТРАНЗАКЦИЕЙ в живой редактор, а не пересозданием зоны: пересоздание
+  // стёрло бы историю отмены, а вместе с ней и обещание обратимости.
+  const номерПодстановки = props.подстановка?.номер ?? 0;
+  useEffect(() => {
+    const editor = view.current;
+    const текст = props.подстановка?.текст;
+    if (!editor || номерПодстановки === 0 || текст === undefined) return;
+    if (editor.state.doc.toString() === текст) return;
+
+    // Пометка «правка не от человека»: пара уже записана в черновик до подстановки, и слушатель
+    // не должен отправить её второй раз — иначе таймер очереди вернул бы надпись «Автосохранено»
+    // поверх честного «Сохранено».
+    editor.dispatch({
+      changes: {from: 0, to: editor.state.doc.length, insert: текст},
+      annotations: Transaction.remote.of(true),
+    });
+  }, [номерПодстановки]);
 
   const blocks = props.settings.вставки.filter((item) => item.группа === 'Блоки');
 

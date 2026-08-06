@@ -112,7 +112,7 @@ async function api(req, res, url) {
   if (url.pathname === '/api/articles') return send(res, 200, await articles());
 
   // Видимость статьи — отдельным модулем: сервер иначе выходит за лимит размера файла.
-  if (await visibilityRoute({req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send, фиксировать})) return;
+  if (await visibilityRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, insideRepo, send, фиксировать})) return;
 
   // Лента версий и содержимое одной версии — тоже отдельным модулем, по той же причине.
   if (await versionsRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), insideRepo, send})) return;

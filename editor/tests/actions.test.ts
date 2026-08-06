@@ -51,16 +51,28 @@ describe('смена видимости', () => {
     expect(fail).toHaveBeenCalledWith('нет такой статьи');
   });
 
-  it('поздний ответ видимости не применяется к уже другой открытой статье', async () => {
-    // Иначе окно станет смесью двух статей: состояние прошлой поверх данных новой.
-    const request = vi.fn().mockResolvedValue({changed: []});
+  it('поздний ответ видимости приходит с пометкой, что окно уже другое', async () => {
+    // Состояние чужой статьи менять нельзя — иначе окно станет смесью двух. Но и молчать нельзя:
+    // в ответе может быть предупреждение о незаписанной версии, а оно относится к работе,
+    // а не к экрану. Поэтому ответ доносится всегда, с признаком, и решает обработчик.
+    const request = vi.fn().mockResolvedValue({changed: [], предупреждения: ['история']});
     const ok = vi.fn();
     const fail = vi.fn();
 
     await setVisibility(['docs/a/index.mdx'], true, {ok, fail, актуально: () => false}, request as never);
 
-    expect(ok).not.toHaveBeenCalled();
+    expect(ok).toHaveBeenCalledWith({changed: [], предупреждения: ['история'], актуально: false});
     expect(fail).not.toHaveBeenCalled();
+  });
+
+  it('видимость отвечает свежими отпечатками записанных файлов', async () => {
+    // Без них окно осталось бы с базой от прежнего файла и получило бы ложное «изменён снаружи».
+    const request = vi.fn().mockResolvedValue({changed: ['docs/a/index.mdx'], отпечатки: {'docs/a/index.mdx': 'ОТП2'}});
+    const ok = vi.fn();
+
+    await setVisibility(['docs/a/index.mdx'], true, {ok, fail: vi.fn()}, request as never);
+
+    expect(ok.mock.calls[0][0].отпечатки).toEqual({'docs/a/index.mdx': 'ОТП2'});
   });
 
   it('при ошибке сервера состояние не меняется: ok не вызывается', async () => {

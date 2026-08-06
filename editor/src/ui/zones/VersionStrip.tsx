@@ -11,6 +11,11 @@ export function VersionStrip(props: {
   visible: boolean;
   сеансы: Сеанс[];
   выбрано: string | null;
+  /**
+   * Идёт запись возврата к версии. Лента на это время заперта: уйдя сейчас на другую версию,
+   * человек оставил бы на диске черновик от возврата, которого в окне уже нет.
+   */
+  занято?: boolean;
   onВыбрать: (версия: Версия) => void;
   onСейчас: () => void;
 }) {
@@ -50,6 +55,7 @@ export function VersionStrip(props: {
                   <button
                     key={версия.имя}
                     className={версия.имя === props.выбрано ? 'version version-on' : 'version'}
+                    disabled={props.занято === true}
                     onClick={() => props.onВыбрать(версия)}
                   >
                     {время(версия.iso, props.settings)}
@@ -65,6 +71,7 @@ export function VersionStrip(props: {
       <button
         className={props.выбрано === null ? 'session-head session-on' : 'session-head'}
         title={п.вернутьсяКТекущей}
+        disabled={props.занято === true}
         onClick={props.onСейчас}
       >
         {п.сейчас}

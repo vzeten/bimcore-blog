@@ -16,6 +16,18 @@ export function VersionView(props: {
   версия: ПросмотрВерсии;
   path: string;
   onЗакрыть: () => void;
+  onВернуть: () => void;
+  /**
+   * Запись возврата ещё идёт. Обе кнопки на это время заперты: уйдя сейчас, человек оставил бы
+   * на диске черновик от возврата, которого в окне уже нет.
+   */
+  занято: boolean;
+  /**
+   * Возврат запрещён и по другой причине — например, пока не сделан выбор «черновик или файл».
+   * Выход к своей работе при этом обязан остаться: иначе человек заперт в просмотре и не может
+   * добраться до самого выбора, ведь его полоса на время просмотра спрятана.
+   */
+  возвратНедоступен: boolean;
 }) {
   const host = useRef<HTMLDivElement | null>(null);
   const п = props.settings.подписи;
@@ -38,7 +50,10 @@ export function VersionView(props: {
     <div className="pane pane-read">
       <div className="version-bar">
         <span>{шапка(props.версия, props.settings)}</span>
-        <button className="ghost" onClick={props.onЗакрыть}>{п.вернутьсяКТекущей}</button>
+        {/* Возврат кладёт версию в рабочее окно, а файл статьи не трогает: на диск её
+            записывает только кнопка «Сохранить», обычным путём со всеми его проверками. */}
+        <button className="ghost" disabled={props.возвратНедоступен} onClick={props.onВернуть}>{п.вернутьВерсию}</button>
+        <button className="ghost" disabled={props.занято} onClick={props.onЗакрыть}>{п.вернутьсяКТекущей}</button>
       </div>
 
       <div className="pane-head">

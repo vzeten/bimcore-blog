@@ -1,5 +1,5 @@
 import {useEffect, useRef} from 'react';
-import {EditorState} from '@codemirror/state';
+import {EditorState, Transaction} from '@codemirror/state';
 import {EditorView, keymap, drawSelection, highlightActiveLine} from '@codemirror/view';
 import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
 import {запретПравки, чтениеСтатьи} from './reading';
@@ -30,6 +30,13 @@ export function useEditor(options: {
 }) {
   const host = useRef<HTMLDivElement | null>(null);
   const view = useRef<EditorView | null>(null);
+  // Свежие обработчики и статья в ref. Редактор создаётся один раз на статью и держит замыкание
+  // того мгновения: без ref он до самого закрытия статьи звал бы обработчики, знающие отпечаток
+  // и текст файла на момент открытия. После сохранения отпечаток меняется, и набранное уходило
+  // бы в черновик со старым — при следующем открытии человек получал бы ложный выбор
+  // «черновик или файл», а выбор «взять файл» отбрасывал бы его работу.
+  const свежие = useRef(options);
+  свежие.current = options;
 
   useEffect(() => {
     if (!host.current) return;
@@ -50,9 +57,9 @@ export function useEditor(options: {
           drawSelection(),
           highlightActiveLine(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
-          ...чтениеСтатьи(() => options.article.path),
+          ...чтениеСтатьи(() => свежие.current.article.path),
           ...(options.толькоЧтение === true ? запретПравки() : []),
-          layerColors(() => before, options.onDeletions),
+          layerColors(() => before, (deletions) => свежие.current.onDeletions(deletions)),
           EditorView.domEventHandlers({
             paste: (event, editor) => {
               const file = [...(event.clipboardData?.items ?? [])]
@@ -60,14 +67,18 @@ export function useEditor(options: {
                 ?.getAsFile();
               if (!file) return false;
               event.preventDefault();
-              options.onPaste(file, editor);
+              свежие.current.onPaste(file, editor);
               return true;
             },
           }),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged) options.onText(update.state.doc.toString());
+            // Подстановка целой пары (возврат к версии) помечена как правка не от человека:
+            // она уже записана в черновик, и повторная отправка завела бы вторую запись той же
+            // пары. Курсор и выделение при этом пересчитываются как обычно.
+            const своя = update.transactions.every((tr) => tr.annotation(Transaction.remote) !== true);
+            if (update.docChanged && своя) свежие.current.onText(update.state.doc.toString());
             if (!update.selectionSet && !update.docChanged) return;
-            options.onSelection(spotOf(update.view));
+            свежие.current.onSelection(spotOf(update.view));
           }),
         ],
       }),

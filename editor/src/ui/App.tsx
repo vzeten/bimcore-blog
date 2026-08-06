@@ -7,11 +7,10 @@ import {VersionStrip} from './zones/VersionStrip';
 import {VersionView} from './zones/VersionView';
 import {ArticlePane} from './zones/ArticlePane';
 import {CommentGutter} from './zones/CommentGutter';
-import {ConflictBars, ErrorBar} from './zones/ConflictBar';
+import {Bars} from './zones/Bars';
 import {buildFrontmatter, type Field} from './zones/Properties';
 import {pasteImage} from './editor/images';
 import {requestJson} from './api';
-import {nothingChanged} from '../core/articleFile.mjs';
 import {useAutosave} from './useAutosave';
 import {label, setLabels} from './labels';
 import {makeReporter} from './errors';
@@ -19,6 +18,8 @@ import {useConflictChoice} from './useConflictChoice';
 import {useSaving} from './useSaving';
 import {useNavigation} from './useNavigation';
 import {useVersions} from './useVersions';
+import {useVersionRestore} from './useVersionRestore';
+import {useWindowText} from './useWindowText';
 import {applyLayerColors} from './layerColors';
 import {Boot} from './zones/Boot';
 import type {Article, ArticleRow, PanelMode, SaveState, Settings} from './types';
@@ -69,6 +70,12 @@ export function App() {
   const открытие = useRef(0);
   const просмотрРеф = useRef(false);
 
+  // Пара «тело + шапка» в окне: обычная правка и подстановка целой пары при возврате к версии.
+  const {подстановка, вЧерновик, правка, отметить, положитьПару} = useWindowText({
+    article, roots: settings?.контент ?? [], текстСейчас, шапкаСейчас, автосохранение,
+    setArticle, setFields, setDirty, setСостояние: setСостояниеСохранения, setКонфликтСохранения,
+  });
+
   // Актуальные настройки в ref: обработчик «назад» ставится один раз и иначе поймал бы старое (null) значение.
   const settingsRef = useRef<Settings | null>(null);
   settingsRef.current = settings;
@@ -90,7 +97,14 @@ export function App() {
   const {save, visibility} = useSaving({
     article, settings, fields, текстСейчас, шапкаСейчас, статьяСейчас, открытие, автосохранение,
     setArticle, setFields, setDirty, setОшибка, setКонфликтСохранения, setСостояние: setСостояниеСохранения,
-    refresh, сПричиной, вЧерновик: () => вЧерновик(),
+    refresh, сПричиной, вЧерновик: (отпечаток) => вЧерновик(undefined, undefined, отпечаток),
+    // Работа записана в файл — откатывать больше не к чему, на диске уже другое состояние.
+    послеЗаписи: () => возврат.забытьСнимок(),
+  });
+
+  const возврат = useVersionRestore({
+    article, текстСейчас, шапкаСейчас, статьяСейчас, открытие, автосохранение, вЧерновик,
+    положитьПару, отметить, версии, onОшибка: (ключ) => setОшибка(label(ключ)),
   });
 
   useEffect(() => {
@@ -147,28 +161,33 @@ export function App() {
         просмотр={просмотрИдёт}
       />
 
-      <ErrorBar settings={settings} текст={ошибка} onЗакрыть={() => setОшибка(null)} />
-
-      {/* Файл разошёлся с окном: выбор делает человек, молча ничего не трогаем.
-          В просмотре версии панель прячется целиком: обе её кнопки пишут на диск или подменяют
-          рабочий текст, а просмотр не меняет ничего. Выбор никуда не девается — он ждёт возврата. */}
-      {!просмотрИдёт && (
-        <ConflictBars
-          settings={settings}
-          article={реестр ? null : article}
-          конфликтСохранения={конфликтСохранения}
-          onВзятьЧерновик={взятьЧерновик}
-          onВзятьФайл={взятьФайл}
-          onСохранитьПоверх={() => void save(true)}
-          onПеречитать={() => void open(article!.path, false)}
-        />
-      )}
+      <Bars
+        settings={settings}
+        article={реестр ? null : article}
+        ошибка={ошибка}
+        onЗакрытьОшибку={() => setОшибка(null)}
+        конфликтСохранения={конфликтСохранения}
+        просмотрИдёт={просмотрИдёт}
+        реестр={реестр}
+        спрашиваемВозврат={возврат.спрашиваем()}
+        откатДоступен={возврат.откатДоступен()}
+        onВзятьЧерновик={взятьЧерновик}
+        onВзятьФайл={взятьФайл}
+        onСохранитьПоверх={() => void save(true)}
+        onПеречитать={() => void open(article!.path, false)}
+        onПодтвердитьВозврат={() => void возврат.подтвердить()}
+        onОтменитьВозврат={возврат.отменитьПодтверждение}
+        onОткатить={() => void возврат.откатить()}
+      />
 
       <VersionStrip
         settings={settings}
         visible={mode === 'версии' && article !== null}
         сеансы={версии.сеансы}
         выбрано={версии.просмотр?.имя ?? null}
+        // Пока идёт запись возврата, лента заперта: иначе человек ушёл бы на другую версию,
+        // и на диске остался бы черновик от возврата, которого в окне уже нет.
+        занято={возврат.идёт}
         onВыбрать={(версия) => void версии.открыть(article!.path, версия)}
         onСейчас={версии.закрыть}
       />
@@ -199,6 +218,9 @@ export function App() {
                 версия={версии.просмотр}
                 path={article!.path}
                 onЗакрыть={версии.закрыть}
+                onВернуть={() => void возврат.вернуть(версии.просмотр!, dirty)}
+                занято={возврат.идёт}
+                возвратНедоступен={возврат.недоступен}
               />
             )}
 
@@ -216,13 +238,21 @@ export function App() {
               // и через состояние свежее значение соседа получить не успевают.
               onFields={(next) => {
                 setFields(next);
-                правка(текстСейчас.current, buildFrontmatter(article!.frontmatterRaw, next, article!.path, settings.контент));
+                // Образец сборки — шапка ОКНА, а не файла: нетронутые поля возвращаются из образца
+                // дословно, и после возврата к версии сборка от файла выбросила бы поля, которых
+                // в нём уже нет, и вернула бы выброшенные когда-то. База сравнения с файлом
+                // (`article.frontmatterRaw`) при этом остаётся прежней — она отвечает за другое.
+                const образец = шапкаСейчас.current || article!.frontmatterRaw;
+                правка(текстСейчас.current, buildFrontmatter(образец, next, article!.path, settings.контент));
               }}
               onText={(next) => {
                 setText(next);
                 правка(next, шапкаСейчас.current);
               }}
               onDeletions={setDeletions}
+              // Возврат к версии кладёт текст сюда транзакцией: пересоздание зоны стёрло бы
+              // историю отмены вместе с обещанием обратимости.
+              подстановка={подстановка}
               // Дописывать картинку можно, только если это всё ещё та же статья и не идёт просмотр:
               // иначе разметка уедет в чужой или уже уничтоженный редактор.
               onPaste={(file, view) => void runSafe(() => pasteImage(file, article!.path, view,
@@ -252,25 +282,4 @@ export function App() {
     if (next === 'версии' && article) void версии.обновить(article.path);
   }
 
-  /**
-   * Правка уходит в очередь автосохранения; настоящий файл не трогается.
-   * Без аргументов — вернуть в очередь то, что уже в окне (сохранение не прошло).
-   */
-  function вЧерновик(body = текстСейчас.current, frontmatterRaw = шапкаСейчас.current): void {
-    if (!article) return;
-    текстСейчас.current = body;
-    шапкаСейчас.current = frontmatterRaw;
-    автосохранение.запланировать({path: article.path, body, frontmatterRaw, отпечатокБазы: article.отпечаток});
-  }
-
-  /**
-   * Любая правка окна: текста или свойств. Несохранённость считается по паре «тело + шапка»
-   * тем же правилом, что и на сервере: иначе возврат текста к исходному стёр бы признак
-   * несохранённых свойств, и правка шапки молча потерялась бы.
-   */
-  function правка(body: string, frontmatterRaw: string): void {
-    if (!article) return;
-    setDirty(!nothingChanged({body: article.body, frontmatterRaw: article.frontmatterRaw}, {body, frontmatterRaw}));
-    вЧерновик(body, frontmatterRaw);
-  }
 }
