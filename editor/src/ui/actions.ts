@@ -195,7 +195,7 @@ export async function createArticle(
   request: Request = requestJson,
 ): Promise<void> {
   try {
-    await effects.ok(await request<{path: string}>('/api/article/new', {
+    await effects.ok(await request<{path: string; заглушка?: boolean}>('/api/article/new', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(запрос),

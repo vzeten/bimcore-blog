@@ -11,6 +11,23 @@ export interface Field {
 }
 
 /** Свойства статьи стоят над текстом и по умолчанию свёрнуты: нужны раз на статью. */
+/** Поля, которым мало одной строки: описание пишется для поиска и не влезает в строку. */
+const ДЛИННЫЕ = ['description'];
+
+/** Поля, которые человек здесь не правит: автор блога задан настройками сайта, один на все статьи. */
+const НЕПРАВИМЫЕ = ['authors'];
+
+function правка(
+  props: {fields: Field[]; onChange: (fields: Field[]) => void},
+  index: number,
+  field: Field,
+  значение: string,
+): void {
+  const next = [...props.fields];
+  next[index] = {...field, display: значение};
+  props.onChange(next);
+}
+
 export function Properties(props: {
   settings: Settings;
   fields: Field[];
@@ -34,15 +51,20 @@ export function Properties(props: {
             <label key={field.key}>
               {/* Человеку — понятная подпись; техническое имя остаётся подсказкой при наведении. */}
               <span title={field.key}>{props.settings.подписиПолей[field.key] ?? field.key}</span>
-              <input
-                value={field.display}
-                readOnly={props.толькоЧтение === true}
-                onChange={(event) => {
-                  const next = [...props.fields];
-                  next[index] = {...field, display: event.target.value};
-                  props.onChange(next);
-                }}
-              />
+              {ДЛИННЫЕ.includes(field.key) ? (
+                <textarea
+                  rows={3}
+                  value={field.display}
+                  readOnly={props.толькоЧтение === true}
+                  onChange={(event) => правка(props, index, field, event.target.value)}
+                />
+              ) : (
+                <input
+                  value={field.display}
+                  readOnly={props.толькоЧтение === true || НЕПРАВИМЫЕ.includes(field.key)}
+                  onChange={(event) => правка(props, index, field, event.target.value)}
+                />
+              )}
             </label>
           ))}
         </div>
