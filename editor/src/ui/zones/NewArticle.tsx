@@ -13,13 +13,16 @@ export function NewArticle(props: {
   /** Раздел, выбранный в дереве. Пусто — создавать негде, и это говорится прямо. */
   раздел: string | null;
   занято: boolean;
-  onСоздать: (название: string, адрес: string) => void;
+  onСоздать: (название: string, адрес: string, язык: string) => void;
   onЗакрыть: () => void;
 }) {
   const п = props.settings.подписи;
   const [название, setНазвание] = useState('');
   const [адрес, setАдрес] = useState('');
   const [правлюАдрес, setПравлюАдрес] = useState(false);
+  // Язык статьи: по умолчанию основной. Выбрали английский — заглушка не нужна, статья и есть
+  // английская; выбрали любой другой — английская заглушка создаётся вместе с ней.
+  const [язык, setЯзык] = useState(props.settings.основнойЯзык);
 
   // Пока человек не тронул адрес руками, он идёт из названия: владелец не должен придумывать
   // адреса, но и подменять его выбор, если он уже написал своё, программа не вправе.
@@ -36,7 +39,7 @@ export function NewArticle(props: {
             value={название}
             onChange={(event) => setНазвание(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && готово) props.onСоздать(название, итоговый);
+              if (event.key === 'Enter' && готово) props.onСоздать(название, итоговый, язык);
               if (event.key === 'Escape') props.onЗакрыть();
             }}
           />
@@ -53,12 +56,21 @@ export function NewArticle(props: {
           />
         </label>
 
+        <label>
+          <span>{п.языкСтатьи}</span>
+          <select value={язык} onChange={(event) => setЯзык(event.target.value)}>
+            {Object.entries(props.settings.локали).map(([код, имя]) => (
+              <option key={код} value={код}>{имя}</option>
+            ))}
+          </select>
+        </label>
+
         <p className="newarticle-hint">
           {props.раздел === null ? п.выберитеРаздел : `${п.статьяЛяжет} ${props.раздел}`}
         </p>
 
         <div className="newarticle-buttons">
-          <button className="ghost" disabled={!готово} onClick={() => props.onСоздать(название, итоговый)}>
+          <button className="ghost" disabled={!готово} onClick={() => props.onСоздать(название, итоговый, язык)}>
             {п.создать}
           </button>
           <button className="ghost" onClick={props.onЗакрыть}>{п.неСоздавать}</button>

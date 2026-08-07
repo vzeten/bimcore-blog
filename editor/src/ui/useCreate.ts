@@ -17,11 +17,11 @@ export function useCreate(deps: {
   const [раздел, setРаздел] = useState<string | null | undefined>(undefined);
   const [идёт, setИдёт] = useState(false);
 
-  const создать = async (название: string, адрес: string): Promise<void> => {
+  const создать = async (название: string, адрес: string, язык: string): Promise<void> => {
     if (раздел === undefined || идёт) return;
     setИдёт(true);
 
-    await createArticle({раздел: раздел ?? '', название, адрес}, {
+    await createArticle({раздел: раздел ?? '', название, адрес, язык}, {
       // Статья создана — сразу открываем её: человек начал писать, а не заводить файлы.
       ok: async (созданная) => {
         setРаздел(undefined);

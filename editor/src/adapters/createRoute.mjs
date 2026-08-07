@@ -32,6 +32,7 @@ export async function createRoute({req, res, url, repo, editorDir, settings, git
     раздел: payload['раздел'],
     название: payload['название'],
     адрес: typeof payload['адрес'] === 'string' ? payload['адрес'] : '',
+    язык: typeof payload['язык'] === 'string' ? payload['язык'] : '',
   });
 
   if (итог.ошибка) {

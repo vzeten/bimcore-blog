@@ -15,7 +15,7 @@ export function Registry(props: {
     идёт: boolean;
     начать: (раздел: string | null) => void;
     закрыть: () => void;
-    создать: (название: string, адрес: string) => Promise<void>;
+    создать: (название: string, адрес: string, язык: string) => Promise<void>;
   };
 }) {
   const р = props.settings.реестр;
@@ -46,7 +46,7 @@ export function Registry(props: {
           раздел={props.создание.раздел}
           занято={props.создание.идёт}
           onЗакрыть={props.создание.закрыть}
-          onСоздать={(название, адрес) => void props.создание.создать(название, адрес)}
+          onСоздать={(название, адрес, язык) => void props.создание.создать(название, адрес, язык)}
         />
       )}
 
@@ -54,16 +54,7 @@ export function Registry(props: {
 
       <div className="registry-main">
         <div className="registry-filters">
-          {/* В блоге создание пока не делается: правила его шапки не описаны. Кнопка не прячется,
-              а гаснет с причиной — спрятанный запрет человек принимает за поломку. */}
-          <button
-            className="ghost"
-            disabled={раздел?.startsWith('blog') === true}
-            title={раздел?.startsWith('blog') === true ? props.settings.ошибкиСоздания.блогПока : ''}
-            onClick={() => props.создание.начать(раздел)}
-          >
-            {п.новаяСтатья}
-          </button>
+          <button className="ghost" onClick={() => props.создание.начать(раздел)}>{п.новаяСтатья}</button>
 
           <input
             className="registry-search"

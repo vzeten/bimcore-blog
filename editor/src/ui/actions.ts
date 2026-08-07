@@ -190,7 +190,7 @@ export async function openVersion(
  * При ошибке `ok` не вызывается: ничего не создано, и делать вид, что создано, нельзя.
  */
 export async function createArticle(
-  запрос: {раздел: string; название: string; адрес: string},
+  запрос: {раздел: string; название: string; адрес: string; язык: string},
   effects: {ok: (созданная: {path: string}) => void; fail: (reason: string) => void},
   request: Request = requestJson,
 ): Promise<void> {
