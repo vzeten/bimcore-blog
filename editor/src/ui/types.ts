@@ -136,6 +136,8 @@ export interface Settings {
   призывПоРазделу: Record<string, string>;
   статусы: string[];
   подписи: Record<string, string>;
+  /** Почему статья не создана: коды от сервера, слова человеку — здесь. */
+  ошибкиСоздания: Record<string, string>;
   видимость: {вМеню: string; поСсылке: string};
   хранение: {
     файлСостояния: string;

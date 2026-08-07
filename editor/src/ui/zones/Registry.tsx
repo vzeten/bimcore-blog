@@ -1,5 +1,6 @@
 import {useMemo, useState} from 'react';
 import {filterArticles, lastEditOf, readinessOf, sortArticles, visibilityOf} from '../../core/registry.mjs';
+import {NewArticle} from './NewArticle';
 import {SectionTree} from './SectionTree';
 import type {ArticleRow, Settings} from '../types';
 
@@ -8,6 +9,14 @@ export function Registry(props: {
   settings: Settings;
   articles: ArticleRow[];
   onOpen: (path: string) => void;
+  /** Создание статьи: своё состояние живёт в хуке окна, реестр только показывает форму. */
+  создание: {
+    раздел: string | null | undefined;
+    идёт: boolean;
+    начать: (раздел: string | null) => void;
+    закрыть: () => void;
+    создать: (название: string, адрес: string) => Promise<void>;
+  };
 }) {
   const р = props.settings.реестр;
   const п = props.settings.подписи;
@@ -31,10 +40,31 @@ export function Registry(props: {
 
   return (
     <div className="registry">
+      {props.создание.раздел !== undefined && (
+        <NewArticle
+          settings={props.settings}
+          раздел={props.создание.раздел}
+          занято={props.создание.идёт}
+          onЗакрыть={props.создание.закрыть}
+          onСоздать={(название, адрес) => void props.создание.создать(название, адрес)}
+        />
+      )}
+
       <SectionTree settings={props.settings} articles={props.articles} chosen={раздел} onChoose={setРаздел} />
 
       <div className="registry-main">
         <div className="registry-filters">
+          {/* В блоге создание пока не делается: правила его шапки не описаны. Кнопка не прячется,
+              а гаснет с причиной — спрятанный запрет человек принимает за поломку. */}
+          <button
+            className="ghost"
+            disabled={раздел?.startsWith('blog') === true}
+            title={раздел?.startsWith('blog') === true ? props.settings.ошибкиСоздания.блогПока : ''}
+            onClick={() => props.создание.начать(раздел)}
+          >
+            {п.новаяСтатья}
+          </button>
+
           <input
             className="registry-search"
             value={запрос}

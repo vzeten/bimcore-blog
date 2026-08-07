@@ -19,6 +19,7 @@ import {assetRoute} from './src/adapters/assets.mjs';
 import {visibilityRoute} from './src/adapters/visibilityRoute.mjs';
 import {versionsRoute} from './src/adapters/versionsRoute.mjs';
 import {articleRoute} from './src/adapters/articleRoute.mjs';
+import {createRoute} from './src/adapters/createRoute.mjs';
 import {detectPublishedRef, gitAuthor, showFile} from './src/adapters/gitFile.mjs';
 import {фиксироватьВнешнюю} from './src/adapters/externalVersion.mjs';
 
@@ -116,6 +117,9 @@ async function api(req, res, url) {
 
   // Лента версий и содержимое одной версии — тоже отдельным модулем, по той же причине.
   if (await versionsRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), insideRepo, send})) return;
+
+  // Создание статьи — отдельным модулем, как и остальные ручки.
+  if (await createRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, send})) return;
 
   // Открытие статьи — отдельным модулем: сервер иначе выходит за лимит размера файла.
   if (await articleRoute({

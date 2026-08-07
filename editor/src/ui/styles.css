@@ -281,3 +281,11 @@ button { font: inherit; cursor: pointer; }
 .lang-нет { opacity: 0.35; cursor: default; }
 .lang-устарела { color: var(--layer-prevAi); }
 .lang-mark { margin-left: 3px; font-size: 9px; vertical-align: 2px; }
+
+/* Создание статьи: небольшое окно поверх реестра. Появляется по кнопке и уходит по «Отмена». */
+.newarticle { position: fixed; inset: 0; background: rgba(17, 20, 24, 0.35); display: flex; align-items: center; justify-content: center; z-index: 20; }
+.newarticle-body { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 20px; width: 460px; max-width: 92vw; display: grid; gap: 12px; }
+.newarticle-body label { display: grid; gap: 4px; font-size: 13px; color: var(--ink-quiet); }
+.newarticle-body input { font-size: 14px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--ink); }
+.newarticle-hint { margin: 0; font-size: 12px; color: var(--ink-quiet); }
+.newarticle-buttons { display: flex; gap: 8px; justify-content: flex-end; }

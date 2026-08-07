@@ -185,6 +185,26 @@ export async function openVersion(
   return true;
 }
 
+/**
+ * Создание статьи. Сервер отвечает путём созданной русской версии — окно сразу её открывает.
+ * При ошибке `ok` не вызывается: ничего не создано, и делать вид, что создано, нельзя.
+ */
+export async function createArticle(
+  запрос: {раздел: string; название: string; адрес: string},
+  effects: {ok: (созданная: {path: string}) => void; fail: (reason: string) => void},
+  request: Request = requestJson,
+): Promise<void> {
+  try {
+    await effects.ok(await request<{path: string}>('/api/article/new', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(запрос),
+    }));
+  } catch (error) {
+    effects.fail(причина(error));
+  }
+}
+
 /** Смена видимости всех языковых версий. При ошибке `ok` не вызывается — состояние статьи не меняется. */
 export async function setVisibility(
   paths: string[],

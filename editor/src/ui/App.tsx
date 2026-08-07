@@ -8,6 +8,7 @@ import {VersionView} from './zones/VersionView';
 import {ArticlePane} from './zones/ArticlePane';
 import {CommentGutter} from './zones/CommentGutter';
 import {Bars} from './zones/Bars';
+import {useCreate} from './useCreate';
 import {buildFrontmatter, type Field} from './zones/Properties';
 import {pasteImage} from './editor/images';
 import {requestJson} from './api';
@@ -93,6 +94,13 @@ export function App() {
     if (st?.вид === 'статья' && st.path) void open(st.path, false);
     else void closeArticle();
   };
+
+  const создание = useCreate({
+    открыть: (path) => open(path),
+    обновить: refresh,
+    onОшибка: setОшибка,
+    onСоздано: setОшибка,
+  });
 
   const {save, visibility} = useSaving({
     article, settings, fields, текстСейчас, шапкаСейчас, статьяСейчас, открытие, автосохранение,
@@ -201,7 +209,7 @@ export function App() {
         />
 
         {article === null ? (
-          <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} />
+          <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} создание={создание} />
         ) : (
           <>
             {/* Всё, что показывается вместо открытой статьи, встаёт РЯДОМ с рабочим редактором,
@@ -209,7 +217,7 @@ export function App() {
                 пересоздать его при возврате — из текста, каким статья открывалась, — то есть
                 потерять несохранённую правку и всю историю отмены. */}
             {реестр && (
-              <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} />
+              <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} создание={создание} />
             )}
 
             {версии.просмотр && (
