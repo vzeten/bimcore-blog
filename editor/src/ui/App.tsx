@@ -9,9 +9,10 @@ import {ArticlePane} from './zones/ArticlePane';
 import {CommentGutter} from './zones/CommentGutter';
 import {Bars} from './zones/Bars';
 import {useCreate} from './useCreate';
-import {buildFrontmatter, type Field} from './zones/Properties';
-import {pasteImage} from './editor/images';
+import type {Field} from './headFields';
+import {makeCoverUpload, pasteImage} from './editor/images';
 import {requestJson} from './api';
+import {useDelete} from './useDelete';
 import {useAutosave} from './useAutosave';
 import {label, setLabels} from './labels';
 import {makeReporter} from './errors';
@@ -47,7 +48,7 @@ export function App() {
     onОшибка: (причина) => setОшибка(сПричиной('ошибкаВерсии', причина)),
   });
   const {взятьЧерновик, взятьФайл} = useConflictChoice({
-    article, roots: settings?.контент ?? [], setArticle, setText, setFields,
+    article, roots: settings?.контент ?? [], общаяОбложка: settings?.сайт?.обложкаПоУмолчанию ?? null, setArticle, setText, setFields,
     setDirty, setСостояние: setСостояниеСохранения,
     запомнить: (body, frontmatterRaw) => {
       текстСейчас.current = body;
@@ -70,10 +71,15 @@ export function App() {
   // Номер захода в статью: та же статья, открытая заново, — уже другое окно.
   const открытие = useRef(0);
   const просмотрРеф = useRef(false);
+  // Пока грузится обложка, человек мог уйти в другую статью, в просмотр версии или открыть эту же
+  // заново: во всех трёх случаях путь в шапку не пишется. Признаки берутся из ref по той же причине.
+  const загрузитьОбложку = makeCoverUpload({
+    runSafe, статья: статьяСейчас, заход: открытие, просмотр: просмотрРеф,
+  });
 
   // Пара «тело + шапка» в окне: обычная правка и подстановка целой пары при возврате к версии.
-  const {подстановка, вЧерновик, правка, отметить, положитьПару} = useWindowText({
-    article, roots: settings?.контент ?? [], текстСейчас, шапкаСейчас, автосохранение,
+  const {подстановка, вЧерновик, правка, правитьПоля, отметить, положитьПару} = useWindowText({
+    article, roots: settings?.контент ?? [], общаяОбложка: settings?.сайт?.обложкаПоУмолчанию ?? null, текстСейчас, шапкаСейчас, автосохранение,
     setArticle, setFields, setDirty, setСостояние: setСостояниеСохранения, setКонфликтСохранения,
   });
 
@@ -113,6 +119,12 @@ export function App() {
   const возврат = useVersionRestore({
     article, текстСейчас, шапкаСейчас, статьяСейчас, открытие, автосохранение, вЧерновик,
     положитьПару, отметить, версии, onОшибка: (ключ) => setОшибка(label(ключ)),
+  });
+
+  const удаление = useDelete({
+    путь: () => статьяСейчас.current, заход: () => открытие.current,
+    автосохранение, обновить: refresh, закрытьСтатью: closeArticle,
+    onОшибка: (текст) => setОшибка(сПричиной('ошибкаУдаления', текст)), onУдалено: setОшибка,
   });
 
   useEffect(() => {
@@ -165,6 +177,8 @@ export function App() {
         onColors={setColors}
         onSave={() => void save()}
         onVisibility={(скрыть) => void visibility(article, скрыть)}
+        onDelete={() => void удаление.удалить()}
+        удаление={удаление.идёт}
         // Просмотр версии ничего не пишет: пишущие кнопки шапки на это время заперты.
         просмотр={просмотрИдёт}
       />
@@ -244,15 +258,7 @@ export function App() {
               fields={fields}
               // Пара «тело + шапка» собирается из ref: обработчики живут в замыкании редактора
               // и через состояние свежее значение соседа получить не успевают.
-              onFields={(next) => {
-                setFields(next);
-                // Образец сборки — шапка ОКНА, а не файла: нетронутые поля возвращаются из образца
-                // дословно, и после возврата к версии сборка от файла выбросила бы поля, которых
-                // в нём уже нет, и вернула бы выброшенные когда-то. База сравнения с файлом
-                // (`article.frontmatterRaw`) при этом остаётся прежней — она отвечает за другое.
-                const образец = шапкаСейчас.current || article!.frontmatterRaw;
-                правка(текстСейчас.current, buildFrontmatter(образец, next, article!.path, settings.контент));
-              }}
+              onFields={(next) => правитьПоля(next, settings)}
               onText={(next) => {
                 setText(next);
                 правка(next, шапкаСейчас.current);
@@ -265,6 +271,7 @@ export function App() {
               // иначе разметка уедет в чужой или уже уничтоженный редактор.
               onPaste={(file, view) => void runSafe(() => pasteImage(file, article!.path, view,
                 () => !просмотрРеф.current && статьяСейчас.current === article!.path))}
+              загрузить={загрузитьОбложку}
             />
 
             {!реестр && !просмотрИдёт && <CommentGutter settings={settings} deletions={deletions} />}

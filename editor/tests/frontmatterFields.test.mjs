@@ -45,6 +45,91 @@ describe('поля шапки в человеческом виде', () => {
     expect(writeFields('tags: [a]', fields, DOCS, КОРНИ)).toBe('tags: [a, "две буквы"]');
   });
 
+  it('последнее поле шапки не теряется, когда строка кончается одиноким возвратом каретки', () => {
+    // Так выглядит шапка файла, который уже правился с windows-переводами строк. Одинокий `\r` —
+    // часть перевода строки, а не значения: без этого правила поле пропадает из окна вовсе,
+    // и человек не может ни увидеть обложку, ни поменять её.
+    const шапка = 'title: "Проба"\r\nimage: ./cover.png\r';
+    const поля = readFields(шапка, DOCS, КОРНИ);
+
+    expect(поля.map((поле) => поле.key)).toEqual(['title', 'image']);
+    expect(поля[1].display).toBe('./cover.png');
+  });
+
+  it('одинокий возврат каретки не попадает в значение поля', () => {
+    const поля = readFields('image: ./cover.png\r', DOCS, КОРНИ);
+    expect(поля[0].display).toBe('./cover.png');
+  });
+
+  it('нетронутая строка с одиноким возвратом каретки возвращается дословно', () => {
+    // Разбирать очищенную строку, а возвращать исходную: иначе одно только открытие статьи
+    // переписывало бы файл (SPEC 5.1). Лишний знак снимается при настоящей правке, а не сам собой.
+    const шапка = 'title: "Проба"\r\nimage: ./cover.png\r';
+    expect(writeFields(шапка, readFields(шапка, DOCS, КОРНИ), DOCS, КОРНИ))
+      .toBe('title: "Проба"\nimage: ./cover.png\r');
+  });
+
+  it('правка поля рядом снимает одинокий возврат каретки с изменённой строки', () => {
+    const шапка = 'title: "Проба"\r\nimage: ./cover.png\r';
+    const поля = readFields(шапка, DOCS, КОРНИ).map((f) => (f.key === 'image' ? {...f, display: './cover.jpg'} : f));
+
+    expect(writeFields(шапка, поля, DOCS, КОРНИ)).toBe('title: "Проба"\nimage: ./cover.jpg');
+  });
+
+  it('поле, которого в шапке не было, встаёт на место из принятого порядка полей', () => {
+    // Место строки берётся из общего правила рода, а не выбирается наугад: у одинаковых статей
+    // шапка обязана выглядеть одинаково.
+    const порядок = НАСТРОЙКИ['поляСоздания']['docs']['порядок'];
+    const шапка = 'title: "Проба"\nslug: /help/foo\ndescription: "О чём"\nunlisted: true';
+    const fields = [...readFields(шапка, DOCS, КОРНИ), {key: 'image', raw: '', kind: 'plain', display: './cover.png'}];
+
+    expect(writeFields(шапка, fields, DOCS, КОРНИ, порядок))
+      .toBe('title: "Проба"\nslug: /help/foo\ndescription: "О чём"\nimage: ./cover.png\nunlisted: true');
+  });
+
+  it('обложка дописывается и в шапку с windows-переводами строк', () => {
+    const порядок = НАСТРОЙКИ['поляСоздания']['docs']['порядок'];
+    const шапка = 'title: "Проба"\r\nslug: /help/foo\r\nunlisted: true';
+    const fields = [...readFields(шапка, DOCS, КОРНИ), {key: 'image', raw: '', kind: 'plain', display: './cover.jpg'}];
+
+    expect(writeFields(шапка, fields, DOCS, КОРНИ, порядок))
+      .toBe('title: "Проба"\nslug: /help/foo\nimage: ./cover.jpg\nunlisted: true');
+  });
+
+  it('пустая обложка в шапку не дописывается', () => {
+    // Пустое `image` роняет сборку всего сайта (SPEC 2.1), а поле, которого человек не заполнял,
+    // в файле появляться не должно.
+    const порядок = НАСТРОЙКИ['поляСоздания']['docs']['порядок'];
+    const шапка = 'title: "Проба"\nunlisted: true';
+    const fields = [...readFields(шапка, DOCS, КОРНИ), {key: 'image', raw: '', kind: 'plain', display: ''}];
+
+    expect(writeFields(шапка, fields, DOCS, КОРНИ, порядок)).toBe(шапка);
+  });
+
+  it('очистка обложки убирает строку из шапки, а не оставляет пустое значение', () => {
+    const шапка = 'title: "Проба"\nimage: ./cover.png\nunlisted: true';
+    const fields = readFields(шапка, DOCS, КОРНИ).map((f) => (f.key === 'image' ? {...f, display: '  '} : f));
+
+    expect(writeFields(шапка, fields, DOCS, КОРНИ)).toBe('title: "Проба"\nunlisted: true');
+  });
+
+  it('поле вне принятого порядка в шапку не дописывается', () => {
+    // Места для него никто не назначал: выдуманное место расходится от статьи к статье.
+    const порядок = НАСТРОЙКИ['поляСоздания']['docs']['порядок'];
+    const шапка = 'title: "Проба"';
+    const fields = [...readFields(шапка, DOCS, КОРНИ), {key: 'draft', raw: '', kind: 'plain', display: 'true'}];
+
+    expect(writeFields(шапка, fields, DOCS, КОРНИ, порядок)).toBe(шапка);
+  });
+
+  it('обложка встаёт в конец, когда всех соседей по порядку в шапке нет', () => {
+    const порядок = НАСТРОЙКИ['поляСоздания']['docs']['порядок'];
+    const шапка = 'title: "Проба"';
+    const fields = [...readFields(шапка, DOCS, КОРНИ), {key: 'image', raw: '', kind: 'plain', display: './cover.png'}];
+
+    expect(writeFields(шапка, fields, DOCS, КОРНИ, порядок)).toBe('title: "Проба"\nimage: ./cover.png');
+  });
+
   it('нетронутое поле возвращается дословно на всех настоящих статьях сайта', () => {
     const files = КОРНИ.flatMap((root) => walk(path.join(REPO, root['папка'])));
 

@@ -4,7 +4,8 @@ import type {EditorView} from '@codemirror/view';
 import type {Deletion} from '../../core/colorize';
 import {SelectionToolbar, decideEdit} from '../editor/SelectionToolbar';
 import {useEditor, type Spot} from '../editor/useEditor';
-import {Properties, type Field} from './Properties';
+import {Properties} from './Properties';
+import type {Field} from '../headFields';
 import type {Article, Settings} from '../types';
 
 export function ArticlePane(props: {
@@ -15,6 +16,8 @@ export function ArticlePane(props: {
   onText: (text: string) => void;
   onDeletions: (deletions: Deletion[]) => void;
   onPaste: (file: File, view: EditorView) => void;
+  /** Загрузка файла для поля-картинки в свойствах. `null` в ответе — не вышло, причина показана. */
+  загрузить: (file: File) => Promise<string | null>;
   /**
    * Идёт просмотр старой версии: рабочий редактор прячется, но остаётся живым.
    * Снять его с экрана насовсем нельзя — вместе с ним пропадут несохранённые правки
@@ -77,6 +80,8 @@ export function ArticlePane(props: {
           settings={props.settings}
           fields={props.fields}
           onChange={props.onFields}
+          path={props.article.path}
+          загрузить={props.загрузить}
           толькоЧтение={выборНеСделан}
         />
 

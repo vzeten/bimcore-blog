@@ -1,7 +1,7 @@
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import {loadArticle} from './actions';
 import {requestJson} from './api';
-import {parseFrontmatter, type Field} from './zones/Properties';
+import {parseFrontmatter, type Field} from './headFields';
 import type {Deletion} from '../core/colorize';
 import type {Article, ArticleRow, PanelMode, SaveState, Settings} from './types';
 
@@ -106,7 +106,7 @@ export function useNavigation(deps: {
     deps.setКонфликтСохранения(false);
     deps.версии.сбросить(); // лента и просмотр относились к прошлому файлу
     deps.setArticle({...art, заход: открытие.current});
-    deps.setFields(parseFrontmatter(art.frontmatterRaw, path, s.контент));
+    deps.setFields(parseFrontmatter(art.frontmatterRaw, path, s.контент, s.сайт?.обложкаПоУмолчанию ?? null));
     deps.setText(art.body);
     deps.setDeletions([]);
     // Исходное состояние окна: от него считается «есть несохранённое».

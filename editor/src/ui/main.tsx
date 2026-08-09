@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import {App} from './App';
 import './styles.css';
 import './registry.css';
+import './properties.css';
 import './feedback.css';
 import './versions.css';
 

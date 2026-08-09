@@ -32,7 +32,15 @@ export function statePath(repo, rel, settings) {
 
 export function readStateRaw(repo, rel, settings) {
   const file = statePath(repo, rel, settings);
-  return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+
+  try {
+    return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+  } catch (error) {
+    // Файл состояния нечитаем — например, на его месте оказалась папка. Это не повод ронять
+    // весь список статей: без состояния готовность выводится из факта публикации (SPEC 4.5.2).
+    console.error(error);
+    return '';
+  }
 }
 
 export function loadState(repo, rel, settings) {
@@ -42,13 +50,17 @@ export function loadState(repo, rel, settings) {
 /**
  * Пути, которые уже опубликованы — то есть присутствуют в версии сайта.
  * Один запрос git на весь репозиторий: перечень дерева опубликованной ветки.
+ *
+ * `известна` отделяет «в ветке пусто» от «ветку прочитать не удалось». Для реестра разница
+ * невелика, а для удаления решающая: сбой git не должен выдавать живую статью
+ * за неопубликованную. Поэтому чтение ветки здесь одно на всю программу.
  */
-export async function publishedFiles(git, ref) {
+export async function опубликованные(git, ref) {
   try {
     const raw = await git.raw(['-c', 'core.quotepath=false', 'ls-tree', '-r', '--name-only', ref]);
-    return new Set(raw.split('\n').map((line) => line.trim()).filter(Boolean));
+    return {известна: true, файлы: new Set(raw.split('\n').map((line) => line.trim()).filter(Boolean))};
   } catch {
-    return new Set(); // ветки ещё нет — считаем, что ничего не опубликовано
+    return {известна: false, файлы: new Set()};
   }
 }
 
@@ -126,6 +138,9 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
         // Пустое название не подменяется здесь: чем его заменить — правило статьи, а не адаптера.
         title: readField(frontmatterRaw, 'title'),
         скрыта: isUnlisted(frontmatterRaw),
+        // Лежит ли файл в опубликованной ветке. Готовности для этого мало: её человек может
+        // менять руками, а вопрос «вышла ли статья на сайт» решает только сама ветка.
+        опубликован: published.has(rel),
         готовность: readinessOf(repo, rel, settings, published),
         правил: edit.правил,
         когда: edit.когда,

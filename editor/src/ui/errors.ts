@@ -12,16 +12,18 @@ export function makeReporter(setОшибка: (текст: string | null) => voi
     return хвост ? `${начало}. ${label(хвост)}` : начало;
   };
 
-  /** Выполняет действие и при сбое спокойно показывает причину, не считая действие успешным. */
+  /**
+   * Выполняет действие и при сбое спокойно показывает причину, не считая действие успешным.
+   * `contextKey` — что именно не вышло: причина от сервера написана обрывком («нет папки статьи»)
+   * и без этих слов читается как обрубок неизвестно чего.
+   */
   const runSafe = async (action: () => Promise<void>, contextKey?: string): Promise<boolean> => {
     try {
       await action();
       return true;
     } catch (error) {
-      const текст = contextKey
-        ? label(contextKey)
-        : (error instanceof Error ? error.message : label('ошибкаЗапроса'));
-      setОшибка(текст);
+      const причина = error instanceof Error ? error.message : label('ошибкаЗапроса');
+      setОшибка(contextKey ? сПричиной(contextKey, причина) : причина);
       return false;
     }
   };

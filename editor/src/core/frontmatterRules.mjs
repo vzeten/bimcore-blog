@@ -2,6 +2,8 @@
 // Единственное место, где они записаны: модуль общий для сервера и проверок.
 // Нарушение любого из них роняет сборку всего сайта или ломает связь языков.
 
+import {headLine, headLines} from './articleFile.mjs';
+
 /**
  * Какого рода статья, на каком языке и какой у неё путь внутри своего раздела.
  * Корни приходят из настроек: код не знает, где лежит контент сайта.
@@ -60,12 +62,20 @@ export function isUnlisted(frontmatterRaw) {
   return /^unlisted:\s*true\s*$/m.test(String(frontmatterRaw ?? ''));
 }
 
-/** Переключение видимости. Остальные строки шапки не трогаются вовсе. */
+/**
+ * Переключение видимости. Остальные строки шапки не трогаются вовсе.
+ * Строка, ставшая последней, теряет одинокий `\r`: следом идёт свой перевод строки, и вдвоём
+ * они дают `\r\r\n`, после которого последнее поле шапки перестаёт читаться.
+ */
 export function setUnlisted(frontmatterRaw, hidden) {
-  const lines = String(frontmatterRaw ?? '').split('\n');
-  const at = lines.findIndex((line) => /^unlisted:/.test(line));
+  const lines = headLines(frontmatterRaw);
+  const at = lines.findIndex((line) => /^unlisted:/.test(headLine(line)));
 
-  if (!hidden) return lines.filter((line, index) => index !== at).join('\n');
+  if (!hidden) {
+    const без = lines.filter((line, index) => index !== at);
+    if (без.length > 0) без[без.length - 1] = headLine(без[без.length - 1]);
+    return без.join('\n');
+  }
   if (at >= 0) {
     lines[at] = 'unlisted: true';
     return lines.join('\n');
@@ -73,6 +83,7 @@ export function setUnlisted(frontmatterRaw, hidden) {
 
   const tail = [...lines];
   while (tail.length > 0 && tail[tail.length - 1].trim() === '') tail.pop();
+  if (tail.length > 0) tail[tail.length - 1] = headLine(tail[tail.length - 1]);
 
   return [...tail, 'unlisted: true'].join('\n');
 }
@@ -93,11 +104,11 @@ export function sameSlugAcrossLocales(ownSlug, otherSlug) {
  */
 export function safeFrontmatter(path, raw, roots) {
   const fixed = [];
-  const lines = String(raw).split(/\r?\n/);
+  const lines = headLines(raw);
   const out = [];
 
   for (const line of lines) {
-    const found = /^([A-Za-z_][\w-]*):\s?(.*)$/.exec(line);
+    const found = /^([A-Za-z_][\w-]*):\s?(.*)$/.exec(headLine(line));
     if (!found) {
       out.push(line);
       continue;

@@ -23,7 +23,7 @@ import {loadState} from './library.mjs';
  */
 export async function articleRoute({
   req, res, url, repo, editorDir, settings, git, publishedRef,
-  insideRepo, send, фиксировать, articles, publishedBody,
+  insideRepo, send, фиксировать, articles, publishedBody, веткаИзвестна,
 }) {
   if (url.pathname !== '/api/article' || req.method !== 'GET') return false;
 
@@ -81,6 +81,10 @@ export async function articleRoute({
     title: readField(frontmatterRaw, 'title') || rel,
     state: loadState(repo, rel, settings),
     ...articleFacts(await articles(), rel, settings),
+    // Удалось ли прочитать опубликованную ветку. Без этого окно считало бы недоступную ветку
+    // за «ничего не опубликовано» и предлагало бы удаление там, где сервер его запрещает.
+    // Признак берётся от сборки свода: дерево ветки читается один раз за запрос, не дважды.
+    веткаИзвестна: веткаИзвестна(),
   });
 
   return true;

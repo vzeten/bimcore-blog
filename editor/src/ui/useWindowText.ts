@@ -1,11 +1,11 @@
 import {useRef, useState} from 'react';
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
-import {parseFrontmatter, type Field} from './zones/Properties';
+import {buildFrontmatter, parseFrontmatter, порядокПолей, type Field} from './headFields';
 import {nothingChanged} from '../core/articleFile.mjs';
 import {isUnlisted} from '../core/frontmatterRules.mjs';
 import type {Пара} from './restore';
 import type {DraftPayload} from './useAutosave';
-import type {Article, Root, SaveState} from './types';
+import type {Article, Root, SaveState, Settings} from './types';
 
 /**
  * Пара «тело + шапка» в окне: обычная правка человека и подстановка целой пары (возврат к версии).
@@ -15,6 +15,8 @@ import type {Article, Root, SaveState} from './types';
 export function useWindowText(deps: {
   article: Article | null;
   roots: Root[];
+  /** Общая картинка сайта: вписанная в статью, она показывается пустым полем. */
+  общаяОбложка: string | null;
   текстСейчас: MutableRefObject<string>;
   шапкаСейчас: MutableRefObject<string>;
   автосохранение: {запланировать: (данные: DraftPayload) => void};
@@ -102,7 +104,7 @@ export function useWindowText(deps: {
 
     deps.текстСейчас.current = пара.body;
     deps.шапкаСейчас.current = пара.frontmatterRaw;
-    deps.setFields(parseFrontmatter(пара.frontmatterRaw, article.path, deps.roots));
+    deps.setFields(parseFrontmatter(пара.frontmatterRaw, article.path, deps.roots, deps.общаяОбложка));
     // Видимость живёт в шапке, а кнопка читает признак окна: без обновления надпись говорила бы
     // одно, шапка другое, и следующее нажатие сделало бы не то, что человек видит.
     // Файл при этом не трогается — показывается то, что будет записано при сохранении.
@@ -116,11 +118,32 @@ export function useWindowText(deps: {
     setПодстановка({текст: пара.body, номер: номер.current, ключ: ключОкна()});
   };
 
+  /**
+   * Правка свойств: поля собираются обратно в шапку и уходят той же дорогой, что и текст.
+   *
+   * Образец сборки — шапка ОКНА, а не файла: нетронутые поля возвращаются из образца дословно,
+   * и после возврата к версии сборка от файла выбросила бы поля, которых в нём уже нет,
+   * и вернула бы выброшенные когда-то. База сравнения с файлом отвечает за другое и не меняется.
+   */
+  const правитьПоля = (fields: Field[], settings: Settings): void => {
+    const article = deps.article;
+    if (!article) return;
+
+    deps.setFields(fields);
+    const образец = deps.шапкаСейчас.current || article.frontmatterRaw;
+    правка(deps.текстСейчас.current, buildFrontmatter(
+      образец, fields, article.path, deps.roots,
+      порядокПолей(settings, article.path) as string[],
+      deps.общаяОбложка,
+    ));
+  };
+
   return {
     // Наружу уходит только подстановка своего окна: чужая молча превращается в её отсутствие.
     подстановка: подстановка !== null && подстановка.ключ === ключОкна() ? подстановка : null,
     вЧерновик,
     правка,
+    правитьПоля,
     отметить,
     положитьПару,
   };

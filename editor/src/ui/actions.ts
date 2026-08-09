@@ -191,7 +191,9 @@ export async function openVersion(
  */
 export async function createArticle(
   запрос: {раздел: string; название: string; адрес: string; язык: string},
-  effects: {ok: (созданная: {path: string}) => void; fail: (reason: string) => void},
+  // `заглушка` — создана ли вместе с русской статьёй английская: окно говорит об этом человеку,
+  // и молчать нельзя — про второй созданный файл он должен знать.
+  effects: {ok: (созданная: {path: string; заглушка?: boolean}) => void; fail: (reason: string) => void},
   request: Request = requestJson,
 ): Promise<void> {
   try {
@@ -231,5 +233,35 @@ export async function setVisibility(
     // Ошибку показываем всегда, даже если человек уже ушёл: он нажал переключатель и вправе
     // знать, что видимость не изменилась. Молчание здесь и есть тихая потеря его решения.
     effects.fail(причина(error));
+  }
+}
+
+/**
+ * Удаление статьи со всеми языковыми версиями. `ok` зовётся только после подтверждения сервера:
+ * убрать статью из окна раньше значит показать человеку, что её нет, когда она на диске осталась.
+ *
+ * Отказ сервера — обычный путь, а не поломка: статью, уже вышедшую на сайт, программа удалять
+ * не умеет, и человеку это говорится словами.
+ */
+export async function deleteArticle(
+  path: string,
+  effects: {
+    ok: (итог: {удалено: string[]; предупреждения?: string[]}) => void | Promise<void>;
+    /** `стёрто` — что уже успело исчезнуть, когда удаление сорвалось на середине. */
+    fail: (reason: string, стёрто: string[]) => void | Promise<void>;
+  },
+  request: Request = requestJson,
+): Promise<void> {
+  try {
+    await effects.ok(await request<{удалено: string[]; предупреждения?: string[]}>('/api/article/delete', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({path}),
+    }));
+  } catch (error) {
+    // Перечень уже стёртого доносим вместе с причиной: при сбое посреди удаления человек иначе
+    // не узнает, что именно исчезло, — картинок в списке статей не видно.
+    const ответ = (error as {ответ?: {стёрто?: string[]}})?.ответ;
+    await effects.fail(причина(error), ответ?.стёрто ?? []);
   }
 }

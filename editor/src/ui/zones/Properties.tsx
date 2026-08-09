@@ -1,14 +1,7 @@
-import {useState} from 'react';
-import {readFields, writeFields} from '../../core/frontmatterFields.mjs';
-import type {Root, Settings} from '../types';
-
-/** Поле шапки в человеческом виде: списки без скобок, строки без кавычек, адрес короткий. */
-export interface Field {
-  key: string;
-  raw: string;
-  kind: string;
-  display: string;
-}
+import {useRef, useState, type ReactNode} from 'react';
+import {типыОбложки} from '../../core/imageType.mjs';
+import {безПоказанных, полеПослеЗагрузки, показанныеПоля, порядокПолей, type Field} from '../headFields';
+import type {Settings} from '../types';
 
 /** Свойства статьи стоят над текстом и по умолчанию свёрнуты: нужны раз на статью. */
 /** Поля, которым мало одной строки: описание пишется для поиска и не влезает в строку. */
@@ -17,37 +10,89 @@ const ДЛИННЫЕ = ['description'];
 /** Поля, которые человек здесь не правит: автор блога задан настройками сайта, один на все статьи. */
 const НЕПРАВИМЫЕ = ['authors'];
 
+/**
+ * Поля, значение которых — картинка: рядом с ними стоит выбор файла.
+ * Имя поля задано Docusaurus, а не нами, поэтому живёт в коде, а не в настройках (SPEC 4.4).
+ */
+const КАРТИНКИ = ['image'];
+
 function правка(
   props: {fields: Field[]; onChange: (fields: Field[]) => void},
+  поля: Field[],
   index: number,
   field: Field,
   значение: string,
 ): void {
-  const next = [...props.fields];
+  const next = [...поля];
   next[index] = {...field, display: значение};
-  props.onChange(next);
+  props.onChange(безПоказанных(props.fields, next));
 }
 
 export function Properties(props: {
   settings: Settings;
   fields: Field[];
   onChange: (fields: Field[]) => void;
+  /** Путь открытой статьи: по нему показывается сама картинка и берётся порядок полей рода. */
+  path: string;
+  /**
+   * Кладёт файл в папку статьи и возвращает путь для шапки. `null` — не вышло, причина уже
+   * показана человеку. Пустого пути отсюда прийти не может: пустой `image` роняет сборку (SPEC 2.1).
+   */
+  загрузить?: (file: File) => Promise<string | null>;
   /** Просмотр старой версии: шапка видна, но правке не подлежит — менять можно только текущую работу. */
   толькоЧтение?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  // Какое поле сейчас грузится. Пока идёт запрос, второй файл не берём: ответы пришли бы вразнобой,
+  // и в шапке осталась бы картинка от первого выбора, а в папке — обе.
+  const [идёт, setИдёт] = useState<string | null>(null);
+  // Счётчик загрузок. Имя обложки постоянное, поэтому после замены браузер показал бы прежнюю
+  // картинку из своей памяти: адрес не изменился. Счётчик в адресе делает картинку новой.
+  const [загрузок, setЗагрузок] = useState(0);
+
+  // Обложка показывается в рабочем окне даже тогда, когда правка временно заперта — например,
+  // пока человек не выбрал между черновиком и файлом. Признак здесь именно «есть куда грузить»,
+  // а не «только чтение»: просмотр старой версии показывает шапку такой, какой она была,
+  // и поля, которого в ней не было, там взяться неоткуда.
+  const поля = props.загрузить
+    ? показанныеПоля(props.fields, порядокПолей(props.settings, props.path))
+    : props.fields;
+
+  // Поля в ref: ответ загрузки приходит поздно, а к тому времени человек уже мог дописать описание
+  // или заголовок. Из состояния обработчик получил бы значения на момент выбора файла и стёр бы
+  // набранное — это тихая потеря текста, а не мелочь.
+  const поляРеф = useRef(поля);
+  поляРеф.current = поля;
+
+  const выбран = async (field: Field, file: File | undefined): Promise<void> => {
+    // Отметку «идёт» ставим, только если сами и начинаем: иначе сброс в конце погасил бы показ
+    // загрузки, которая на самом деле ещё идёт.
+    if (идёт !== null) return;
+    setИдёт(field.key);
+    try {
+      const next = await полеПослеЗагрузки(() => поляРеф.current, field.key, file, props.загрузить, false);
+      if (next) {
+        // Счётчик двигается только после подтверждённой записи: до неё показывать нечего нового.
+        setЗагрузок((было) => было + 1);
+        props.onChange(next);
+      }
+    } finally {
+      setИдёт(null);
+    }
+  };
 
   return (
     <section className="props">
       <button className="props-head" onClick={() => setOpen(!open)}>
         <span className="props-sign">{open ? '−' : '+'}</span>
         {props.settings.подписи.свойства}
+        {/* Счёт — по полям самой статьи: обложка, которой в шапке нет, свойством ещё не стала. */}
         <span className="props-count">{props.fields.length}</span>
       </button>
 
       {open && (
         <div className="props-grid">
-          {props.fields.map((field, index) => (
+          {поля.map((field, index) => (
             <label key={field.key}>
               {/* Человеку — понятная подпись; техническое имя остаётся подсказкой при наведении. */}
               <span title={field.key}>{props.settings.подписиПолей[field.key] ?? field.key}</span>
@@ -56,14 +101,42 @@ export function Properties(props: {
                   rows={3}
                   value={field.display}
                   readOnly={props.толькоЧтение === true}
-                  onChange={(event) => правка(props, index, field, event.target.value)}
+                  onChange={(event) => правка(props, поля, index, field, event.target.value)}
                 />
               ) : (
                 <input
                   value={field.display}
-                  readOnly={props.толькоЧтение === true || НЕПРАВИМЫЕ.includes(field.key)}
-                  onChange={(event) => правка(props, index, field, event.target.value)}
+                  // Поле, которое сейчас грузится, руками не правится: ответ сервера всё равно
+                  // запишет свой путь поверх, и набранное пропало бы молча. Запрет снимается
+                  // вместе с отметкой «идёт» — и после удачи, и после ошибки.
+                  readOnly={props.толькоЧтение === true || НЕПРАВИМЫЕ.includes(field.key) || идёт === field.key}
+                  onChange={(event) => правка(props, поля, index, field, event.target.value)}
                 />
+              )}
+
+              {/* В просмотре старой версии картинки нет вовсе: имя обложки постоянное, файл на диске
+                  давно другой, и показ выдал бы сегодняшнюю картинку за картинку той версии. */}
+              {КАРТИНКИ.includes(field.key) && props.загрузить && (
+                <span className="props-cover">
+                  {показать(props, field, загрузок)}
+
+                  {/* Выбор файла заперт, пока правка запрещена: загрузка положила бы файл
+                      в папку статьи по-настоящему. */}
+                  {props.толькоЧтение !== true && (
+                    <input
+                      type="file"
+                      accept={типыОбложки()}
+                      disabled={идёт !== null}
+                      onChange={(event) => {
+                        void выбран(field, event.target.files?.[0]);
+                        // Сбрасываем выбор: иначе тот же файл второй раз не выберется — браузер
+                        // не считает это изменением, и повтор после ошибки был бы невозможен.
+                        event.target.value = '';
+                      }}
+                    />
+                  )}
+                  {идёт === field.key && <span>{props.settings.подписи.идётЗагрузка}</span>}
+                </span>
               )}
             </label>
           ))}
@@ -73,12 +146,44 @@ export function Properties(props: {
   );
 }
 
-/** Разбор шапки в человеческие поля. Путь и корни нужны для короткого адреса. */
-export function parseFrontmatter(raw: string, path: string, roots: Root[]): Field[] {
-  return readFields(raw, path, roots) as Field[];
+/**
+ * Показ обложки: своя картинка, если путь в шапке есть, иначе общая картинка сайта со словами
+ * о том, что она общая. Пустое поле при этом остаётся пустым — в шапку чужой путь не попадает
+ * (правило владельца: общая обложка в статью не записывается).
+ */
+function показать(
+  props: {settings: Settings; path: string},
+  field: Field,
+  загрузок: number,
+): ReactNode {
+  const свой = field.display.trim();
+  const общая = props.settings.сайт?.обложкаПоУмолчанию ?? null;
+  const путь = свой !== '' ? свой : общая;
+
+  return (
+    <>
+      {путь !== null && (
+        <img
+          className="props-cover-img"
+          src={адресКартинки(props.path, путь, загрузок)}
+          alt={props.settings.подписи.показОбложки}
+        />
+      )}
+      {свой === '' && (
+        <span>{общая === null
+          ? props.settings.подписи.обложкаНеизвестна
+          : props.settings.подписи.обложкаПоУмолчанию}</span>
+      )}
+    </>
+  );
 }
 
-/** Сборка обратно: нетронутые поля возвращаются дословно. */
-export function buildFrontmatter(raw: string, fields: Field[], path: string, roots: Root[]): string {
-  return writeFields(raw, fields, path, roots);
+/**
+ * Адрес, по которому окно берёт картинку у сервера. `версия` меняется после каждой загрузки:
+ * имя обложки постоянное, и без неё браузер показал бы прежнюю картинку из своей памяти.
+ */
+function адресКартинки(article: string, src: string, версия: number): string {
+  const адрес = new URLSearchParams({article, src});
+  if (версия > 0) адрес.set('версия', String(версия));
+  return `/api/asset?${адрес.toString()}`;
 }

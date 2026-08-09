@@ -2,7 +2,8 @@ import {useEffect, useRef} from 'react';
 import {EditorState} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
 import {толькоЧтение} from '../editor/reading';
-import {Properties, parseFrontmatter} from './Properties';
+import {Properties} from './Properties';
+import {parseFrontmatter} from '../headFields';
 import {время} from './VersionStrip';
 import type {ПросмотрВерсии, Settings} from '../types';
 
@@ -59,8 +60,9 @@ export function VersionView(props: {
       <div className="pane-head">
         <Properties
           settings={props.settings}
-          fields={parseFrontmatter(props.версия.frontmatterRaw, props.path, props.settings.контент)}
+          fields={parseFrontmatter(props.версия.frontmatterRaw, props.path, props.settings.контент, props.settings.сайт?.обложкаПоУмолчанию ?? null)}
           onChange={() => undefined}
+          path={props.path}
           толькоЧтение
         />
       </div>

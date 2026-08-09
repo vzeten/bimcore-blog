@@ -17,8 +17,8 @@ const НАСТРОЙКИ = {
   хранение: {файлСостояния: '_state.json'},
   заглушкаПеревода: {заголовок: 'Translation placeholder:', тело: 'Placeholder.'},
   поляСоздания: {
-    docs: {порядок: ['title', 'slug', 'sidebar_label', 'sidebar_position', 'description', 'image', 'unlisted'], значения: {description: '', image: '/img/social-card.jpg'}},
-    blog: {порядок: ['title', 'slug', 'description', 'date', 'authors', 'tags', 'keywords', 'image', 'unlisted'], значения: {description: '', authors: '[ivan]', tags: '[]', keywords: '[]', image: '/img/social-card.jpg'}},
+    docs: {порядок: ['title', 'slug', 'sidebar_label', 'sidebar_position', 'description', 'image', 'unlisted'], значения: {description: ''}},
+    blog: {порядок: ['title', 'slug', 'description', 'date', 'authors', 'tags', 'keywords', 'image', 'unlisted'], значения: {description: '', authors: '[ivan]', tags: '[]', keywords: '[]'}},
     проба: {порядок: ['title', 'slug', 'unlisted'], значения: {}},
   },
   контент: [

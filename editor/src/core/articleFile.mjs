@@ -33,6 +33,10 @@ export function joinArticle({head, body}) {
  * иначе невидимая метка и вид перевода строки теряются при сохранении.
  */
 export function buildHead({frontmatterRaw, eol, метка = ''}) {
+  // Хвостовой `\r` здесь НЕ снимается, хотя вместе со следующим переводом строки он даёт `\r\r\n`.
+  // Снять его значило бы переписать файл при одном только «открыл и сохранил» (SPEC 5.1).
+  // Порча лечится там, где рождается — при правке шапки и при переключении видимости, — а разбор
+  // шапки её переживает: строка читается через `headLine`.
   return `${метка}---${eol}${frontmatterRaw}${eol}---${eol}`;
 }
 
@@ -56,8 +60,30 @@ export function nothingChanged(current, next) {
   return sameText(current.body, next.body) && sameText(current.frontmatterRaw, next.frontmatterRaw);
 }
 
+/**
+ * Шапка построчно, как она лежит в файле. Единственное место, где шапка режется на строки:
+ * все разборы обязаны видеть одни и те же строки.
+ */
+export function headLines(raw) {
+  return String(raw ?? '').split(/\r?\n/);
+}
+
+/**
+ * Строка без одинокого `\r` на конце — так её и надо разбирать.
+ *
+ * Такой `\r` встречается в файлах, которые правились с windows-переводами строк, и это часть
+ * перевода строки, а не значения поля. Без снятия строка `image: ./cover.png\r` перестаёт
+ * считаться полем вовсе: поле пропадает из окна вместе с возможностью его изменить.
+ *
+ * Разбирать очищенную строку, а возвращать в файл исходную — не прихоть: нетронутое поле
+ * обязано вернуться дословно, иначе одно только открытие статьи переписывало бы файл (SPEC 5.1).
+ */
+export function headLine(line) {
+  return String(line ?? '').replace(/\r+$/, '');
+}
+
 export function readField(frontmatterRaw, field) {
-  const line = frontmatterRaw.split(/\r?\n/).find((item) => item.startsWith(`${field}:`));
+  const line = headLines(frontmatterRaw).map(headLine).find((item) => item.startsWith(`${field}:`));
   if (!line) return '';
   return line.slice(field.length + 1).trim().replace(/^["']|["']$/g, '');
 }

@@ -1,4 +1,4 @@
-import {parseFrontmatter, type Field} from './zones/Properties';
+import {parseFrontmatter, type Field} from './headFields';
 import type {Article, Root, SaveState} from './types';
 
 /**
@@ -9,6 +9,8 @@ import type {Article, Root, SaveState} from './types';
 export function useConflictChoice(deps: {
   article: Article | null;
   roots: Root[];
+  /** Общая картинка сайта: вписанная в статью, она показывается пустым полем. */
+  общаяОбложка: string | null;
   setArticle: (article: Article) => void;
   setText: (text: string) => void;
   setFields: (fields: Field[]) => void;
@@ -33,7 +35,7 @@ export function useConflictChoice(deps: {
 
     const черновик = article.черновик;
     deps.setText(черновик.body);
-    deps.setFields(parseFrontmatter(черновик.frontmatterRaw, article.path, deps.roots));
+    deps.setFields(parseFrontmatter(черновик.frontmatterRaw, article.path, deps.roots, deps.общаяОбложка));
     deps.setArticle({
       ...article,
       body: черновик.body,

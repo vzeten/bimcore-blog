@@ -5,7 +5,10 @@
 import {articlePlace} from '../core/frontmatterRules.mjs';
 import {versionStates} from '../core/articles.mjs';
 
-const ПУСТО = {versions: {}, states: {}, category: '', нетНаСайте: false, служебная: false, готовность: null};
+const ПУСТО = {
+  versions: {}, states: {}, category: '', нетНаСайте: false, служебная: false,
+  готовность: null, естьНаСайте: false, внеСайта: false,
+};
 
 /** `свод` — все статьи с диска; `rel` — путь открытой языковой версии. */
 export function articleFacts(свод, rel, settings) {
@@ -27,5 +30,11 @@ export function articleFacts(свод, rel, settings) {
     служебная: article.служебная,
     готовность: своя?.готовность ?? null,
     скрыта: своя?.скрыта ?? false,
+    // Вышла ли статья на сайт хоть одной языковой версией. Смотреть на одну открытую нельзя:
+    // русскую версию могли ещё не выпустить, а английская уже живёт по своему адресу.
+    естьНаСайте: Object.values(article.versions).some((версия) => версия.опубликован === true),
+    // Живёт ли статья вне сайта вовсе — как песочница. Про такую статью опубликованная ветка
+    // ничего не решает: её там нет и быть не может.
+    внеСайта: article.наСайте !== true,
   };
 }

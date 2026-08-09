@@ -81,6 +81,7 @@ export function groupArticles(files, settings) {
     byKey.get(key).versions[place.locale] = {
       path: file.path,
       title: file.title,
+      опубликован: file.опубликован === true,
       скрыта: file.скрыта === true,
       готовность: file.готовность ?? null,
       правил: file.правил ?? null,

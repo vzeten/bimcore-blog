@@ -1,7 +1,7 @@
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import {autosaveDraft, saveArticle, setVisibility} from './actions';
 import {label} from './labels';
-import {buildFrontmatter, parseFrontmatter, type Field} from './zones/Properties';
+import {buildFrontmatter, parseFrontmatter, порядокПолей, type Field} from './headFields';
 import {setUnlisted} from '../core/frontmatterRules.mjs';
 import type {DraftPayload} from './useAutosave';
 import type {Article, SaveState, Settings} from './types';
@@ -89,7 +89,7 @@ export function useSaving(deps: {
         // следующее сохранение сравнило бы правку со старым файлом и дало ложный конфликт.
         const свежий = ответ?.отпечатки?.[open.path];
         deps.setArticle({...open, скрыта: скрыть, frontmatterRaw: вФайле, отпечаток: свежий ?? open.отпечаток});
-        deps.setFields(parseFrontmatter(шапка, open.path, deps.settings?.контент ?? []));
+        deps.setFields(parseFrontmatter(шапка, open.path, deps.settings?.контент ?? [], deps.settings?.сайт?.обложкаПоУмолчанию ?? null));
         // И черновик тоже: он держал прежнюю шапку, и продолжение работы из него вернуло бы
         // старую видимость поверх уже записанной в файл.
         deps.шапкаСейчас.current = шапка;
@@ -132,7 +132,8 @@ export function useSaving(deps: {
     // перерисовки, и сохранение записало бы текст без неё, попутно сняв очередь черновика с ней.
     const тело = deps.текстСейчас.current;
     const шапка = deps.шапкаСейчас.current
-      || buildFrontmatter(article.frontmatterRaw, deps.fields, путь, deps.settings.контент);
+      || buildFrontmatter(article.frontmatterRaw, deps.fields, путь, deps.settings.контент,
+        порядокПолей(deps.settings, путь), deps.settings.сайт?.обложкаПоУмолчанию ?? null);
     // Время правки, которую сохраняем. По нему сервер отличает запоздавшее сохранение от свежего
     // и не удаляет черновик, написанный уже после начала этого запроса. Часы общие с очередью:
     // две записи с одинаковой меткой сервер не смог бы упорядочить.

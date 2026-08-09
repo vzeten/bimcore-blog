@@ -17,11 +17,13 @@ export function useCreate(deps: {
   const [раздел, setРаздел] = useState<string | null | undefined>(undefined);
   const [идёт, setИдёт] = useState(false);
 
-  const создать = async (название: string, адрес: string, язык: string): Promise<void> => {
-    if (раздел === undefined || идёт) return;
+  // Раздел приходит из формы, а не из состояния хука: выбирает его человек уже внутри формы,
+  // и состояние хука отвечает только за то, открыта форма или нет.
+  const создать = async (раздел: string, название: string, адрес: string, язык: string): Promise<void> => {
+    if (идёт) return;
     setИдёт(true);
 
-    await createArticle({раздел: раздел ?? '', название, адрес, язык}, {
+    await createArticle({раздел, название, адрес, язык}, {
       // Статья создана — сразу открываем её: человек начал писать, а не заводить файлы.
       ok: async (созданная) => {
         setРаздел(undefined);

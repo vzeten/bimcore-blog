@@ -15,7 +15,7 @@ export function Registry(props: {
     идёт: boolean;
     начать: (раздел: string | null) => void;
     закрыть: () => void;
-    создать: (название: string, адрес: string, язык: string) => Promise<void>;
+    создать: (раздел: string, название: string, адрес: string, язык: string) => Promise<void>;
   };
 }) {
   const р = props.settings.реестр;
@@ -43,10 +43,11 @@ export function Registry(props: {
       {props.создание.раздел !== undefined && (
         <NewArticle
           settings={props.settings}
+          articles={props.articles}
           раздел={props.создание.раздел}
           занято={props.создание.идёт}
           onЗакрыть={props.создание.закрыть}
-          onСоздать={(название, адрес, язык) => void props.создание.создать(название, адрес, язык)}
+          onСоздать={(раздел, название, адрес, язык) => void props.создание.создать(раздел, название, адрес, язык)}
         />
       )}
 

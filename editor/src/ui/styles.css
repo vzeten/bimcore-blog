@@ -132,26 +132,6 @@ button { font: inherit; cursor: pointer; }
   border-bottom: 1px solid var(--line);
 }
 
-.props { flex: 1; min-width: 0; }
-
-.props-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 0;
-  background: transparent;
-  padding: 3px 0;
-  font-size: 12px;
-  color: var(--ink-quiet);
-}
-
-.props-sign { display: inline-block; width: 12px; }
-.props-count { color: #b4bac1; }
-
-.props-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; margin-top: 10px; }
-.props-grid label { display: flex; flex-direction: column; gap: 3px; }
-.props-grid span { font-size: 11px; color: var(--ink-quiet); }
-.props-grid input { border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 13px; }
 
 .insert { position: relative; flex: none; }
 .insert-open { border: 1px solid var(--line); background: #fff; border-radius: 7px; padding: 4px 11px; font-size: 13px; }
@@ -289,7 +269,3 @@ button { font: inherit; cursor: pointer; }
 .newarticle-body input { font-size: 14px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--ink); }
 .newarticle-hint { margin: 0; font-size: 12px; color: var(--ink-quiet); }
 .newarticle-buttons { display: flex; gap: 8px; justify-content: flex-end; }
-
-/* Описание пишется для поиска: в одну строку оно не влезает, и человек не видит, что написал. */
-.props-grid textarea { border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 13px; resize: vertical; }
-.props-grid input[readonly], .props-grid textarea[readonly] { background: var(--bg-soft); color: var(--ink-quiet); }

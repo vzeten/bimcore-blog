@@ -9,8 +9,9 @@ import {simpleGit} from 'simple-git';
 
 import {buildHead, joinArticle, nothingChanged, splitArticle} from './src/core/articleFile.mjs';
 import {safeFrontmatter} from './src/core/frontmatterRules.mjs';
+import {обложкаСайта} from './src/core/siteConfig.mjs';
 import {afterEdit, состояниеДляОкна} from './src/core/articleState.mjs';
-import {editTimes, listArticles, loadState, publishedFiles, saveState} from './src/adapters/library.mjs';
+import {editTimes, listArticles, loadState, опубликованные, saveState} from './src/adapters/library.mjs';
 import {badFields, badPath, errorResponse, readBody} from './src/adapters/httpBody.mjs';
 import {позже, свежееЧерновика} from './src/core/drafts.mjs';
 import {dropDraft, fingerprint, loadDraft, saveSnapshot} from './src/adapters/draftStore.mjs';
@@ -18,6 +19,7 @@ import {draftRoute} from './src/adapters/draftRoute.mjs';
 import {assetRoute} from './src/adapters/assets.mjs';
 import {visibilityRoute} from './src/adapters/visibilityRoute.mjs';
 import {versionsRoute} from './src/adapters/versionsRoute.mjs';
+import {deleteRoute} from './src/adapters/deleteRoute.mjs';
 import {articleRoute} from './src/adapters/articleRoute.mjs';
 import {createRoute} from './src/adapters/createRoute.mjs';
 import {detectPublishedRef, gitAuthor, showFile} from './src/adapters/gitFile.mjs';
@@ -32,6 +34,20 @@ const git = simpleGit(REPO);
 
 // Где лежат статьи — в настройках. Код об этом не знает.
 const roots = () => readSettings()['контент'];
+
+/**
+ * Общая картинка сайта из его конфига. Читается текстом, без исполнения: импорт конфига
+ * потянул бы плагины и чтение секретов — побочные действия внутри программы правки статей.
+ * Конфига нет или значение не найдено — `null`, и окно скажет об этом словами.
+ */
+function обложкаСайтаИзКонфига() {
+  try {
+    return обложкаСайта(fs.readFileSync(path.join(REPO, 'docusaurus.config.js'), 'utf8'));
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
 
 let publishedRef = 'HEAD';
 
@@ -74,14 +90,20 @@ const фиксировать = (rel, обязательно) => фиксиров
   editorDir: EDITOR_DIR, repo: REPO, settings: readSettings(), git, ref: publishedRef, rel, обязательно,
 });
 
+// Удалось ли прочитать опубликованную ветку при последней сборке свода. Держится рядом со
+// сводом, а не спрашивается вторым запросом: дерево ветки читается один раз, и «не знаю»
+// про публикацию должно быть одно на всю программу.
+let веткаПрочитана = true;
+
 /** Весь свод статей: файлы с диска, собранные в статьи, с временами правок и фактом публикации. */
 async function articles() {
   const settings = readSettings();
-  const [times, published] = await Promise.all([
+  const [times, ветка] = await Promise.all([
     editTimes(REPO, git, EDITOR_DIR, settings),
-    publishedFiles(git, publishedRef),
+    опубликованные(git, publishedRef),
   ]);
-  return listArticles(REPO, settings, times, published);
+  веткаПрочитана = ветка.известна;
+  return listArticles(REPO, settings, times, ветка.файлы);
 }
 
 /** Тело статьи в опубликованной версии сайта. `null` — статьи там ещё нет. */
@@ -108,7 +130,11 @@ function insideRepo(target) {
 }
 
 async function api(req, res, url) {
-  if (url.pathname === '/api/settings') return send(res, 200, readSettings());
+  // К настройкам редактора добавляются факты самого сайта. Они не настройка: путь общей обложки
+  // задан конфигом Docusaurus, и второй его источник в программе разошёлся бы с первым молча.
+  if (url.pathname === '/api/settings') {
+    return send(res, 200, {...readSettings(), сайт: {обложкаПоУмолчанию: обложкаСайтаИзКонфига()}});
+  }
 
   if (url.pathname === '/api/articles') return send(res, 200, await articles());
 
@@ -121,10 +147,17 @@ async function api(req, res, url) {
   // Создание статьи — отдельным модулем, как и остальные ручки.
   if (await createRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, send})) return;
 
+  // Удаление статьи — тоже отдельным модулем. Опубликованную ветку ручка получает функцией:
+  // на момент запуска сервера она ещё не определена, а к запросу уже известна.
+  if (await deleteRoute({
+    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git,
+    publishedRef: () => publishedRef, тело, insideRepo, send, articles,
+  })) return;
+
   // Открытие статьи — отдельным модулем: сервер иначе выходит за лимит размера файла.
   if (await articleRoute({
     req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, publishedRef,
-    insideRepo, send, фиксировать, articles, publishedBody,
+    insideRepo, send, фиксировать, articles, publishedBody, веткаИзвестна: () => веткаПрочитана,
   })) return;
 
   // Автосохранение — отдельным модулем: сервер иначе выходит за лимит размера файла.

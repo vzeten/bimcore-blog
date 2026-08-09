@@ -62,6 +62,15 @@ export function dropDraft(editorDir, settings, rel) {
 
 const snapshotDir = (editorDir, settings, rel) => path.join(historyDir(editorDir, settings), historyFolder(rel));
 
+/**
+ * Убрать всю историю этой версии статьи. Зовётся только при удалении самой статьи:
+ * история без статьи — мусор, который лента всё равно никогда не покажет.
+ */
+export function dropHistory(editorDir, settings, rel) {
+  const dir = snapshotDir(editorDir, settings, rel);
+  if (fs.existsSync(dir)) fs.rmSync(dir, {recursive: true, force: true});
+}
+
 /** Имена снимков этой версии по порядку времени: имя начинается со времени, поэтому хватает сортировки. */
 function snapshotNames(dir) {
   return fs.existsSync(dir) ? fs.readdirSync(dir).sort() : [];

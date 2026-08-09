@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import type {Article, SaveState, Settings} from '../types';
 
 export function TopBar(props: {
@@ -11,11 +12,20 @@ export function TopBar(props: {
   onColors: (value: boolean) => void;
   onSave: () => void;
   onVisibility: (скрыть: boolean) => void;
+  /** Удаление статьи целиком. Спрашивается здесь же, применяется только после ответа сервера. */
+  onDelete: () => void;
+  /** Идёт удаление: второе нажатие ничего не запускает, пока сервер не ответил. */
+  удаление: boolean;
   /** Идёт просмотр старой версии: писать на диск нельзя ничем, включая видимость. */
   просмотр: boolean;
 }) {
   const п = props.settings.подписи;
   const в = props.settings.видимость;
+  // Вопрос живёт в шапке и гаснет сам: отдельного окна ради двух кнопок заводить незачем.
+  // Вместе с вопросом запоминается статья: перешли на другую — нажатие «Удалить навсегда»
+  // относилось бы уже к ней, а человек спрашивал совсем про другую.
+  const [спрашиваю, setСпрашиваю] = useState<string | null>(null);
+  const спросили = спрашиваю !== null && спрашиваю === props.article?.path;
 
   return (
     <header className="topbar">
@@ -99,6 +109,29 @@ export function TopBar(props: {
         <button className="ghost" disabled title={п.скороПодготовить}>
           {п.подготовить}
         </button>
+
+        {/* Удаление предлагается только у статьи, которой ещё нет на сайте: у вышедшей его нет
+            вовсе, чтобы человек не тянулся к кнопке, которая ему всё равно откажет. Последнее
+            слово за сервером — он проверяет все языковые версии заново. */}
+        {/* Ветку прочитать не удалось — удаление статьи сайта не предлагается: сервер в этом
+            случае отказывает, и кнопка обещала бы то, чего не будет. Песочницы это не касается:
+            она живёт вне сайта, и опубликованная ветка про неё ничего не решает. */}
+        {props.article && props.article.естьНаСайте !== true && !props.article.служебная && !props.просмотр
+          && (props.article.веткаИзвестна !== false || props.article.внеСайта === true) && (
+          спросили ? (
+            <>
+              <span className="topbar-ask">{п.удалениеСпросить}</span>
+              <button className="ghost ghost-danger" disabled={props.удаление} onClick={props.onDelete}>
+                {props.удаление ? п.удалениеИдёт : п.удалитьНавсегда}
+              </button>
+              <button className="ghost" disabled={props.удаление} onClick={() => setСпрашиваю(null)}>
+                {п.неУдалять}
+              </button>
+            </>
+          ) : (
+            <button className="ghost" onClick={() => setСпрашиваю(props.article!.path)}>{п.удалитьСтатью}</button>
+          )
+        )}
 
         <button className="ghost" disabled title={п.скороОпубликовать}>
           {п.опубликовать}
