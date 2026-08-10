@@ -54,12 +54,16 @@ export function TopBar(props: {
             const here = path === props.article!.path;
             // Нет обязательного языка — статьи нет на сайте вовсе. Это ошибка, а не дыра в переводах.
             const срыв = state === 'нет' && code === props.settings.обязательныйЯзык && props.article!.нетНаСайте;
+            // Своя версия — по окну, соседние — по диску. Иначе флажок в свойствах и кнопка
+            // языка начали бы противоречить друг другу сразу после переключения, до сохранения.
+            const своя = here ? скрыта : props.article!.видимостьВерсий?.[code] === true;
+            const спрятана = state !== 'нет' && своя;
 
             return (
               <button
                 key={code}
-                className={`lang lang-${срыв ? 'срыв' : state}${here ? ' lang-on' : ''}`}
-                title={срыв ? props.settings.реестр.нетНаСайте : подсказка(code, state, props.settings)}
+                className={`lang lang-${срыв ? 'срыв' : state}${here ? ' lang-on' : ''}${спрятана ? ' lang-скрыта' : ''}`}
+                title={срыв ? props.settings.реестр.нетНаСайте : подсказка(code, state, спрятана, props.settings)}
                 disabled={state === 'нет'}
                 onClick={() => path && props.onOpen(path)}
               >
@@ -84,7 +88,8 @@ export function TopBar(props: {
           <>
             <span className="status" title={п.готовность}>{props.article.готовность}</span>
             {/* Видимость — не кнопка: меняется она в свойствах статьи и уезжает на диск обычным
-                «Сохранить». Здесь только правда о том, что человек получит на сайте. */}
+                «Сохранить». Здесь только правда о том, что человек получит на сайте, и она
+                про ОТКРЫТУЮ языковую версию: у соседних версий видимость своя (SPEC 2.8). */}
             <span className={скрыта ? 'visibility visibility-off' : 'visibility'} title={п.видимость}>
               {скрыта ? в.поСсылке : в.вМеню}
               {/* Файл изменён, но сайт этого ещё не видит: обещать «скрыто» было бы враньём. */}
@@ -148,9 +153,18 @@ export function TopBar(props: {
   );
 }
 
-function подсказка(code: string, state: string, settings: Settings): string {
+/**
+ * Что сказать про языковую версию при наведении. Признаки складываются, а не заменяют друг друга:
+ * версия бывает и устаревшей, и скрытой сразу, и человек должен узнать про оба.
+ */
+function подсказка(code: string, state: string, спрятана: boolean, settings: Settings): string {
   const язык = settings.локали[code] ?? code;
   if (state === 'нет') return `${язык}: ${settings.подписи.версииНет}`;
-  if (state === 'устарела') return `${язык}: ${settings.подписи.версияУстарела}`;
-  return язык;
+
+  const признаки = [
+    state === 'устарела' ? settings.подписи.версияУстарела : null,
+    спрятана ? settings.видимость.поСсылке : null,
+  ].filter(Boolean);
+
+  return признаки.length === 0 ? язык : `${язык}: ${признаки.join(', ')}`;
 }

@@ -80,12 +80,36 @@ export function readinessOf(article, settings) {
   };
 }
 
-/** Видимость статьи целиком. Скрыта хотя бы одна версия, но не все — версии разошлись. */
-export function visibilityOf(article) {
-  const versions = Object.values(article.versions);
-  const hidden = versions.filter((version) => version.скрыта).length;
+/**
+ * Какие языковые версии статьи скрыты. Видимость принадлежит версии (SPEC 2.8), поэтому здесь
+ * не «да или нет», а перечень: смешанное состояние законно и называется по именам языков.
+ *
+ * Порядок кодов — из настройки `локали`, а не из обхода файлов: иначе порядок в ячейке реестра
+ * зависел бы от того, в какой папке файл нашёлся раньше, и поехал бы при добавлении языка.
+ *
+ * `всего` — сколько версий у статьи существует, а не сколько языков в настройках: у статьи
+ * бывает две версии из трёх, и «скрыты все» считается по существующим.
+ */
+export function visibilityOf(article, settings) {
+  const versions = article.versions ?? {};
+  const порядок = Object.keys(settings['локали']);
 
-  return {скрыта: hidden > 0 && hidden === versions.length, разное: hidden > 0 && hidden < versions.length};
+  return {
+    скрытые: порядок.filter((код) => versions[код]?.скрыта === true),
+    всего: Object.keys(versions).length,
+  };
+}
+
+/**
+ * Место статьи в сортировке по видимости: сначала полностью видимые, потом смешанные, потом
+ * полностью скрытые. Считается состоянием, а не числом скрытых версий: у статьи с одной версией
+ * одна скрытая — это «скрыта целиком», а у статьи с тремя — «смешанно», и по голому счёту
+ * они встали бы рядом.
+ */
+export function видимостьРангом(article, settings) {
+  const {скрытые, всего} = visibilityOf(article, settings);
+  if (скрытые.length === 0) return 0;
+  return скрытые.length === всего ? 2 : 1;
 }
 
 /** Кто и когда правил статью в последний раз — по самой свежей из её версий. */
@@ -135,7 +159,7 @@ export function sortArticles(articles, column, direction, settings) {
       const место = settings['статусы'].indexOf(readinessOf(article, settings).значение);
       return место === -1 ? null : место;
     }
-    if (column === 'видимость') return visibilityOf(article).скрыта ? 1 : 0;
+    if (column === 'видимость') return видимостьРангом(article, settings);
     if (column === 'автор') return lastEditOf(article).правил;
     if (column === 'когда') return lastEditOf(article).когда || null;
     return article.title;

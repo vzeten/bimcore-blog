@@ -266,6 +266,9 @@ button { font: inherit; cursor: pointer; }
 .side-foreign { color: var(--layer-deleted); }
 .lang-нет { opacity: 0.35; cursor: default; }
 .lang-устарела { color: var(--layer-prevAi); }
+/* Скрытая языковая версия: приглушена, но не заперта — открыть её можно, и видимость у неё своя.
+   Отличается от «версии нет» тем, что остаётся нажимаемой и не гаснет так сильно. */
+.lang-скрыта { opacity: 0.55; font-style: italic; }
 .lang-mark { margin-left: 3px; font-size: 9px; vertical-align: 2px; }
 
 /* Создание статьи: небольшое окно поверх реестра. Появляется по кнопке и уходит по «Отмена». */

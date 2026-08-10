@@ -1,5 +1,6 @@
 import {useMemo, useState} from 'react';
 import {filterArticles, lastEditOf, readinessOf, sortArticles, visibilityOf} from '../../core/registry.mjs';
+import {label} from '../labels';
 import {NewArticle} from './NewArticle';
 import {SectionTree} from './SectionTree';
 import type {ArticleRow, Settings} from '../types';
@@ -174,12 +175,22 @@ function клетка(
 
   if (ключ === 'видимость') {
     // Только показ. Переключается видимость внутри открытой статьи, не из общего списка.
-    const {скрыта, разное} = visibilityOf(article);
+    // Видимость принадлежит версии (SPEC 2.8), поэтому смешанное состояние — не беда и не
+    // звёздочка, а обычная правда: скрытые языки называются по именам.
+    const {скрытые, всего} = visibilityOf(article, settings);
+    const коды = скрытые.map((код) => код.toUpperCase()).join(', ');
+    // Колонка узкая, и перечень не должен её распирать: с какого числа языков показывается
+    // счёт вместо имён, решает настройка, а полный перечень уходит в подсказку.
+    const многоЯзыков = скрытые.length > settings.видимость.порогПеречня;
+
+    if (скрытые.length === 0) return <span className="cell-shown">{settings.видимость.вМеню}</span>;
+    if (скрытые.length === всего) return <span className="cell-hidden">{settings.видимость.поСсылке}</span>;
 
     return (
-      <span className={скрыта ? 'cell-hidden' : 'cell-shown'}>
-        {скрыта ? settings.видимость.поСсылке : settings.видимость.вМеню}
-        {разное ? ' *' : ''}
+      <span className="cell-hidden" title={многоЯзыков ? коды : ''}>
+        {многоЯзыков
+          ? label('видимостьМногоСкрытых', {сколько: скрытые.length})
+          : label('видимостьСмешанная', {языки: коды})}
       </span>
     );
   }

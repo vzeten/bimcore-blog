@@ -5,7 +5,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 import {articleKey, categoryOf, groupArticles, missingOnSite, sectionOf, versionStates} from '../src/core/articles.mjs';
-import {buildTree, filterArticles, lastEditOf, readinessOf, sortArticles, visibilityOf} from '../src/core/registry.mjs';
+import {buildTree, filterArticles, lastEditOf, readinessOf, sortArticles} from '../src/core/registry.mjs';
 import {parseGitLog, parseGitStatus} from '../src/core/gitLog.mjs';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -218,12 +218,12 @@ describe('реестр статей', () => {
     expect(filterArticles([...статьи, ...без], {переводы: 'нетНаСайте'}, НАСТРОЙКИ)).toHaveLength(1);
   });
 
-  it('готовность и видимость принадлежат версии, а расхождение версий видно отдельно', () => {
+  it('готовность принадлежит версии, а расхождение версий видно отдельно', () => {
+    // Видимость тоже принадлежит версии, но показывается иначе — именами языков вместо
+    // звёздочки; её проверки живут в `registryVisibility.test.mjs`.
     const стены = статьи.find((статья) => статья.key.includes('walls'));
 
     expect(readinessOf(стены, НАСТРОЙКИ).разное).toBe(true);
-    expect(visibilityOf(стены).скрыта).toBe(false);
-    expect(visibilityOf(стены).разное).toBe(true);
   });
 
   it('кто и когда правил — по самой свежей из версий статьи', () => {
