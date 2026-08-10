@@ -8,6 +8,7 @@ import path from 'node:path';
 import {readField, splitArticle} from '../core/articleFile.mjs';
 import {normalizeSlug} from '../core/frontmatterRules.mjs';
 import {планСоздания} from '../core/newArticle.mjs';
+import {файлСтатьи} from '../core/articles.mjs';
 
 /** Адрес, под которым статья окажется на сайте. Сравниваем именно его: папки могут быть разными. */
 function адресаСайта(repo, roots) {
@@ -36,7 +37,7 @@ function собрать(dir, корень, адреса, repo, roots) {
       собрать(полный, корень, адреса, repo, roots);
       continue;
     }
-    if (!запись.name.endsWith('.mdx') && !запись.name.endsWith('.md')) continue;
+    if (!файлСтатьи(запись.name)) continue;
 
     try {
       const rel = path.relative(repo, полный).split(path.sep).join('/');

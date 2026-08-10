@@ -11,6 +11,7 @@ import {initialReadiness, readState, stateFileName, writeState} from '../core/ar
 import {ФОРМАТ, parseGitLog, parseGitStatus} from '../core/gitLog.mjs';
 import {авторПравки} from '../core/externalEdit.mjs';
 import {latestSnapshot} from './draftStore.mjs';
+import {файлСтатьи} from '../core/articles.mjs';
 
 /** Файлы и папки с подчёркиванием и точкой — служебные: ни Docusaurus, ни программа их не читают. */
 export function walk(dir, out = []) {
@@ -20,7 +21,7 @@ export function walk(dir, out = []) {
     if (entry.name.startsWith('_') || entry.name.startsWith('.')) continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) walk(full, out);
-    else if (entry.name.endsWith('.mdx') || entry.name.endsWith('.md')) out.push(full);
+    else if (файлСтатьи(entry.name)) out.push(full);
   }
 
   return out;
