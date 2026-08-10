@@ -8,7 +8,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {countSnapshots} from '../src/adapters/draftStore.mjs';
-import {EN, ES, RU, НАСТРОЙКИ, подготовить, прочитать, сохранить, статья, убратьПесочницы} from './saveHarness.mjs';
+import {ЖДАТЬ_GIT, EN, ES, RU, НАСТРОЙКИ, подготовить, прочитать, сохранить, статья, убратьПесочницы} from './saveHarness.mjs';
+
+// Проверки зовут настоящий git во временной папке; почему им нужен свой предел времени — в обвязке.
+vi.setConfig({testTimeout: ЖДАТЬ_GIT, hookTimeout: ЖДАТЬ_GIT});
 
 afterEach(() => {
   vi.restoreAllMocks();

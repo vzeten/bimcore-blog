@@ -27,11 +27,27 @@ export const RU = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/a/inde
 export const EN = 'docs/lessons/a/index.mdx';
 export const ES = 'i18n/es/docusaurus-plugin-content-docs/current/lessons/a/index.mdx';
 
+/**
+ * Сколько ждать проверку, которая по-настоящему зовёт git во временной папке.
+ *
+ * Умолчание vitest — пять секунд, и на Windows под нагрузкой (запущенный dev-сервер, антивирус)
+ * git в них не укладывается: проверка падает по времени, а следом падает и уборка папки, потому
+ * что процесс git ещё держит её файлы (`EBUSY: rmdir`). Настоящей поломкой это не было ни разу,
+ * но привыкать к мигающим проверкам нельзя — однажды за миганием пройдёт настоящая.
+ */
+export const ЖДАТЬ_GIT = 30_000;
+
 const песочницы = [];
 
-/** Убрать все временные папки, созданные проверками. Зовётся из `afterEach` каждого файла. */
+/**
+ * Убрать все временные папки, созданные проверками. Зовётся из `afterEach` каждого файла.
+ * Windows держит папку занятой ещё мгновение после того, как git её отпустил, поэтому уборка
+ * повторяется: иначе падает не проверка, а уборка за ней, и красным становится зелёный прогон.
+ */
 export function убратьПесочницы() {
-  while (песочницы.length > 0) fs.rmSync(песочницы.pop(), {recursive: true, force: true});
+  while (песочницы.length > 0) {
+    fs.rmSync(песочницы.pop(), {recursive: true, force: true, maxRetries: 10, retryDelay: 100});
+  }
 }
 
 function песочница(имя) {

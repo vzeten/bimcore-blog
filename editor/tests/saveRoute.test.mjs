@@ -1,11 +1,14 @@
 // Имя каждого теста повторяет формулировку правила.
 // Ручка сохранения: работа человека доезжает до файла, чужая правка не затирается молча.
 // Обвязка — в `saveHarness.mjs`, видимость языковых версий — в `saveVisibility.test.mjs`.
-import {afterEach, describe, expect, it} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {EN, RU, подготовить, прочитать, сохранить, статья, убратьПесочницы} from './saveHarness.mjs';
+import {ЖДАТЬ_GIT, EN, RU, подготовить, прочитать, сохранить, статья, убратьПесочницы} from './saveHarness.mjs';
+
+// Проверки зовут настоящий git во временной папке; почему им нужен свой предел времени — в обвязке.
+vi.setConfig({testTimeout: ЖДАТЬ_GIT, hookTimeout: ЖДАТЬ_GIT});
 
 afterEach(убратьПесочницы);
 

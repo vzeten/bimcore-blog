@@ -1,6 +1,6 @@
 // Имя каждого теста повторяет формулировку правила.
 // Проверка на настоящем диске и настоящем git: внешняя правка обязана оказаться в истории.
-import {afterEach, describe, expect, it} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -8,6 +8,10 @@ import {simpleGit} from 'simple-git';
 
 import {фиксироватьВнешнюю} from '../src/adapters/externalVersion.mjs';
 import {countSnapshots, latestSnapshot, snapshotText} from '../src/adapters/draftStore.mjs';
+import {ЖДАТЬ_GIT} from './saveHarness.mjs';
+
+// Проверки зовут настоящий git во временной папке; почему им нужен свой предел времени — в обвязке.
+vi.setConfig({testTimeout: ЖДАТЬ_GIT, hookTimeout: ЖДАТЬ_GIT});
 
 
 const НАСТРОЙКИ = {
@@ -27,7 +31,11 @@ function песочница(имя) {
 }
 
 afterEach(() => {
-  while (песочницы.length > 0) fs.rmSync(песочницы.pop(), {recursive: true, force: true});
+  // Windows держит папку занятой ещё мгновение после того, как git её отпустил: без повторов
+  // падает не проверка, а уборка за ней (`EBUSY: rmdir`), и красным становится зелёный прогон.
+  while (песочницы.length > 0) {
+    fs.rmSync(песочницы.pop(), {recursive: true, force: true, maxRetries: 10, retryDelay: 100});
+  }
 });
 
 /** Настоящий репозиторий с одной закоммиченной статьёй и пустым хранилищем редактора. */
