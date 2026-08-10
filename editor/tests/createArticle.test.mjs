@@ -18,7 +18,7 @@ const НАСТРОЙКИ = {
   видимость: {новаяСкрыта: true},
   статусы: ['Черновик', 'Готова к публикации', 'Опубликована'],
   хранение: {файлСостояния: '_state.json'},
-  заглушкаПеревода: {заголовок: 'Translation placeholder:', тело: 'Placeholder.'},
+  заглушкаПеревода: {заголовок: 'Translation placeholder:', тело: 'Placeholder.', описание: 'Placeholder page.'},
   поляСоздания: {
     docs: {порядок: ['title', 'slug', 'sidebar_label', 'sidebar_position', 'description', 'image', 'unlisted'], значения: {description: ''}},
     blog: {порядок: ['title', 'slug', 'description', 'date', 'authors', 'tags', 'keywords', 'image', 'unlisted'], значения: {description: '', authors: '[ivan]', tags: '[]', keywords: '[]'}},

@@ -18,7 +18,9 @@ describe('защитные правила шапки статьи', () => {
     const {frontmatterRaw, fixed} = safeFrontmatter(DOCS, 'title: "Тест"\nimage: \nslug: /help/foo', КОРНИ);
 
     expect(frontmatterRaw).not.toContain('image');
-    expect(fixed).toHaveLength(1);
+    // Находка — запись с кодом и полем, а не фраза для человека: по полю подготовка ведёт
+    // к месту в статье, а слова живут в настройках (SPEC 4.4).
+    expect(fixed).toEqual([{код: 'пустаяОбложка', поле: 'image'}]);
   });
 
   it('поле обложки из одних пробелов удаляется из шапки целиком', () => {
@@ -31,7 +33,7 @@ describe('защитные правила шапки статьи', () => {
     const {frontmatterRaw, fixed} = safeFrontmatter('blog/x/index.mdx', 'slug: x\nkeywords: []', КОРНИ);
 
     expect(frontmatterRaw).not.toContain('keywords');
-    expect(fixed).toHaveLength(1);
+    expect(fixed).toEqual([{код: 'пустыеКлючевыеСлова', поле: 'keywords'}]);
   });
 
   it('пустые метки при сохранении не удаляются: сборку они не роняют, а файл чужой', () => {
@@ -58,7 +60,9 @@ describe('защитные правила шапки статьи', () => {
     const {frontmatterRaw, fixed} = safeFrontmatter(DOCS, 'slug: "install-plugin"', КОРНИ);
 
     expect(frontmatterRaw).toBe('slug: /help/install-plugin');
-    expect(fixed).toHaveLength(1);
+    // Было и стало едут в находке значениями: отчёту подготовки нужно показать оба, и собирать
+    // их разбором готовой фразы значило бы завести второй источник того же правила.
+    expect(fixed).toEqual([{код: 'адресПоПравилу', поле: 'slug', было: 'install-plugin', стало: '/help/install-plugin'}]);
   });
 
   it('адрес блога из одних цифр остаётся в кавычках и не переписывается зря', () => {
@@ -80,7 +84,9 @@ describe('защитные правила шапки статьи', () => {
     const {frontmatterRaw, fixed} = safeFrontmatter('blog/2026/index.mdx', 'slug: 2026', КОРНИ);
 
     expect(frontmatterRaw).toBe('slug: "2026"');
-    expect(fixed).toHaveLength(1);
+    // Своя находка, а не «адрес приведён к правилу»: адрес не менялся, изменилась его запись,
+    // и отчёт подготовки сказал бы человеку «2026 → 2026», то есть соврал бы.
+    expect(fixed).toEqual([{код: 'адресВКавычки', поле: 'slug', адрес: '2026'}]);
   });
 
   it('заполненное поле обложки сохраняется без изменений', () => {

@@ -113,8 +113,11 @@ export async function saveRoute({
   }
 
   // Защитные правила применяются здесь: через сохранение проходит любая правка шапки.
+  // Список поправленного окну не отдаётся: читателя у него нет, а подготовка (круги 2 и 4)
+  // зовёт `safeFrontmatter` сама и получает находки напрямую. Поле, которое никто не читает,
+  // однажды уже прожило целый круг мёртвым — второй раз его заводить не за чем.
   const safe = payload.frontmatterRaw === undefined
-    ? {frontmatterRaw: current.frontmatterRaw, fixed: []}
+    ? {frontmatterRaw: current.frontmatterRaw}
     : safeFrontmatter(payload.path, payload.frontmatterRaw, settings['контент']);
 
   /** Убрать черновик после настоящего сохранения — но только если он не новее самого сохранения. */
@@ -162,7 +165,6 @@ export async function saveRoute({
 
   send(res, 200, {
     saved: true,
-    fixed: safe.fixed,
     state: наДиске,
     отпечаток: fingerprint(текст),
     предупреждения,
