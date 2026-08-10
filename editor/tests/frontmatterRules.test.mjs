@@ -1,6 +1,7 @@
 // Имя каждого теста повторяет формулировку правила: список правил — это вывод прогона.
 import {describe, expect, it} from 'vitest';
-import {isUnlisted, normalizeSlug, safeFrontmatter, sameSlugAcrossLocales, setUnlisted} from '../src/core/frontmatterRules.mjs';
+import {isUnlisted, normalizeSlug, sameSlugAcrossLocales, setUnlisted} from '../src/core/frontmatterRules.mjs';
+import {safeFrontmatter} from '../src/core/safeFrontmatter.mjs';
 import {nothingChanged} from '../src/core/articleFile.mjs';
 
 const КОРНИ = [

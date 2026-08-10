@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {buildHead, joinArticle, nothingChanged, splitArticle} from '../core/articleFile.mjs';
-import {safeFrontmatter} from '../core/frontmatterRules.mjs';
+import {safeFrontmatter} from '../core/safeFrontmatter.mjs';
 import {afterEdit, состояниеДляОкна} from '../core/articleState.mjs';
 import {позже, свежееЧерновика} from '../core/drafts.mjs';
 import {badFields} from './httpBody.mjs';
