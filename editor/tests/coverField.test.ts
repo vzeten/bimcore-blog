@@ -112,7 +112,10 @@ describe('поле обложки в свойствах статьи', () => {
   it('поле обложки показывается на своём месте по порядку полей рода', () => {
     const шапка = 'title: "Проба"\nslug: /help/foo\ndescription: "О чём"\nunlisted: true';
     const поля = показанныеПоля(parseFrontmatter(шапка, DOCS, КОРНИ), порядок);
-    expect(поля.map((поле) => поле.key)).toEqual(['title', 'slug', 'description', 'image', 'unlisted']);
+    // Ключевые слова показываются и у документации: без них статью-инструкцию не найдут в поиске,
+    // и подготовка требует их заполнить. Пустыми в файл они не пишутся.
+    expect(поля.map((поле) => поле.key))
+      .toEqual(['title', 'slug', 'description', 'keywords', 'image', 'unlisted']);
   });
 
   it('второго поля обложки у статьи с image не появляется', () => {
@@ -134,10 +137,17 @@ describe('поле обложки в свойствах статьи', () => {
     const поля = показанныеПоля(parseFrontmatter(шапка, DOCS, КОРНИ), порядок);
     const место = поля.findIndex((поле) => поле.key === 'image');
 
-    const собрано = buildFrontmatter(шапка, поля.map((поле, i) => (i === место ? {...поле, display: './cover.png'} : поле)), DOCS, КОРНИ, порядок);
+    const сОбложкой = поля.map((поле, i) => (i === место ? {...поле, display: './cover.png'} : поле));
+    const собрано = buildFrontmatter(шапка, сОбложкой, DOCS, КОРНИ, порядок);
     const строки = собрано.split('\n').filter((line) => /^[A-Za-z_]/.test(line));
 
-    expect(строки.findIndex((line) => line.startsWith('image:'))).toBe(место);
+    // Место считается среди полей, у которых в файле есть своя строка: рядом с обложкой человеку
+    // показываются пустые ключевые слова, которых в шапке нет, а пустыми они не пишутся.
+    const свои = new Set(parseFrontmatter(шапка, DOCS, КОРНИ).map((поле) => поле.key));
+    const вФайле = сОбложкой.filter((поле) => свои.has(поле.key) || String(поле.display ?? '').trim() !== '');
+
+    expect(строки.findIndex((line) => line.startsWith('image:')))
+      .toBe(вФайле.findIndex((поле) => поле.key === 'image'));
   });
 
   it('места поля в окне и в файле совпадают на всех статьях сайта без обложки', () => {

@@ -26,6 +26,10 @@
 .props-grid textarea { border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 13px; resize: vertical; }
 .props-grid input[readonly], .props-grid textarea[readonly] { background: var(--bg-soft); color: var(--ink-quiet); }
 
+/* Почему поле не правится. Текст мелкий и приглушённый: это пояснение к полю, а не ошибка —
+   пугать человека красным незачем, значение цело и лежит в файле. */
+.props-locked { font-size: 11px; color: var(--ink-quiet); line-height: 1.35; }
+
 /* Видимость — флажок, а не строка ввода. Он не растягивается на всю ячейку: галочка во всю
    ширину поля выглядела бы как ошибка вёрстки и в неё труднее попасть, чем в маленькую. */
 .props-grid .props-flag {

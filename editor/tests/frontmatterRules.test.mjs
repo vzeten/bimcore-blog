@@ -36,6 +36,38 @@ describe('защитные правила шапки статьи', () => {
     expect(fixed).toEqual([{код: 'пустыеКлючевыеСлова', поле: 'keywords'}]);
   });
 
+  it('голый ключ ключевых слов без единого элемента удаляется: YAML читает его пустотой', () => {
+    // `keywords:` без значения и без строк под ним — это `null`, и сборка сайта на нём падает.
+    // От блочного списка такой ключ отличается тем, что под ним нет ни одного элемента.
+    const {frontmatterRaw, fixed} = safeFrontmatter('blog/x/index.mdx', 'slug: x\nkeywords:\ntitle: A', КОРНИ);
+
+    expect(frontmatterRaw).toBe('slug: x\ntitle: A');
+    expect(fixed).toEqual([{код: 'пустыеКлючевыеСлова', поле: 'keywords'}]);
+  });
+
+  it('список ключевых слов из пустых строк удаляется: сборку роняет и он', () => {
+    const {frontmatterRaw, fixed} = safeFrontmatter('blog/x/index.mdx', "slug: x\nkeywords: ['']", КОРНИ);
+
+    expect(frontmatterRaw).toBe('slug: x');
+    expect(fixed).toEqual([{код: 'пустыеКлючевыеСлова', поле: 'keywords'}]);
+  });
+
+  it('ключевые слова, которых программа не поняла, не трогаются вовсе', () => {
+    // Стереть непонятое значит потерять текст человека. Об этом скажет подготовка статьи.
+    const raw = 'slug: x\nkeywords: [не закрытая скобка';
+    const {frontmatterRaw, fixed} = safeFrontmatter('blog/x/index.mdx', raw, КОРНИ);
+
+    expect(frontmatterRaw).toBe(raw);
+    expect(fixed).toEqual([]);
+  });
+
+  it('пустая обложка в кавычках удаляется так же, как голая: сборку роняют обе', () => {
+    const {frontmatterRaw, fixed} = safeFrontmatter(DOCS, 'image: ""\nslug: /help/foo', КОРНИ);
+
+    expect(frontmatterRaw).toBe('slug: /help/foo');
+    expect(fixed).toEqual([{код: 'пустаяОбложка', поле: 'image'}]);
+  });
+
   it('пустые метки при сохранении не удаляются: сборку они не роняют, а файл чужой', () => {
     // Открыл и сохранил — ни байта (SPEC 5.1). Пустые метки уйдут только тогда, когда человек
     // сам очистит поле: это правка шапки, а не защитная починка.
