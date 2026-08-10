@@ -86,14 +86,19 @@ export function Properties(props: {
       <button className="props-head" onClick={() => setOpen(!open)}>
         <span className="props-sign">{open ? '−' : '+'}</span>
         {props.settings.подписи.свойства}
-        {/* Счёт — по полям самой статьи: обложка, которой в шапке нет, свойством ещё не стала. */}
-        <span className="props-count">{props.fields.length}</span>
+        {/* Счёт — по тому, что человек увидит, раскрыв свойства. Считать поля одного лишь файла
+            нельзя: показываются все поля рода, и цифра расходилась бы со списком под ней вдвое. */}
+        <span className="props-count">{поля.length}</span>
       </button>
 
       {open && (
         <div className="props-grid">
           {поля.map((field, index) => (
-            <label key={field.key}>
+            // Ключ с номером, а не одно имя поля: сломанная шапка может нести один ключ дважды,
+            // и на одинаковых ключах React вправе оставить один узел или подменить содержимое
+            // второго — окно показало бы не то, что лежит в файле, ровно там, где оно обязано
+            // не соврать. Оба таких поля показываются запертыми, но показываются оба.
+            <label key={`${field.key}#${index}`}>
               {/* Человеку — понятная подпись; техническое имя остаётся подсказкой при наведении. */}
               <span title={field.key}>{props.settings.подписиПолей[field.key] ?? field.key}</span>
               {field.kind === 'флаг' ? (
