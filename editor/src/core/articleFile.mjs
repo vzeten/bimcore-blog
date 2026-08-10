@@ -82,8 +82,25 @@ export function headLine(line) {
   return String(line ?? '').replace(/\r+$/, '');
 }
 
+/**
+ * Значение без кавычек — то, что прочитал бы сам YAML: у двойных кавычек снимается и
+ * экранирование. Единственное место правила: им пользуется и чтение поля по имени, и разбор
+ * шапки в человеческий вид. Разойдись они — заголовок с кавычкой показывался бы в свойствах
+ * статьи чисто, а в списке статей и в шапке окна с обратными слешами.
+ */
+export function безКавычек(значение) {
+  const текст = String(значение ?? '');
+  if (текст.length > 1 && текст.startsWith('"') && текст.endsWith('"')) {
+    return текст.slice(1, -1).replace(/\\(["\\])/g, '$1');
+  }
+  // В одиночных кавычках YAML экранирует апостроф удвоением: `'it''s'` читается как `it's`.
+  // Вне кавычек он этого не делает, поэтому и мы не делаем: `it''s` там так и остаётся.
+  const одиночные = /^'(.*)'$/s.exec(текст);
+  return одиночные ? одиночные[1].replace(/''/g, "'") : текст;
+}
+
 export function readField(frontmatterRaw, field) {
   const line = headLines(frontmatterRaw).map(headLine).find((item) => item.startsWith(`${field}:`));
   if (!line) return '';
-  return line.slice(field.length + 1).trim().replace(/^["']|["']$/g, '');
+  return безКавычек(line.slice(field.length + 1).trim());
 }

@@ -154,8 +154,14 @@ describe('поле обложки в свойствах статьи', () => {
 
       const сОбложкой = поля.map((поле, i) => (i === место ? {...поле, display: './cover.png'} : поле));
       const строки = buildFrontmatter(шапка, сОбложкой, rel, КОРНИ, свой).split('\n').filter((line) => /^[A-Za-z_]/.test(line));
+      // Место считается среди полей, у которых в файле есть своя строка. Рядом с обложкой
+      // человеку показываются пустые метки и ключевые слова, которых в шапке нет: пустыми они
+      // не пишутся и строкой не становятся, поэтому номера строк с ними сравнивать не с чем.
+      const свои = new Set(parseFrontmatter(шапка, rel, КОРНИ).map((поле) => поле.key));
+      const вФайле = сОбложкой.filter((поле) => свои.has(поле.key) || String(поле.display ?? '').trim() !== '');
 
-      expect(строки.findIndex((line) => line.startsWith('image:')), rel).toBe(место);
+      expect(строки.findIndex((line) => line.startsWith('image:')), rel)
+        .toBe(вФайле.findIndex((поле) => поле.key === 'image'));
     }
   });
 

@@ -1,6 +1,7 @@
 // Имя каждого теста повторяет формулировку правила.
 // Создание статьи: адрес из названия и план записи. Диска здесь нет — только решение, что писать.
 import {describe, expect, it} from 'vitest';
+import matter from 'gray-matter';
 import {адресГоден, адресИзНазвания, планСоздания, языкиРаздела} from '../src/core/newArticle.mjs';
 
 const НАСТРОЙКИ = {
@@ -138,7 +139,9 @@ describe('план создания статьи', () => {
 
     expect(свой.text).toContain('authors: [ivan]');
     expect(свой.text).toMatch(/date: \d{4}-\d{2}-\d{2}/);
-    expect(свой.text).toContain('tags: []');
+    // Пустые списки в шапку не пишутся: `keywords: []` роняет сборку сайта, а `tags: []`
+    // ничего не сообщает. Поле появится, как только человек его заполнит.
+    expect(свой.text).not.toContain('tags: []');
     expect(свой.text).not.toContain('sidebar_position');
   });
 
@@ -221,6 +224,38 @@ describe('план создания статьи', () => {
     for (const состояние of состояния) {
       expect(состояние.path.endsWith('/_state.json')).toBe(true);
       expect(JSON.parse(состояние.text).готовность).toBe('Черновик');
+    }
+  });
+
+  it('адрес новой статьи блога из одних цифр остаётся текстом, а не числом', () => {
+    const {файлы} = план({раздел: 'blog', название: '2026', адрес: '2026'});
+
+    for (const файл of файлы) {
+      expect(matter(файл.text).data.slug, файл.path).toBe('2026');
+    }
+  });
+
+  it('новая статья блога создаётся без пустых списков, которые роняют сборку', () => {
+    // `keywords: []` Docusaurus не принимает вовсе: полю нужно хотя бы одно значение.
+    // Найдено репетицией выпуска 2026-08-10 — первая же блог-статья не собиралась.
+    const {файлы} = план({раздел: 'blog', название: 'Проба блога', адрес: 'proba-bloga'});
+
+    for (const файл of файлы) {
+      const шапка = matter(файл.text).data;
+      expect(Object.keys(шапка), файл.path).not.toContain('keywords');
+      expect(Object.keys(шапка), файл.path).not.toContain('tags');
+      // Автор задан настройками и пустым не бывает: он остаётся на месте.
+      expect(шапка.authors, файл.path).toEqual(['ivan']);
+    }
+  });
+
+  it('пустое описание новой статьи YAML читает пустой строкой, а не пустотой', () => {
+    // Голое `description:` разбирается как `null`, и сборка сайта падает на «must be a string».
+    // Найдено репетицией выпуска 2026-08-10: так падала первая же статья, созданная программой.
+    const {файлы} = план();
+
+    for (const файл of файлы) {
+      expect(matter(файл.text).data.description, файл.path).toBe('');
     }
   });
 

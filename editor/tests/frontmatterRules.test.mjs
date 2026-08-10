@@ -27,6 +27,62 @@ describe('защитные правила шапки статьи', () => {
     expect(frontmatterRaw).not.toContain('image');
   });
 
+  it('пустое поле ключевых слов удаляется из шапки: оно роняет сборку сайта', () => {
+    const {frontmatterRaw, fixed} = safeFrontmatter('blog/x/index.mdx', 'slug: x\nkeywords: []', КОРНИ);
+
+    expect(frontmatterRaw).not.toContain('keywords');
+    expect(fixed).toHaveLength(1);
+  });
+
+  it('пустые метки при сохранении не удаляются: сборку они не роняют, а файл чужой', () => {
+    // Открыл и сохранил — ни байта (SPEC 5.1). Пустые метки уйдут только тогда, когда человек
+    // сам очистит поле: это правка шапки, а не защитная починка.
+    const raw = 'slug: x\ntags: []';
+    const {frontmatterRaw, fixed} = safeFrontmatter('blog/x/index.mdx', raw, КОРНИ);
+
+    expect(frontmatterRaw).toBe(raw);
+    expect(fixed).toEqual([]);
+  });
+
+  it('список, расписанный строками ниже, не трогается: его элементы осиротели бы', () => {
+    // Так устроены ключевые слова у живых статей блога: `keywords:` и под ним строки `- слово`.
+    // Для построчного разбора такая строка выглядит пустой, но пустой не является.
+    const raw = 'slug: x\nkeywords:\n  - revit\n  - семейства';
+    const {frontmatterRaw, fixed} = safeFrontmatter('blog/x/index.mdx', raw, КОРНИ);
+
+    expect(frontmatterRaw).toBe(raw);
+    expect(fixed).toEqual([]);
+  });
+
+  it('адрес в кавычках не считается частью адреса: кавычки не уезжают внутрь пути', () => {
+    const {frontmatterRaw, fixed} = safeFrontmatter(DOCS, 'slug: "install-plugin"', КОРНИ);
+
+    expect(frontmatterRaw).toBe('slug: /help/install-plugin');
+    expect(fixed).toHaveLength(1);
+  });
+
+  it('адрес блога из одних цифр остаётся в кавычках и не переписывается зря', () => {
+    const {frontmatterRaw, fixed} = safeFrontmatter('blog/2026/index.mdx', 'slug: "2026"', КОРНИ);
+
+    expect(frontmatterRaw).toBe('slug: "2026"');
+    expect(fixed).toEqual([]);
+  });
+
+  it('адрес в одиночных кавычках остаётся как записан: YAML читает его строкой не хуже', () => {
+    // Открыл и сохранил — файл не меняется (SPEC 5.1). Менять вид кавычек не за что.
+    for (const шапка of ["slug: '2026'", "slug: '/help/foo'"]) {
+      const путь = шапка.includes('help') ? DOCS : 'blog/2026/index.mdx';
+      expect(safeFrontmatter(путь, шапка, КОРНИ).frontmatterRaw, шапка).toBe(шапка);
+    }
+  });
+
+  it('адрес из одних цифр без кавычек берётся в кавычки: иначе YAML прочитает его числом', () => {
+    const {frontmatterRaw, fixed} = safeFrontmatter('blog/2026/index.mdx', 'slug: 2026', КОРНИ);
+
+    expect(frontmatterRaw).toBe('slug: "2026"');
+    expect(fixed).toHaveLength(1);
+  });
+
   it('заполненное поле обложки сохраняется без изменений', () => {
     const {frontmatterRaw, fixed} = safeFrontmatter(DOCS, 'image: ./cover.png\nslug: /help/foo', КОРНИ);
 

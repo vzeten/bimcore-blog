@@ -5,8 +5,10 @@
 // Поэтому «изменилось ли поле» решается по показанному значению, а не по обратной сборке:
 // нетронутое показанное значение → исходная строка файла как есть.
 
-import {headLine, headLines} from './articleFile.mjs';
-import {isEmptyImage, normalizeSlug} from './frontmatterRules.mjs';
+import {безКавычек, headLine, headLines} from './articleFile.mjs';
+import {
+  адресВШапку, вКавычках, isEmptyImage, normalizeSlug, нужныКавычки, строковоеПоле,
+} from './frontmatterRules.mjs';
 
 /** Разбор одной строки шапки на имя поля и значение. Одно место правила для всех разборов. */
 export function полеСтроки(line) {
@@ -16,7 +18,9 @@ export function полеСтроки(line) {
 // Имена полей задал Docusaurus, не мы, — это чужой формат, а не наша настройка.
 const СПИСКИ = ['tags', 'authors', 'keywords'];
 
-const снятьКавычки = (s) => s.replace(/^["'](.*)["']$/s, '$1');
+// Снятие кавычек — одно правило на всю программу, живёт в `articleFile.mjs`: человек не должен
+// видеть YAML-синтаксис ни в свойствах статьи, ни в списке статей, ни в шапке окна.
+const снятьКавычки = безКавычек;
 
 /** Какого рода поле и как показать его значение человеку. */
 export function parseField(key, raw, path, roots) {
@@ -30,7 +34,10 @@ export function parseField(key, raw, path, roots) {
 
   if (key === 'slug' && trimmed !== '') {
     // Человек вводит короткий адрес; префикс раздела добавляет программа при сохранении.
-    return {kind: 'slug', display: trimmed.split('/').filter(Boolean).pop() ?? trimmed};
+    // Кавычки снимаются первым делом: адрес из одних цифр записан в кавычках, и без этого
+    // человек увидел бы в поле адреса YAML-синтаксис, а следующая правка его удвоила бы.
+    const голый = снятьКавычки(trimmed);
+    return {kind: 'slug', display: голый.split('/').filter(Boolean).pop() ?? голый};
   }
 
   if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
@@ -40,18 +47,24 @@ export function parseField(key, raw, path, roots) {
   return {kind: 'plain', display: value};
 }
 
-/** Собрать значение поля обратно в строку YAML из показанного человеку вида. */
+/**
+ * Собрать значение поля обратно в строку YAML из показанного человеку вида.
+ *
+ * Кавычки решаются по ИМЕНИ поля, а не по тому, как значение записано сейчас: описание живых статей
+ * записано без кавычек и разбирается как `plain`, но строкой быть обязано всё равно.
+ */
 export function formatField(key, kind, display, path, roots) {
   if (kind === 'list') {
-    // Элемент берётся в кавычки только когда без них YAML прочитает его неверно (пробел, запятая).
-    const items = display.split(',').map((item) => item.trim()).filter(Boolean)
-      .map((item) => (/[\s,]/.test(item) ? `"${item}"` : item));
+    // Элементы берутся в кавычки все до одного. Разбирать, какой из них YAML прочитал бы неверно,
+    // здесь незачем: метка, автор и ключевое слово — всегда слова, а без кавычек `true` стало бы
+    // да-нет, `2026` числом, а дата — датой. Одно правило вместо списка исключений.
+    const items = display.split(',').map((item) => item.trim()).filter(Boolean).map(вКавычках);
     return `[${items.join(', ')}]`;
   }
 
-  if (kind === 'slug') return normalizeSlug(path, display, roots);
-  if (kind === 'text') return `"${display}"`;
-  return display;
+  if (kind === 'slug') return адресВШапку(normalizeSlug(path, display, roots));
+  if (строковоеПоле(key) || kind === 'text') return вКавычках(display);
+  return нужныКавычки(display) ? вКавычках(display) : display;
 }
 
 /** Разбор шапки в поля с человеческим видом. Многострочные и сложные значения не трогаются. */
@@ -89,6 +102,12 @@ export function writeFields(raw, fields, path, roots, порядок = []) {
 
       const исходный = parseField(found[1], found[2], path, roots).display;
       if (field.display === исходный) return line;
+
+      // Человек очистил список — строка уходит целиком, а не остаётся пустыми скобками:
+      // пустой `keywords` роняет сборку сайта. Проверка стоит ПОСЛЕ сравнения с исходным
+      // значением: нетронутый `tags: []` в чужой статье убирать без действия человека нельзя,
+      // иначе одно только открытие и сохранение меняло бы файл (SPEC 5.1).
+      if (field.kind === 'list' && field.display.trim() === '') return null;
 
       return `${found[1]}: ${formatField(found[1], field.kind, field.display, path, roots)}`;
     })

@@ -3,6 +3,8 @@ import {describe, expect, it} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import matter from 'gray-matter';
+import {readField} from '../src/core/articleFile.mjs';
 import {parseField, readFields, writeFields} from '../src/core/frontmatterFields.mjs';
 import {walk} from '../src/adapters/library.mjs';
 
@@ -27,7 +29,7 @@ describe('поля шапки в человеческом виде', () => {
 
   it('изменённый список собирается обратно в квадратные скобки', () => {
     const fields = readFields('tags: [a, b]', DOCS, КОРНИ).map((f) => ({...f, display: 'a, b, c'}));
-    expect(writeFields('tags: [a, b]', fields, DOCS, КОРНИ)).toBe('tags: [a, b, c]');
+    expect(writeFields('tags: [a, b]', fields, DOCS, КОРНИ)).toBe('tags: ["a", "b", "c"]');
   });
 
   it('изменённая строка собирается обратно в кавычки', () => {
@@ -40,9 +42,9 @@ describe('поля шапки в человеческом виде', () => {
     expect(writeFields('slug: /help/old', fields, DOCS, КОРНИ)).toBe('slug: /help/install-plugin');
   });
 
-  it('элемент списка с пробелом при сборке берётся в кавычки', () => {
+  it('элементы списка при сборке берутся в кавычки', () => {
     const fields = readFields('tags: [a]', DOCS, КОРНИ).map((f) => ({...f, display: 'a, две буквы'}));
-    expect(writeFields('tags: [a]', fields, DOCS, КОРНИ)).toBe('tags: [a, "две буквы"]');
+    expect(writeFields('tags: [a]', fields, DOCS, КОРНИ)).toBe('tags: ["a", "две буквы"]');
   });
 
   it('последнее поле шапки не теряется, когда строка кончается одиноким возвратом каретки', () => {
@@ -128,6 +130,123 @@ describe('поля шапки в человеческом виде', () => {
     const fields = [...readFields(шапка, DOCS, КОРНИ), {key: 'image', raw: '', kind: 'plain', display: './cover.png'}];
 
     expect(writeFields(шапка, fields, DOCS, КОРНИ, порядок)).toBe('title: "Проба"\nimage: ./cover.png');
+  });
+
+  // Дальше — правила, найденные репетицией выпуска 2026-08-10: шапку читает YAML, и значение,
+  // записанное как попало, либо роняет сборку сайта, либо молча теряет текст человека.
+  // Доказательство одно на все случаи: читаем шапку тем же разбором, что и Docusaurus.
+  const прочитать = (шапка) => matter(`---\n${шапка}\n---\n`).data;
+
+  it('описание с двоеточием после сохранения читается тем же текстом', () => {
+    const шапка = 'description: старое';
+    const поля = readFields(шапка, DOCS, КОРНИ).map((f) => ({...f, display: 'Как быть: разбор ошибки'}));
+
+    expect(прочитать(writeFields(шапка, поля, DOCS, КОРНИ)).description).toBe('Как быть: разбор ошибки');
+  });
+
+  it('описание с решёткой сохраняется целиком, а не до решётки', () => {
+    const шапка = 'description: старое';
+    const поля = readFields(шапка, DOCS, КОРНИ).map((f) => ({...f, display: 'Семейства # и как их искать'}));
+
+    expect(прочитать(writeFields(шапка, поля, DOCS, КОРНИ)).description).toBe('Семейства # и как их искать');
+  });
+
+  it('пустое описание сохраняется пустой строкой, а не пустотой', () => {
+    // Голое `description:` YAML читает как `null`, и сборка сайта падает на «must be a string».
+    const шапка = 'description: "старое"';
+    const поля = readFields(шапка, DOCS, КОРНИ).map((f) => ({...f, display: ''}));
+
+    expect(прочитать(writeFields(шапка, поля, DOCS, КОРНИ)).description).toBe('');
+  });
+
+  it('кавычка внутри заголовка не ломает шапку и не удваивается при следующей правке', () => {
+    const шапка = 'title: "Старое"';
+    const поля = readFields(шапка, DOCS, КОРНИ).map((f) => ({...f, display: 'Тип «стена» и параметр "Высота"'}));
+    const собрано = writeFields(шапка, поля, DOCS, КОРНИ);
+
+    expect(прочитать(собрано).title).toBe('Тип «стена» и параметр "Высота"');
+    // Второй проход: человек открыл статью снова и правит соседнее поле.
+    expect(readFields(собрано, DOCS, КОРНИ)[0].display).toBe('Тип «стена» и параметр "Высота"');
+  });
+
+  it('элемент списка с квадратной скобкой берётся в кавычки', () => {
+    const шапка = 'tags: [a]';
+    const поля = readFields(шапка, DOCS, КОРНИ).map((f) => ({...f, display: 'a, [черновик]'}));
+
+    expect(прочитать(writeFields(шапка, поля, DOCS, КОРНИ)).tags).toEqual(['a', '[черновик]']);
+  });
+
+  it('метка из одного слова «true» остаётся словом, а не превращается в да-нет', () => {
+    const шапка = 'tags: [a]';
+    const поля = readFields(шапка, DOCS, КОРНИ).map((f) => ({...f, display: 'true, 2026, 2026-08-10'}));
+
+    expect(прочитать(writeFields(шапка, поля, DOCS, КОРНИ)).tags).toEqual(['true', '2026', '2026-08-10']);
+  });
+
+  it('адрес блога из одних цифр остаётся текстом, а не становится числом', () => {
+    const BLOG = 'blog/2026/index.mdx';
+    const шапка = 'slug: staraya-statya';
+    const поля = readFields(шапка, BLOG, КОРНИ).map((f) => ({...f, display: '2026'}));
+
+    expect(прочитать(writeFields(шапка, поля, BLOG, КОРНИ)).slug).toBe('2026');
+  });
+
+  it('апостроф в одиночных кавычках читается так же, как его читает YAML', () => {
+    // В одиночных кавычках YAML экранирует апостроф удвоением. Не сними его — человек увидел бы
+    // в заголовке два апострофа подряд, а сайт показывал бы один.
+    expect(readField("title: 'it''s ok'", 'title')).toBe("it's ok");
+    expect(readFields("title: 'it''s ok'", DOCS, КОРНИ)[0].display).toBe("it's ok");
+    // Вне кавычек YAML удвоение не разворачивает — и мы не разворачиваем.
+    expect(readField("title: it''s ok", 'title')).toBe("it''s ok");
+  });
+
+  it('заголовок с кавычкой читается одинаково и в свойствах статьи, и в списке статей', () => {
+    // Список статей и шапка окна берут заголовок через `readField`, свойства — через `readFields`.
+    // Разойдись эти два разбора — в одном месте человек видел бы обратные слеши, в другом нет.
+    const шапка = 'title: "Тип \\"стена\\" в Revit"';
+
+    expect(readField(шапка, 'title')).toBe('Тип "стена" в Revit');
+    expect(readFields(шапка, DOCS, КОРНИ)[0].display).toBe('Тип "стена" в Revit');
+  });
+
+  it('адрес в кавычках показывается человеку без кавычек и при повторной правке не удваивает их', () => {
+    const BLOG = 'blog/2026/index.mdx';
+    const шапка = 'slug: "2026"';
+
+    expect(readFields(шапка, BLOG, КОРНИ)[0].display).toBe('2026');
+    // Открыли, ничего не тронули, сохранили: строка обязана вернуться дословно (SPEC 5.1).
+    expect(writeFields(шапка, readFields(шапка, BLOG, КОРНИ), BLOG, КОРНИ)).toBe(шапка);
+  });
+
+  it('очищенный список уходит из шапки строкой, а не остаётся пустыми скобками', () => {
+    // Пустой `keywords` роняет сборку сайта: Docusaurus требует в этом поле хотя бы одно значение.
+    const шапка = 'keywords: [revit, семейства]';
+    const поля = readFields(шапка, DOCS, КОРНИ).map((f) => ({...f, display: ''}));
+
+    expect(writeFields(шапка, поля, DOCS, КОРНИ)).toBe('');
+  });
+
+  it('нетронутый пустой список остаётся в шапке, каким был', () => {
+    // Открыл и сохранил — файл не меняется ни на байт (SPEC 5.1). Убирать чужую строку без
+    // действия человека нельзя, даже если она бесполезна.
+    const шапка = 'title: "Проба"\ntags: []';
+
+    expect(writeFields(шапка, readFields(шапка, DOCS, КОРНИ), DOCS, КОРНИ)).toBe(шапка);
+  });
+
+  it('два пробела подряд в описании остаются такими, какими их набрал человек', () => {
+    // Схлопывать пробелы значило бы тихо править текст: их поставил человек, а не программа.
+    const шапка = 'description: старое';
+    const поля = readFields(шапка, DOCS, КОРНИ).map((f) => ({...f, display: 'два  пробела'}));
+
+    expect(прочитать(writeFields(шапка, поля, DOCS, КОРНИ)).description).toBe('два  пробела');
+  });
+
+  it('порядок в меню остаётся числом, а не превращается в строку', () => {
+    const шапка = 'sidebar_position: 1';
+    const поля = readFields(шапка, DOCS, КОРНИ).map((f) => ({...f, display: '4'}));
+
+    expect(прочитать(writeFields(шапка, поля, DOCS, КОРНИ)).sidebar_position).toBe(4);
   });
 
   it('нетронутое поле возвращается дословно на всех настоящих статьях сайта', () => {
