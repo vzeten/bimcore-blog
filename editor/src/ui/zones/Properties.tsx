@@ -96,7 +96,17 @@ export function Properties(props: {
             <label key={field.key}>
               {/* Человеку — понятная подпись; техническое имя остаётся подсказкой при наведении. */}
               <span title={field.key}>{props.settings.подписиПолей[field.key] ?? field.key}</span>
-              {ДЛИННЫЕ.includes(field.key) ? (
+              {field.kind === 'флаг' ? (
+                // Видимость — «да» или «нет», поэтому флажок, а не строка ввода со словом `true`.
+                // Уезжает на диск обычным «Сохранить», как любое другое поле шапки.
+                <input
+                  type="checkbox"
+                  className="props-flag"
+                  checked={field.display === 'true'}
+                  disabled={props.толькоЧтение === true}
+                  onChange={(event) => правка(props, поля, index, field, event.target.checked ? 'true' : '')}
+                />
+              ) : ДЛИННЫЕ.includes(field.key) ? (
                 <textarea
                   rows={3}
                   value={field.display}

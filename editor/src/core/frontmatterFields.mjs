@@ -7,7 +7,8 @@
 
 import {безКавычек, headLine, headLines} from './articleFile.mjs';
 import {
-  адресВШапку, вКавычках, isEmptyImage, normalizeSlug, нужныКавычки, строковоеПоле,
+  ПОЛЕ_ВИДИМОСТИ, адресВШапку, вКавычках, isEmptyImage, normalizeSlug, нужныКавычки,
+  скрытоеЗначение, строковоеПоле,
 } from './frontmatterRules.mjs';
 
 /** Разбор одной строки шапки на имя поля и значение. Одно место правила для всех разборов. */
@@ -26,6 +27,10 @@ const снятьКавычки = безКавычек;
 export function parseField(key, raw, path, roots) {
   const value = String(raw ?? '');
   const trimmed = value.trim();
+
+  // Видимость — «да» или «нет», и человек видит её флажком, а не словом `true` в строке ввода.
+  // Читается тем же правилом, каким видимость читает сайт: всё, кроме `true`, значит «в меню».
+  if (key === ПОЛЕ_ВИДИМОСТИ) return {kind: 'флаг', display: скрытоеЗначение(value) ? 'true' : ''};
 
   if (СПИСКИ.includes(key) && trimmed.startsWith('[') && trimmed.endsWith(']')) {
     const items = trimmed.slice(1, -1).split(',').map((item) => снятьКавычки(item.trim())).filter(Boolean);
@@ -94,6 +99,10 @@ export function writeFields(raw, fields, path, roots, порядок = []) {
     .map((line) => {
       const found = полеСтроки(line);
       if (!found || !byKey.has(found[1])) return line;
+      // Строку видимости пишет одно правило ядра (`setUnlisted`), и общий сбор полей её не трогает
+      // ни здесь, ни при дописывании: два писателя одной строки разошлись бы при первой же
+      // правке правила (SPEC 4.3).
+      if (found[1] === ПОЛЕ_ВИДИМОСТИ) return line;
 
       const field = byKey.get(found[1]);
       // Обложка без значения из шапки убирается целиком: пустое `image` роняет сборку сайта
@@ -124,6 +133,8 @@ function дописатьНовые(строки, fields, порядок, path, 
   const итог = [...строки];
 
   for (const field of fields) {
+    if (field.key === ПОЛЕ_ВИДИМОСТИ) continue;
+
     const ключиСтрок = итог.map((line) => полеСтроки(line)?.[1] ?? null);
     const ключи = ключиСтрок.filter((ключ) => ключ !== null);
     if (ключи.includes(field.key) || String(field.display ?? '').trim() === '') continue;

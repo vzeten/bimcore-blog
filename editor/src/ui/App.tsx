@@ -108,10 +108,10 @@ export function App() {
     onСоздано: setОшибка,
   });
 
-  const {save, visibility} = useSaving({
+  const {save} = useSaving({
     article, settings, fields, текстСейчас, шапкаСейчас, статьяСейчас, открытие, автосохранение,
-    setArticle, setFields, setDirty, setОшибка, setКонфликтСохранения, setСостояние: setСостояниеСохранения,
-    refresh, сПричиной, вЧерновик: (отпечаток) => вЧерновик(undefined, undefined, отпечаток),
+    setArticle, setDirty, setОшибка, setКонфликтСохранения, setСостояние: setСостояниеСохранения,
+    refresh, сПричиной, вЧерновик: () => вЧерновик(),
     // Работа записана в файл — откатывать больше не к чему, на диске уже другое состояние.
     послеЗаписи: () => возврат.забытьСнимок(),
   });
@@ -176,7 +176,7 @@ export function App() {
         onOpen={(path) => void open(path)}
         onColors={setColors}
         onSave={() => void save()}
-        onVisibility={(скрыть) => void visibility(article, скрыть)}
+        fields={fields}
         onDelete={() => void удаление.удалить()}
         удаление={удаление.идёт}
         // Просмотр версии ничего не пишет: пишущие кнопки шапки на это время заперты.

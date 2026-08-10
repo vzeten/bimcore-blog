@@ -1,7 +1,7 @@
 // Имя каждого теста повторяет формулировку правила.
-// Проверяем поведение действий сохранения и видимости без React: успех зовёт ok, ошибка зовёт fail.
+// Проверяем поведение действий сохранения без React: успех зовёт ok, ошибка зовёт fail.
 import {describe, expect, it, vi} from 'vitest';
-import {autosaveDraft, saveArticle, setVisibility} from '../src/ui/actions';
+import {autosaveDraft, saveArticle} from '../src/ui/actions';
 
 const тело = {path: 'docs/a/index.mdx', body: 'x', frontmatterRaw: 'title: A'};
 
@@ -51,61 +51,46 @@ describe('сохранение статьи', () => {
 });
 
 
-describe('смена видимости', () => {
-  it('поздняя ошибка видимости показывается, даже если человек уже ушёл из статьи', async () => {
-    // Он нажал переключатель и вправе знать, что видимость не изменилась.
-    const request = vi.fn().mockRejectedValue(new Error('нет такой статьи'));
-    const fail = vi.fn();
+describe('видимость едет обычным сохранением', () => {
+  it('отдельной ручки видимости у окна нет: видимость уходит в шапке на сохранение статьи', async () => {
+    // Второй двери к `unlisted` быть не должно: она писала файл мимо «Сохранить», и статус
+    // после нажатия было нечем выразить.
+    const request = vi.fn().mockResolvedValue({saved: true});
 
-    await setVisibility(['docs/a/index.mdx'], true, {ok: vi.fn(), fail, актуально: () => false}, request as never);
+    await saveArticle({...тело, frontmatterRaw: 'title: A\nunlisted: true'}, {ok: vi.fn(), fail: vi.fn()}, request as never);
 
-    expect(fail).toHaveBeenCalledWith('нет такой статьи');
+    expect(request).toHaveBeenCalledWith('/api/article/save', expect.anything());
+    expect(request).not.toHaveBeenCalledWith('/api/visibility', expect.anything());
+    const посланное = JSON.parse((request.mock.calls[0][1] as {body: string}).body);
+    expect(посланное.frontmatterRaw).toContain('unlisted: true');
   });
 
-  it('поздний ответ видимости приходит с пометкой, что окно уже другое', async () => {
-    // Состояние чужой статьи менять нельзя — иначе окно станет смесью двух. Но и молчать нельзя:
-    // в ответе может быть предупреждение о незаписанной версии, а оно относится к работе,
-    // а не к экрану. Поэтому ответ доносится всегда, с признаком, и решает обработчик.
-    const request = vi.fn().mockResolvedValue({changed: [], предупреждения: ['история']});
-    const ok = vi.fn();
-    const fail = vi.fn();
-
-    await setVisibility(['docs/a/index.mdx'], true, {ok, fail, актуально: () => false}, request as never);
-
-    expect(ok).toHaveBeenCalledWith({changed: [], предупреждения: ['история'], актуально: false});
-    expect(fail).not.toHaveBeenCalled();
-  });
-
-  it('видимость отвечает свежими отпечатками записанных файлов', async () => {
-    // Без них окно осталось бы с базой от прежнего файла и получило бы ложное «изменён снаружи».
-    const request = vi.fn().mockResolvedValue({changed: ['docs/a/index.mdx'], отпечатки: {'docs/a/index.mdx': 'ОТП2'}});
+  it('судьба остальных языковых версий доносится до окна вместе с ответом', async () => {
+    // Человек правил один файл, а поменялось несколько: молчать об этом нельзя. Непереключённые
+    // называются отдельно — иначе статья останется наполовину скрытой незаметно для него.
+    const request = vi.fn().mockResolvedValue({
+      saved: true,
+      видимость: {переключены: ['docs/a/index.mdx'], неПереключены: ['i18n/es/x/index.mdx']},
+    });
     const ok = vi.fn();
 
-    await setVisibility(['docs/a/index.mdx'], true, {ok, fail: vi.fn()}, request as never);
+    await saveArticle(тело, {ok, fail: vi.fn()}, request as never);
 
-    expect(ok.mock.calls[0][0].отпечатки).toEqual({'docs/a/index.mdx': 'ОТП2'});
+    expect(ok.mock.calls[0][0].видимость).toEqual({
+      переключены: ['docs/a/index.mdx'],
+      неПереключены: ['i18n/es/x/index.mdx'],
+    });
   });
 
-  it('при ошибке сервера состояние не меняется: ok не вызывается', async () => {
+  it('при ошибке сохранения состояние не меняется: ok не вызывается, видимость остаётся прежней', async () => {
     const request = vi.fn().mockRejectedValue(new Error('нет такой статьи'));
     const ok = vi.fn();
     const fail = vi.fn();
 
-    await setVisibility(['docs/a/index.mdx'], true, {ok, fail}, request as never);
+    await saveArticle({...тело, frontmatterRaw: 'title: A\nunlisted: true'}, {ok, fail}, request as never);
 
     expect(ok).not.toHaveBeenCalled();
     expect(fail).toHaveBeenCalledWith('нет такой статьи');
-  });
-
-  it('при успехе сервера вызывает ok, чтобы поменять надпись видимости', async () => {
-    const request = vi.fn().mockResolvedValue({changed: []});
-    const ok = vi.fn();
-    const fail = vi.fn();
-
-    await setVisibility(['docs/a/index.mdx'], true, {ok, fail}, request as never);
-
-    expect(ok).toHaveBeenCalledTimes(1);
-    expect(fail).not.toHaveBeenCalled();
   });
 });
 

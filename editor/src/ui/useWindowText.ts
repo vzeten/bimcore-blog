@@ -2,7 +2,6 @@ import {useRef, useState} from 'react';
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import {buildFrontmatter, parseFrontmatter, порядокПолей, type Field} from './headFields';
 import {nothingChanged} from '../core/articleFile.mjs';
-import {isUnlisted} from '../core/frontmatterRules.mjs';
 import type {Пара} from './restore';
 import type {DraftPayload} from './useAutosave';
 import type {Article, Root, SaveState, Settings} from './types';
@@ -35,16 +34,10 @@ export function useWindowText(deps: {
   const номер = useRef(0);
   const ключОкна = (): string => `${deps.article?.path ?? ''}|${deps.article?.заход ?? 0}`;
 
-  /**
-   * Правка уходит в очередь автосохранения; настоящий файл не трогается.
-   * `отпечаток` передаётся, когда файл только что переписала сама программа (смена видимости):
-   * состояние окна к этому мгновению ещё не перерисовано, и без него черновик уехал бы с базой
-   * от прежнего файла — при следующем открытии человек получил бы ложный выбор «черновик или файл».
-   */
+  /** Правка уходит в очередь автосохранения; настоящий файл не трогается. */
   const вЧерновик = (
     body = deps.текстСейчас.current,
     frontmatterRaw = deps.шапкаСейчас.current,
-    отпечаток?: string,
   ): void => {
     const article = deps.article;
     if (!article) return;
@@ -54,7 +47,7 @@ export function useWindowText(deps: {
       path: article.path,
       body,
       frontmatterRaw,
-      отпечатокБазы: отпечаток ?? article.отпечаток,
+      отпечатокБазы: article.отпечаток,
     });
   };
 
@@ -104,11 +97,8 @@ export function useWindowText(deps: {
 
     deps.текстСейчас.current = пара.body;
     deps.шапкаСейчас.current = пара.frontmatterRaw;
+    // Видимость едет вместе с полями: она обычное поле шапки, и отдельного признака у окна нет.
     deps.setFields(parseFrontmatter(пара.frontmatterRaw, article.path, deps.roots, deps.общаяОбложка));
-    // Видимость живёт в шапке, а кнопка читает признак окна: без обновления надпись говорила бы
-    // одно, шапка другое, и следующее нажатие сделало бы не то, что человек видит.
-    // Файл при этом не трогается — показывается то, что будет записано при сохранении.
-    deps.setArticle((было) => (было ? {...было, скрыта: isUnlisted(пара.frontmatterRaw)} : было));
     // Прежний выбор «сохранить поверх» относился к другому содержимому окна.
     deps.setКонфликтСохранения(false);
     // Только отметка, без записи: пару уже записал возврат, до того как тронул окно.

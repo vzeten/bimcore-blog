@@ -58,8 +58,23 @@ export function normalizeSlug(path, slug, roots) {
  * Видимость статьи живёт в её шапке: `unlisted` — поле Docusaurus, а не наша выдумка,
  * поэтому имя поля в коде. Хранить видимость ещё и в состоянии нельзя: сайт читает только шапку.
  */
+export const ПОЛЕ_ВИДИМОСТИ = 'unlisted';
+
+/**
+ * Читается ли значение поля `unlisted` как «скрыта». Одно правило на всю программу: им пользуется
+ * и чтение шапки целиком, и разбор поля в человеческий вид. Разойдись они — окно показывало бы
+ * флажок снятым у статьи, которую сайт прячет.
+ */
+export function скрытоеЗначение(значение) {
+  return /^\s*true\s*$/.test(String(значение ?? ''));
+}
+
 export function isUnlisted(frontmatterRaw) {
-  return /^unlisted:\s*true\s*$/m.test(String(frontmatterRaw ?? ''));
+  const строка = headLines(frontmatterRaw)
+    .map(headLine)
+    .find((line) => line.startsWith(`${ПОЛЕ_ВИДИМОСТИ}:`));
+
+  return строка === undefined ? false : скрытоеЗначение(строка.slice(ПОЛЕ_ВИДИМОСТИ.length + 1));
 }
 
 /**
@@ -69,7 +84,7 @@ export function isUnlisted(frontmatterRaw) {
  */
 export function setUnlisted(frontmatterRaw, hidden) {
   const lines = headLines(frontmatterRaw);
-  const at = lines.findIndex((line) => /^unlisted:/.test(headLine(line)));
+  const at = lines.findIndex((line) => headLine(line).startsWith(`${ПОЛЕ_ВИДИМОСТИ}:`));
 
   if (!hidden) {
     const без = lines.filter((line, index) => index !== at);
@@ -77,7 +92,7 @@ export function setUnlisted(frontmatterRaw, hidden) {
     return без.join('\n');
   }
   if (at >= 0) {
-    lines[at] = 'unlisted: true';
+    lines[at] = `${ПОЛЕ_ВИДИМОСТИ}: true`;
     return lines.join('\n');
   }
 
@@ -85,7 +100,7 @@ export function setUnlisted(frontmatterRaw, hidden) {
   while (tail.length > 0 && tail[tail.length - 1].trim() === '') tail.pop();
   if (tail.length > 0) tail[tail.length - 1] = headLine(tail[tail.length - 1]);
 
-  return [...tail, 'unlisted: true'].join('\n');
+  return [...tail, `${ПОЛЕ_ВИДИМОСТИ}: true`].join('\n');
 }
 
 /** Пустое или пробельное поле обложки роняет сборку всего сайта, поэтому ключ убирается целиком. */

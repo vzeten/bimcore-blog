@@ -46,6 +46,12 @@ button { font: inherit; cursor: pointer; }
 .lang-on { background: var(--ink); color: #fff; }
 .status { font-size: 12px; color: var(--ink-quiet); }
 
+/* Видимость: надпись, а не кнопка. Меняется она в свойствах статьи, поэтому нажимать здесь
+   нечего, и вид у неё спокойный — это правда о статье, а не орган управления. */
+.visibility { display: inline-flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--ink-quiet); }
+.visibility-off { color: var(--ink); }
+.visibility-pending { font-size: 11px; color: var(--ink-quiet); font-style: italic; }
+
 .ghost {
   border: 1px solid var(--line);
   background: #fff;

@@ -26,6 +26,17 @@
 .props-grid textarea { border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 13px; resize: vertical; }
 .props-grid input[readonly], .props-grid textarea[readonly] { background: var(--bg-soft); color: var(--ink-quiet); }
 
+/* Видимость — флажок, а не строка ввода. Он не растягивается на всю ячейку: галочка во всю
+   ширину поля выглядела бы как ошибка вёрстки и в неё труднее попасть, чем в маленькую. */
+.props-grid .props-flag {
+  width: 16px;
+  height: 16px;
+  align-self: flex-start;
+  margin: 4px 0;
+  padding: 0;
+  border-radius: 3px;
+}
+
 /* Обложка: картинка, слова о ней и выбор файла. Рамки нет: поле сверху уже в рамке,
    вторая делала бы из двух строк коробку. */
 .props-cover { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--ink-quiet); }

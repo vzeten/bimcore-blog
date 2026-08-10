@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {изменениеНеНаСайте, скрытаВОкне, type Field} from '../headFields';
 import type {Article, SaveState, Settings} from '../types';
 
 export function TopBar(props: {
@@ -11,7 +12,8 @@ export function TopBar(props: {
   onOpen: (path: string) => void;
   onColors: (value: boolean) => void;
   onSave: () => void;
-  onVisibility: (скрыть: boolean) => void;
+  /** Поля шапки в окне: из них берётся видимость — своего признака у шапки окна нет. */
+  fields: Field[];
   /** Удаление статьи целиком. Спрашивается здесь же, применяется только после ответа сервера. */
   onDelete: () => void;
   /** Идёт удаление: второе нажатие ничего не запускает, пока сервер не ответил. */
@@ -29,6 +31,9 @@ export function TopBar(props: {
   const окно = props.article === null ? null : `${props.article.path}|${props.article.заход ?? 0}`;
   const [спрашиваю, setСпрашиваю] = useState<string | null>(null);
   const спросили = спрашиваю !== null && спрашиваю === окно;
+
+  const скрыта = скрытаВОкне(props.fields);
+  const неНаСайте = изменениеНеНаСайте(props.article, скрыта);
 
   return (
     <header className="topbar">
@@ -78,14 +83,13 @@ export function TopBar(props: {
         {props.article && (
           <>
             <span className="status" title={п.готовность}>{props.article.готовность}</span>
-            <button
-              className={props.article.скрыта ? 'ghost ghost-on' : 'ghost'}
-              title={props.просмотр ? п.идётПросмотр : п.переключитьВидимость}
-              disabled={props.просмотр}
-              onClick={() => props.onVisibility(!props.article!.скрыта)}
-            >
-              {props.article.скрыта ? в.поСсылке : в.вМеню}
-            </button>
+            {/* Видимость — не кнопка: меняется она в свойствах статьи и уезжает на диск обычным
+                «Сохранить». Здесь только правда о том, что человек получит на сайте. */}
+            <span className={скрыта ? 'visibility visibility-off' : 'visibility'} title={п.видимость}>
+              {скрыта ? в.поСсылке : в.вМеню}
+              {/* Файл изменён, но сайт этого ещё не видит: обещать «скрыто» было бы враньём. */}
+              {неНаСайте && <span className="visibility-pending">{п.неНаСайте}</span>}
+            </span>
           </>
         )}
 

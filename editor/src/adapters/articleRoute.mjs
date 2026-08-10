@@ -6,24 +6,48 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {readField, splitArticle} from '../core/articleFile.mjs';
+import {isUnlisted} from '../core/frontmatterRules.mjs';
 import {draftDecision} from '../core/drafts.mjs';
 import {видСлоя} from '../core/authors.mjs';
 import {articleFacts} from './articleFacts.mjs';
 import {fingerprint, loadDraft} from './draftStore.mjs';
-import {gitAuthor, publishedAt} from './gitFile.mjs';
+import {gitAuthor, publishedAt, showFile} from './gitFile.mjs';
 import {historyLayers} from './layerChain.mjs';
 import {loadState} from './library.mjs';
+
+/** Тело статьи в опубликованной версии сайта. `null` — статьи там ещё нет. */
+async function телоНаСайте(git, ref, rel) {
+  const raw = await showFile(git, ref, rel);
+  return raw === null ? null : splitArticle(raw).body;
+}
+
+/**
+ * Скрыта ли каждая языковая версия в опубликованной ветке. `null` — файла там нет вовсе,
+ * и сказать про сайт нечего: этой версии на нём ещё не существует.
+ *
+ * Спрашивается по всем версиям, а не по одной открытой: видимость — признак статьи целиком,
+ * и «изменение ещё не на сайте» обязано загораться и тогда, когда не уехала соседняя версия.
+ * Версий у статьи три от силы, и читаются они только при её открытии.
+ */
+async function видимостьВетки(git, ref, versions) {
+  const пары = await Promise.all(Object.entries(versions).map(async ([locale, rel]) => {
+    const raw = await showFile(git, ref, rel);
+    return [locale, raw === null ? null : isUnlisted(splitArticle(raw).frontmatterRaw)];
+  }));
+
+  return Object.fromEntries(пары);
+}
 
 /**
  * Обрабатывает `/api/article`. Возвращает true, если запрос был к ней.
  *
  * `фиксировать` — сохранение внешней правки версией: файл могли изменить, пока статья была
  * закрыта, и чужая работа обязана попасть в историю до того, как её увидит окно.
- * `articles` и `publishedBody` приходят готовыми: свод статей и текст с сайта собирает сервер.
+ * `articles` приходит готовым: свод статей собирает сервер.
  */
 export async function articleRoute({
   req, res, url, repo, editorDir, settings, git, publishedRef,
-  insideRepo, send, фиксировать, articles, publishedBody, веткаИзвестна,
+  insideRepo, send, фиксировать, articles, веткаИзвестна,
 }) {
   if (url.pathname !== '/api/article' || req.method !== 'GET') return false;
 
@@ -42,6 +66,8 @@ export async function articleRoute({
   const отпечаток = fingerprint(raw);
 
   // Что открывать: файл или автосохранение. Молча подменять файл нельзя — при конфликте решает человек.
+  const факты = articleFacts(await articles(), rel, settings);
+
   const draft = loadDraft(editorDir, settings, rel);
   const решение = draftDecision({
     draft,
@@ -65,7 +91,7 @@ export async function articleRoute({
     черновикРешение: решение,
     // При конфликте отдаём оба варианта: файл выше, автосохранение здесь.
     черновик: решение === 'нет' ? null : {когда: draft['когда'], frontmatterRaw: draft['frontmatterRaw'], body: draft['body']},
-    published: await publishedBody(rel),
+    published: await телоНаСайте(git, publishedRef, rel),
     // Каким слоем показывать то, что записал сам человек за программой. Обычно это «мои правки»,
     // но правило одно на всех: подписался именем из справочника — правка машинная (критерий 4).
     мойСлой: видСлоя(await gitAuthor(git), settings['слоиПоАвторам'], await gitAuthor(git)),
@@ -80,7 +106,10 @@ export async function articleRoute({
     }),
     title: readField(frontmatterRaw, 'title') || rel,
     state: loadState(repo, rel, settings),
-    ...articleFacts(await articles(), rel, settings),
+    ...факты,
+    // Какой видит каждую языковую версию сам сайт. По этому окно честно говорит «изменение
+    // ещё не на сайте»: видимость в окне сравнивается не с догадкой, а с выпущенной версией.
+    видимостьВВетке: await видимостьВетки(git, publishedRef, факты.versions),
     // Удалось ли прочитать опубликованную ветку. Без этого окно считало бы недоступную ветку
     // за «ничего не опубликовано» и предлагало бы удаление там, где сервер его запрещает.
     // Признак берётся от сборки свода: дерево ветки читается один раз за запрос, не дважды.

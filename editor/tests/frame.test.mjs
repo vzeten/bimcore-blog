@@ -164,6 +164,28 @@ describe('каркас окна', () => {
     expect(registry).not.toContain('onVisibility');
   });
 
+  it('второго пути записи видимости в программе нет: строку unlisted пишет одно правило ядра', () => {
+    // Предохранитель от регресса, а не доказательство поведения: само поведение проверяют
+    // `saveVisibility.test.mjs` и `visibilityField.test.ts`. Здесь ловится возвращение второй
+    // двери — отдельной ручки видимости или собственной сборки строки где-нибудь ещё.
+    const код = источники(path.join(EDITOR, 'src'))
+      .concat(files(path.join(EDITOR, 'src')))
+      .concat([path.join(EDITOR, 'server.mjs')])
+      .map((file) => ({
+        file: path.relative(EDITOR, file).split(path.sep).join('/'),
+        текст: fs.readFileSync(file, 'utf8'),
+      }));
+
+    const своиПисатели = ['src/core/frontmatterRules.mjs'];
+    const пишут = код.filter((item) => item.текст.includes("'unlisted: true'") || item.текст.includes('"unlisted: true"'));
+    expect(пишут.map((item) => item.file)).toEqual([]);
+
+    const ручка = код.filter((item) => item.текст.includes('/api/visibility'));
+    expect(ручка.map((item) => item.file)).toEqual([]);
+    // Само правило на месте: без него проверка выше стала бы зелёной от того, что видимости нет.
+    expect(своиПисатели.every((файл) => код.some((item) => item.file === файл && item.текст.includes('export function setUnlisted')))).toBe(true);
+  });
+
   it('статусов ровно три и первый — черновик', () => {
     const settings = JSON.parse(fs.readFileSync(path.join(EDITOR, 'settings.json'), 'utf8'));
     expect(settings['статусы']).toHaveLength(3);
