@@ -3,8 +3,10 @@
 // (что YAML прочитает, нужны ли кавычки, каким должен быть адрес), а здесь — единственное место,
 // где программа меняет чужую шапку сама, без действия человека.
 
-import {headGroups, безКавычек, значениеГруппы} from './articleFile.mjs';
-import {isEmptyImage, адресВШапку, normalizeSlug, читаетсяНеСтрокой} from './frontmatterRules.mjs';
+import {headGroups, безКавычек} from './articleFile.mjs';
+import {
+  isEmptyImage, адресВШапку, normalizeSlug, списокБезЗначений, читаетсяНеСтрокой,
+} from './frontmatterRules.mjs';
 
 /**
  * Приводит строки шапки в безопасный вид.
@@ -77,19 +79,3 @@ export function safeFrontmatter(path, raw, roots) {
   return {frontmatterRaw: out.flatMap((группа) => группа.строки).join('\n'), fixed};
 }
 
-/**
- * Список, в котором нет ни одного годного значения: пустые скобки, голый ключ без элементов,
- * список из пустых строк. Любой из этих видов роняет сборку сайта — Docusaurus требует в поле
- * ключевых слов хотя бы одно непустое значение.
- *
- * Прочитать не удалось — не трогаем: стирать то, чего программа не поняла, нельзя.
- */
-function списокБезЗначений(группа) {
-  const {ok, значение} = значениеГруппы(группа);
-
-  if (!ok) return false;
-  if (значение === null || значение === undefined) return true;
-  if (!Array.isArray(значение)) return false;
-
-  return значение.every((item) => String(item ?? '').trim() === '');
-}
