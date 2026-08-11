@@ -24,7 +24,7 @@ description: Проверка работы по редактору статей 
 
 ```powershell
 $exe = (Get-ChildItem "$env:LOCALAPPDATA\OpenAI\Codex\bin" -Recurse -Filter codex.exe | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
-& $exe exec --sandbox read-only "Ты read-only reviewer. Проверь только эти незакоммиченные файлы блока: <список>. Файлы НЕ меняй. Блок: <о чём правка>. Критерии приёмки и правила бери из локальных editor/SPEC.md, editor/PLAN.md, editor/CURRENT_TASK.md. Верни только реальные замечания списком."
+& $exe exec --sandbox read-only "Ты read-only reviewer. Проверь только эти незакоммиченные файлы блока: <список>. Файлы НЕ меняй. Блок: <о чём правка>. Критерии приёмки и правила бери из локальных editor/TASKS.md (задание и его приёмка), editor/SPEC.md, editor/CURRENT_TASK.md. Верни только реальные замечания списком."
 ```
 
 Запуск долгий — пускать фоном и заниматься отчётом, пока идёт.
@@ -33,7 +33,7 @@ $exe = (Get-ChildItem "$env:LOCALAPPDATA\OpenAI\Codex\bin" -Recurse -Filter code
 
 ## Что обязано лежать в файлах до запуска
 
-Ворота **не читают базу знаний**: в неинтерактивном запуске вызовы Obsidian отменяются, подтвердить их некому. Значит всё, что Codex должен знать, обязано быть в `editor/SPEC.md`, `editor/PLAN.md`, `editor/CURRENT_TASK.md`. Разовое решение, меняющее критерии, класть в `CURRENT_TASK.md` до запуска, иначе Codex его не увидит и проверит по старым правилам.
+Ворота **не читают базу знаний**: в неинтерактивном запуске вызовы Obsidian отменяются, подтвердить их некому. Значит всё, что Codex должен знать, обязано быть в `editor/TASKS.md` (задание, что в него НЕ входит, критерий приёмки), `editor/SPEC.md` и `editor/CURRENT_TASK.md`. Разовое решение, меняющее критерии, класть в `CURRENT_TASK.md` до запуска, иначе Codex его не увидит и проверит по старым правилам.
 
 ## Контроль, что ворота ничего не изменили
 

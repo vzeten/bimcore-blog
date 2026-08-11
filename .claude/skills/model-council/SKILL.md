@@ -54,7 +54,7 @@ description: Совет моделей по работе над редактор
 EXE=$(ls -t "$LOCALAPPDATA"/OpenAI/Codex/bin/*/codex.exe | head -1); cat запрос.txt | "$EXE" exec --sandbox read-only - > ответ.txt 2>&1
 ```
 
-Ворота базу знаний не читают: в неинтерактивном запуске вызовы Obsidian отменяются. Всё нужное обязано лежать в `editor/SPEC.md`, `editor/PLAN.md`, `editor/CURRENT_TASK.md` и в отчёте по блоку.
+Ворота базу знаний не читают: в неинтерактивном запуске вызовы Obsidian отменяются. Всё нужное обязано лежать в `editor/TASKS.md`, `editor/SPEC.md`, `editor/CURRENT_TASK.md` и в отчёте по блоку.
 
 ## Что делать с итогом
 
