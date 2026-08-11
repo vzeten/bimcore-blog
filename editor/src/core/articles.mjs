@@ -67,7 +67,7 @@ export function categoryOf(path, settings) {
 /** Раздел статьи: путь папок над ней. Он одинаков у всех языковых версий. */
 export function sectionOf(path, settings) {
   const place = articlePlace(path, settings['контент']);
-  return {kind: place.kind, path: folderChain(place.inside).join('/')};
+  return {kind: place.kind, path: folderChain(place.inside, place.kind).join('/')};
 }
 
 /** Папки статьи внутри рода, включая её собственную. Для `lessons/walls/index.mdx` — `docs/lessons/walls`. */

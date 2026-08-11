@@ -28,13 +28,74 @@ export function articlePlace(path, roots) {
 }
 
 /**
- * Папки над статьёй внутри её раздела: у `guides/families/chairs/index.mdx` это `guides/families`.
- * Одно правило на два применения — адрес статьи и дерево разделов.
+ * Индексом своей папки Docusaurus считает не только `index`. У документации имён три и регистр
+ * не важен: `index`, `readme` и имя самой папки (`isCategoryIndex` в
+ * `node_modules/@docusaurus/plugin-content-docs/lib/docs.js`) — у всех троих адрес даёт папка,
+ * а не файл. У блога правило своё и у́же: только `index`, и регистр там важен
+ * (`(?:\/index)?\.mdx?$` в `plugin-content-blog/lib/blogUtils.js`).
+ *
+ * Списком в коде это стоит потому, что правило чужое: его задал Docusaurus, и настройкой оно
+ * не бывает (SPEC 4.4 про надписи и пороги, а не про чужой формат).
  */
-export function folderChain(inside) {
-  const parts = inside.split('/').filter(Boolean);
-  parts.pop();
-  return parts.slice(0, -1);
+const ИМЕНА_ИНДЕКСА = ['index', 'readme'];
+
+function индексПапки(имя, папка, род) {
+  // Своей папки у файла в корне раздела нет: `blog/index.mdx` для Docusaurus обычная статья
+  // с адресом `/index`, а не индекс чего-либо.
+  if (род === 'blog') return имя === 'index' && папка !== undefined;
+
+  const низ = имя.toLowerCase();
+  return ИМЕНА_ИНДЕКСА.includes(низ) || (папка !== undefined && низ === папка.toLowerCase());
+}
+
+/**
+ * Сегменты адреса статьи внутри её раздела: путь без расширения, а у файла, который Docusaurus
+ * считает индексом своей папки, — ещё и без имени самого файла, потому что статьёй там является
+ * папка. Единственное место догадки о том, что Docusaurus делает с путём файла: по ней живут
+ * и папки над статьёй, и адрес версии, у которой `slug` в шапке не записан.
+ *
+ * Расширение снимается любое: правило «какой файл считать статьёй» отвечает на другой вопрос
+ * и живёт своим местом (`файлСтатьи` в `articles.mjs`), а здесь нужно имя файла без хвоста.
+ *
+ * Несколько конвенций имён Docusaurus правило НЕ повторяет, и расхождение по ним молчаливое:
+ * дата в любой части пути блога, числовой префикс у файла и у папок документации, поле `id`
+ * в шапке, относительный `slug` от папки файла. Перечень с примерами, причина, по которой это
+ * сегодня не стреляет, и что опаснее прочего — хвост в `PLAN.md`.
+ */
+function сегментыАдреса(inside, род) {
+  const части = String(inside ?? '').split('/').filter(Boolean);
+  if (части.length === 0) return [];
+
+  const имя = части[части.length - 1].replace(/\.[^./]+$/, '');
+  return индексПапки(имя, части[части.length - 2], род)
+    ? части.slice(0, -1)
+    : [...части.slice(0, -1), имя];
+}
+
+/**
+ * Папки над статьёй внутри её раздела: у `guides/families/chairs/index.mdx` это `guides/families`,
+ * у `lessons/a.mdx` — `lessons`. Одно правило на два применения — адрес статьи и дерево разделов.
+ * Род нужен потому, что индекс папки блог и документация понимают по-разному.
+ */
+export function folderChain(inside, род) {
+  return сегментыАдреса(inside, род).slice(0, -1);
+}
+
+/**
+ * Адрес версии, у которой `slug` в шапке не записан: его даёт путь файла, ровно как это делает
+ * сам Docusaurus. Нужен подготовке — считать такую версию «без адреса» и выбрасывать из сравнения
+ * нельзя: адрес, записанный только у одной версии, разошёлся бы с выведенным у соседней.
+ *
+ * У статьи вне сайта (песочница) и вне известных корней адреса на сайте нет вовсе — пустая строка.
+ */
+export function адресБезSlug(path, roots) {
+  const place = articlePlace(path, roots);
+  const сегменты = сегментыАдреса(place.inside, place.kind);
+
+  if (place.kind === 'blog') return сегменты.join('/');
+  if (place.kind !== 'docs') return '';
+
+  return `/${сегменты.join('/')}`;
 }
 
 /**
@@ -51,7 +112,7 @@ export function normalizeSlug(path, slug, roots) {
   if (place.kind !== 'docs') return value;
   if (value.startsWith('/')) return value;
 
-  return `/${[...folderChain(place.inside), value].join('/')}`;
+  return `/${[...folderChain(place.inside, place.kind), value].join('/')}`;
 }
 
 /**

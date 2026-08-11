@@ -1,6 +1,6 @@
 // Имя каждого теста повторяет формулировку правила.
 // Запись новой статьи на настоящем диске: что появилось, чего не появилось и что убрано при сбое.
-import {afterEach, describe, expect, it} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -179,6 +179,25 @@ describe('создание статьи на диске', () => {
     }
 
     expect(создать(repo, {раздел: 'docs/lessons/foo'}).ошибка).toBe('нетРаздела');
+  });
+
+  it('папка, исчезнувшая посреди обхода, не роняет создание стеком', () => {
+    // Между обходом раздела и заходом в его подпапку папку могли удалить — своей рукой, git-ом
+    // или уборкой. Ответ тот же, что у соседней проверки на нечитаемую папку: статей в ней нет
+    // (SPEC 4.12), человек видит «нет раздела», а не падение программы.
+    const repo = репозиторий();
+    const пропала = path.join(repo, RU, 'lessons/уже-есть');
+    const настоящий = fs.readdirSync;
+    const шпион = vi.spyOn(fs, 'readdirSync').mockImplementation((dir, ...прочее) => {
+      if (path.resolve(String(dir)) === path.resolve(пропала)) throw new Error('ENOENT');
+      return настоящий(dir, ...прочее);
+    });
+
+    try {
+      expect(создать(repo).ошибка).toBe('нетРаздела');
+    } finally {
+      шпион.mockRestore();
+    }
   });
 
   it('плохой раздел и блог до записи не доходят', () => {

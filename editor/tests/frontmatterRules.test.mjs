@@ -1,18 +1,23 @@
 // Имя каждого теста повторяет формулировку правила: список правил — это вывод прогона.
 import {describe, expect, it} from 'vitest';
-import {isUnlisted, normalizeSlug, sameSlugAcrossLocales, setUnlisted} from '../src/core/frontmatterRules.mjs';
+import {
+  isUnlisted, normalizeSlug, sameSlugAcrossLocales, setUnlisted, адресБезSlug,
+} from '../src/core/frontmatterRules.mjs';
 import {safeFrontmatter} from '../src/core/safeFrontmatter.mjs';
 import {nothingChanged} from '../src/core/articleFile.mjs';
+
+const RU_ROOT = 'i18n/ru/docusaurus-plugin-content-docs/current';
 
 const КОРНИ = [
   {локаль: 'en', род: 'docs', папка: 'docs'},
   {локаль: 'en', род: 'blog', папка: 'blog'},
-  {локаль: 'ru', род: 'docs', папка: 'i18n/ru/docusaurus-plugin-content-docs/current'},
+  {локаль: 'ru', род: 'docs', папка: RU_ROOT},
+  {локаль: 'ru', род: 'проба', папка: 'editor/sandbox', наСайте: false},
 ];
 
 const DOCS = 'docs/help/foo/index.mdx';
 const BLOG = 'blog/post/index.mdx';
-const RU_DOCS = 'i18n/ru/docusaurus-plugin-content-docs/current/help/foo/index.mdx';
+const RU_DOCS = `${RU_ROOT}/help/foo/index.mdx`;
 
 describe('защитные правила шапки статьи', () => {
   it('пустое поле обложки удаляется из шапки целиком', () => {
@@ -147,6 +152,69 @@ describe('защитные правила шапки статьи', () => {
 
   it('уже абсолютный адрес не переписывается и раздел не задваивается', () => {
     expect(normalizeSlug(DOCS, '/help/install-plugin', КОРНИ)).toBe('/help/install-plugin');
+  });
+
+  it('у статьи-файла не в своей папке раздел в адрес входит', () => {
+    // Правило держалось на догадке «файл статьи всегда `index.*`», и у файла не в папке оно
+    // съедало настоящий раздел: `slug: a` в `docs/lessons/a.mdx` приводился к `/a`. Записывала
+    // это защитная проверка при каждом сохранении, то есть портила чужой файл.
+    expect(normalizeSlug('docs/lessons/a.mdx', 'a', КОРНИ)).toBe('/lessons/a');
+    expect(normalizeSlug('docs/help/foo/index.mdx', 'a', КОРНИ)).toBe('/help/a');
+  });
+
+  it('верный адрес статьи-файла сохранение не переписывает ни на байт', () => {
+    const raw = 'title: "Проба"\nslug: /lessons/a\ndescription: "Текст"';
+    const {frontmatterRaw, fixed} = safeFrontmatter('docs/lessons/a.mdx', raw, КОРНИ);
+
+    expect(frontmatterRaw).toBe(raw);
+    expect(fixed).toEqual([]);
+  });
+
+  it('адрес версии без записанного адреса даёт путь файла, а не имя папки над ним', () => {
+    // Имя папки годилось только для `index.*`. У файла в корне раздела оно давало имя самой папки
+    // раздела — `/docs` у английской версии и `/current` у русской, то есть ложное расхождение
+    // версий у здоровой статьи (`current` — служебная папка плагина локализации, её на сайте нет).
+    expect(адресБезSlug('docs/intro.mdx', КОРНИ)).toBe('/intro');
+    expect(адресБезSlug(`${RU_ROOT}/intro.mdx`, КОРНИ)).toBe('/intro');
+    expect(адресБезSlug('docs/lessons/a.mdx', КОРНИ)).toBe('/lessons/a');
+    expect(адресБезSlug('docs/help/foo/index.mdx', КОРНИ)).toBe('/help/foo');
+  });
+
+  it('индексом папки Docusaurus считает три имени, и регистр ему не важен', () => {
+    // Правило чужое, взято из `isCategoryIndex` документации: `index`, `readme` и имя самой папки.
+    // Считай мы индексом только `index`, такой файл получил бы адрес с лишним хвостом
+    // (`/lessons/README`), и разошёлся бы он молча: у языковых версий путь одинаков, и сравнение
+    // адресов сошлось бы на одинаково неверном значении.
+    expect(адресБезSlug('docs/lessons/README.md', КОРНИ)).toBe('/lessons');
+    expect(адресБезSlug('docs/lessons/Index.mdx', КОРНИ)).toBe('/lessons');
+    expect(адресБезSlug('docs/lessons/walls/walls.mdx', КОРНИ)).toBe('/lessons/walls');
+    // Записанный адрес заменяет саму статью, а не добавляется внутрь неё: у файла-индекса папки
+    // это ровно то же, что у `lessons/walls/index.mdx`, — соглашение редактора одно на оба вида.
+    expect(normalizeSlug('docs/lessons/walls/walls.mdx', 'a', КОРНИ)).toBe('/lessons/a');
+    expect(normalizeSlug('docs/lessons/walls/index.mdx', 'a', КОРНИ)).toBe('/lessons/a');
+  });
+
+  it('у блога индекс папки только один и написан строчными: правило там своё', () => {
+    // Блог живёт по другому разбору пути, чем документация: `readme` и имя папки для него
+    // обычные статьи, и адрес им даёт имя файла. Файл в корне блога индексом не бывает вовсе:
+    // своей папки у него нет.
+    expect(адресБезSlug('blog/post/index.mdx', КОРНИ)).toBe('post');
+    expect(адресБезSlug('blog/post/readme.mdx', КОРНИ)).toBe('post/readme');
+    expect(адресБезSlug('blog/post/post.mdx', КОРНИ)).toBe('post/post');
+    expect(адресБезSlug('blog/index.mdx', КОРНИ)).toBe('index');
+  });
+
+  it('дату в пути блога правило не разбирает — это названная граница, а не верный адрес', () => {
+    // Docusaurus переносит дату в адрес (`/2026/01/01/post`) и ищет её в любой части пути, а не
+    // только в имени файла. Правило отдаёт путь как есть. Закреплено как известная граница:
+    // расхождение здесь молчаливое, но статьям блога программа всегда пишет `slug` явно,
+    // а при записанном адресе имя файла Docusaurus не разбирает вовсе.
+    expect(адресБезSlug('blog/2026-01-01-post.mdx', КОРНИ)).toBe('2026-01-01-post');
+    expect(адресБезSlug('blog/2026-01-01-post/index.mdx', КОРНИ)).toBe('2026-01-01-post');
+  });
+
+  it('у статьи вне сайта адреса на сайте нет вовсе', () => {
+    expect(адресБезSlug('editor/sandbox/proba/index.mdx', КОРНИ)).toBe('');
   });
 
   it('адрес перевода обязан совпадать с адресом исходной статьи', () => {
