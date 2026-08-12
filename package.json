@@ -16,7 +16,8 @@
     "review": "node scripts/review-page.js",
     "editor:dev": "npm --prefix editor run dev",
     "editor:test": "npm --prefix editor run test",
-    "editor:typecheck": "npm --prefix editor run typecheck"
+    "editor:typecheck": "npm --prefix editor run typecheck",
+    "editor:corpus": "npm --prefix editor run corpus"
   },
   "dependencies": {
     "@docusaurus/core": "3.10.1",

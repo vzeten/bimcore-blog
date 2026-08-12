@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node server.mjs",
     "test": "vitest run",
+    "corpus": "node scripts/corpus.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
