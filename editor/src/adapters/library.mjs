@@ -7,7 +7,7 @@ import path from 'node:path';
 import {readField, splitArticle} from '../core/articleFile.mjs';
 import {isUnlisted} from '../core/frontmatterRules.mjs';
 import {groupArticles} from '../core/articles.mjs';
-import {initialReadiness, readState, stateFileName, writeState} from '../core/articleState.mjs';
+import {initialReadiness, readState, путьФайлаСостояния, writeState} from '../core/articleState.mjs';
 import {ФОРМАТ, parseGitLog, parseGitStatus} from '../core/gitLog.mjs';
 import {авторПравки} from '../core/externalEdit.mjs';
 import {latestSnapshot} from './draftStore.mjs';
@@ -27,8 +27,9 @@ export function walk(dir, out = []) {
   return out;
 }
 
+/** Путь на диске. Само правило имени живёт в ядре и здесь не повторяется (SPEC 4.3). */
 export function statePath(repo, rel, settings) {
-  return path.join(repo, path.dirname(rel), stateFileName(settings));
+  return path.join(repo, путьФайлаСостояния(rel, settings));
 }
 
 export function readStateRaw(repo, rel, settings) {
