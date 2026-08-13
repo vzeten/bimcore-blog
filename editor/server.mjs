@@ -19,6 +19,7 @@ import {createRoute} from './src/adapters/createRoute.mjs';
 import {saveRoute} from './src/adapters/saveRoute.mjs';
 import {prepareRoute} from './src/adapters/prepareRoute.mjs';
 import {releaseRoute} from './src/adapters/releaseRoute.mjs';
+import {publishRoute} from './src/adapters/publishRoute.mjs';
 import {detectPublishedRef} from './src/adapters/gitFile.mjs';
 import {фиксироватьВнешнюю} from './src/adapters/externalVersion.mjs';
 
@@ -132,6 +133,11 @@ async function api(req, res, url) {
   // Предварительный выпуск: состав файлов статьи и полная сборка сайта. Git не трогается ничем.
   if (await releaseRoute({
     req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send,
+  })) return;
+
+  // Коммит статьи — единственная ручка, меняющая git. Отправки в ней нет.
+  if (await publishRoute({
+    req, res, url, repo: REPO, settings: readSettings(), git, тело, insideRepo, send,
   })) return;
 
   // Автосохранение — отдельным модулем: сервер иначе выходит за лимит размера файла.

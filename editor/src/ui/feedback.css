@@ -91,3 +91,5 @@
   font-size: 12px;
   white-space: pre-wrap;
 }
+
+.release-ask { display: flex; gap: 8px; }

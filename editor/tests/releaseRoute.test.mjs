@@ -104,6 +104,69 @@ describe('ручка состава выпуска', () => {
     expect(status).toBe(400);
     expect(payload.файлы).toBeUndefined();
   });
+
+  it('картинки во вложенной папке статьи входят в состав: молчаливая потеря хуже отказа', async () => {
+    const repo = среда({
+      [RU]: СТАТЬЯ,
+      [EN]: СТАТЬЯ,
+      'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/img/один.jpg': 'картинка',
+      'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/img/два.jpg': 'картинка',
+    });
+
+    const {payload} = await запрос(repo, '/api/release', {path: RU});
+    const пути = payload.файлы.map((файл) => файл.путь);
+
+    expect(пути).toContain('i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/img/один.jpg');
+    expect(пути).toContain('i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/img/два.jpg');
+    expect(payload.можно).toBe(true);
+  });
+
+  it('вторая статья во вложенной папке — тоже неоднозначность: состав не доказан', async () => {
+    const repo = среда({
+      [RU]: СТАТЬЯ,
+      [EN]: СТАТЬЯ,
+      'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/внутри/сосед.mdx': СТАТЬЯ,
+    });
+
+    const {payload} = await запрос(repo, '/api/release', {path: RU});
+
+    expect(payload.можно).toBe(false);
+  });
+
+  // Перечень этой ручки станет источником `git add`, поэтому заслон стоит здесь, а не в окне.
+  const негодные = [
+    ['.git/config', 'служебный файл git'],
+    ['docs/lessons', 'папка, а не статья'],
+    ['docs/lessons/proba/cover.png', 'картинка, а не статья'],
+    ['docs/../static/robots.txt', 'выход из корней контента через две точки'],
+    ['docs\\lessons\\proba\\index.mdx', 'путь с обратными косыми'],
+    ['static/img/logo.png', 'файл вне корней контента'],
+  ];
+  for (const [путь, чем] of негодные) {
+    it(`выпуск не даётся на путь, который не файл статьи сайта: ${чем}`, async () => {
+      const repo = среда({
+        [RU]: СТАТЬЯ,
+        [EN]: СТАТЬЯ,
+        '.git/config': 'служебное',
+        'docs/lessons/proba/cover.png': 'картинка',
+        'static/img/logo.png': 'картинка',
+        'static/robots.txt': 'служебное',
+      });
+
+      const состав = await запрос(repo, '/api/release', {path: путь});
+      expect(состав.status).toBe(400);
+      expect(состав.payload.файлы).toBeUndefined();
+
+      // И сборку такой путь не запускает: сборщика не звали ни разу.
+      let звали = false;
+      const сборка = await запрос(repo, '/api/release/build', {path: путь}, (...аргументы) => {
+        звали = true;
+        return сборщик()(...аргументы);
+      });
+      expect(звали).toBe(false);
+      expect(сборка.status).toBe(400);
+    });
+  }
 });
 
 describe('ручка полной сборки', () => {

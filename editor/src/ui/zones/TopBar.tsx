@@ -42,7 +42,7 @@ export function TopBar(props: {
   // шапкой, не касается — тянуть её через всю сборку окна незачем.
   const подготовка = usePrepare(props.article?.path ?? null, props.dirty);
   // Выпуск живёт рядом с подготовкой и по тому же правилу: правка статьи гасит и состав, и сборку.
-  const выпуск = useRelease(props.article?.path ?? null, props.dirty);
+  const выпуск = useRelease(props.article?.path ?? null, props.dirty, props.article?.заход ?? 0);
 
   return (
     <>
