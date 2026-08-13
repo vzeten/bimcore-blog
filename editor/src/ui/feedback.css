@@ -37,3 +37,31 @@
 /* Состояние автосохранения рядом с кнопкой сохранения. */
 .autosave { font-size: 12px; color: var(--ink-quiet); }
 .autosave-fail { color: var(--layer-deleted); }
+
+/* Отчёт подготовки: стоит под шапкой окна, над статьёй. Блокеры и предупреждения различаются
+   меткой уровня и цветом полосы слева — цвет шрифта занят слоями правок (решение в DECISIONS). */
+.prepare {
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-soft);
+  padding: 10px 16px;
+  font-size: 13px;
+}
+
+.prepare-head { display: flex; align-items: baseline; gap: 12px; }
+.prepare-head strong { flex: 1; }
+.prepare-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+
+.prepare-item {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  border-left: 3px solid var(--line);
+  padding-left: 10px;
+}
+
+.prepare-block { border-left-color: var(--layer-deleted); }
+.prepare-level { flex: 0 0 auto; color: var(--ink-quiet); font-size: 12px; min-width: 11rem; }
+.prepare-text { flex: 1; }
+.prepare-where { flex: 0 0 auto; color: var(--ink-quiet); font-size: 12px; }
+.prepare-skipped { margin: 10px 0 0; color: var(--ink-quiet); font-size: 12px; }
+.prepare-failed strong { color: var(--layer-deleted); }

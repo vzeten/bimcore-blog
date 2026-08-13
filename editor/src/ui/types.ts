@@ -193,6 +193,20 @@ export interface Settings {
    * статьи. `null` — прочитать не удалось; выдумывать путь нельзя.
    */
   сайт?: {обложкаПоУмолчанию: string | null};
+  /**
+   * Слова окна подготовки. `находки`, `уровни` и `этапы` — карты по коду находки: код без своей
+   * фразы показывается общей фразой вместе с кодом, а не проглатывается.
+   */
+  подготовка: {
+    заголовок: string;
+    чисто: string;
+    закрыть: string;
+    невыполненные: string;
+    неизвестнаяНаходка: string;
+    уровни: Record<string, string>;
+    этапы: Record<string, string>;
+    находки: Record<string, string>;
+  };
   реестр: {
     колонки: Column[];
     сортировкаПоУмолчанию: string;
@@ -206,3 +220,24 @@ export interface Settings {
 }
 
 export type PanelMode = 'статьи' | 'версии' | null;
+
+/** Одна находка подготовки, как её отдаёт ядро. Поля сверх кода и уровня не у всех находок. */
+export interface PrepareFinding {
+  код: string;
+  уровень: string;
+  этап: string;
+  путь?: string;
+  поле?: string;
+  локаль?: string;
+  значение?: string;
+  длина?: number;
+  предел?: number;
+}
+
+/** Ответ подготовки: находки, вердикт и честный перечень этапов, которые не выполнялись. */
+export interface PrepareReport {
+  path: string;
+  находки: PrepareFinding[];
+  прошла: boolean;
+  невыполненные: string[];
+}

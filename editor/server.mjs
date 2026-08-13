@@ -17,6 +17,7 @@ import {deleteRoute} from './src/adapters/deleteRoute.mjs';
 import {articleRoute} from './src/adapters/articleRoute.mjs';
 import {createRoute} from './src/adapters/createRoute.mjs';
 import {saveRoute} from './src/adapters/saveRoute.mjs';
+import {prepareRoute} from './src/adapters/prepareRoute.mjs';
 import {detectPublishedRef} from './src/adapters/gitFile.mjs';
 import {фиксироватьВнешнюю} from './src/adapters/externalVersion.mjs';
 
@@ -120,6 +121,11 @@ async function api(req, res, url) {
   if (await saveRoute({
     req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git,
     тело, insideRepo, send, фиксировать, последняяПравка,
+  })) return;
+
+  // Подготовка статьи — отдельным модулем. Ручка только читает: файлы человека она не трогает.
+  if (await prepareRoute({
+    req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send, articles,
   })) return;
 
   // Автосохранение — отдельным модулем: сервер иначе выходит за лимит размера файла.

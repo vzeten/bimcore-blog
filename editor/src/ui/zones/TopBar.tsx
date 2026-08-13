@@ -1,5 +1,7 @@
 import {useState} from 'react';
 import {изменениеНеНаСайте, скрытаВОкне, type Field} from '../headFields';
+import {PrepareReport} from './PrepareReport';
+import {usePrepare} from '../usePrepare';
 import type {Article, SaveState, Settings} from '../types';
 
 export function TopBar(props: {
@@ -34,8 +36,12 @@ export function TopBar(props: {
 
   const скрыта = скрытаВОкне(props.fields);
   const неНаСайте = изменениеНеНаСайте(props.article, скрыта);
+  // Подготовка живёт рядом со своей кнопкой: она ничего не пишет и никого, кроме отчёта под
+  // шапкой, не касается — тянуть её через всю сборку окна незачем.
+  const подготовка = usePrepare(props.article?.path ?? null, props.dirty);
 
   return (
+    <>
     <header className="topbar">
       <div className="topbar-name">
         <span className="topbar-title">{props.article ? props.title : п.программа}</span>
@@ -118,8 +124,16 @@ export function TopBar(props: {
           {props.dirty ? п.сохранить : п.сохранено}
         </button>
 
-        <button className="ghost" disabled title={п.скороПодготовить}>
-          {п.подготовить}
+        {/* Подготовка судит о том, что записано в файл, поэтому с несохранёнными правками кнопка
+            заперта: иначе отчёт говорил бы не о том, что человек видит на экране. В просмотре
+            старой версии она заперта по той же причине, что и «Сохранить». */}
+        <button
+          className="ghost"
+          disabled={подготовка.идёт || props.dirty || props.просмотр || !props.article}
+          title={заперта(props, п)}
+          onClick={() => void подготовка.запустить()}
+        >
+          {подготовка.идёт ? п.подготовкаИдёт : п.подготовить}
         </button>
 
         {/* Удаление предлагается только у статьи, которой ещё нет на сайте: у вышедшей его нет
@@ -150,7 +164,29 @@ export function TopBar(props: {
         </button>
       </div>
     </header>
+
+    <PrepareReport
+      settings={props.settings}
+      отчёт={подготовка.отчёт}
+      ошибка={подготовка.ошибка}
+      onЗакрыть={подготовка.закрыть}
+    />
+    </>
   );
+}
+
+/**
+ * Почему кнопка подготовки заперта. Молчаливо запертая кнопка выглядит поломкой: человек видит
+ * «Подготовить» и не понимает, отчего оно не нажимается.
+ */
+function заперта(
+  props: {dirty: boolean; просмотр: boolean; article: Article | null},
+  п: Settings['подписи'],
+): string {
+  if (props.просмотр) return п.идётПросмотр;
+  if (props.article && props.dirty) return п.сначалаСохранитеДляПодготовки;
+
+  return '';
 }
 
 /**
