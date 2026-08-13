@@ -9,11 +9,12 @@
 
 import {headGroups, splitArticle} from './articleFile.mjs';
 import {readFields} from './frontmatterFields.mjs';
-import {articlePlace, isUnlisted} from './frontmatterRules.mjs';
+import {articlePlace} from './frontmatterRules.mjs';
 import {файлСтатьи} from './articles.mjs';
 import {
   БЛОКЕР, ЭТАПЫ, адресаВерсий, находка, настройки, поляПоиска, составСтатьи, шапкиВерсий,
 } from './prepareRules.mjs';
+import {значенияПолей} from './prepareValueRules.mjs';
 
 export {БЛОКЕР, ПРЕДУПРЕЖДЕНИЕ, ЭТАПЫ} from './prepareRules.mjs';
 
@@ -23,6 +24,7 @@ const ПРАВИЛА = {
   шапка: шапкиВерсий,
   составСтатьи,
   поляПоиска,
+  значенияПолей,
   адресаВерсий,
 };
 
@@ -79,7 +81,6 @@ function разобрать({путь, содержимое}, settings) {
     frontmatterRaw,
     поля: readFields(frontmatterRaw, путь, roots),
     группы: headGroups(frontmatterRaw),
-    скрыта: isUnlisted(frontmatterRaw),
     локаль: место.locale,
     род: место.kind,
     наСайте: место.наСайте,
