@@ -1,7 +1,9 @@
 import {useState} from 'react';
 import {изменениеНеНаСайте, скрытаВОкне, type Field} from '../headFields';
 import {PrepareReport} from './PrepareReport';
+import {ReleasePanel} from './ReleasePanel';
 import {usePrepare} from '../usePrepare';
+import {useRelease} from '../useRelease';
 import type {Article, SaveState, Settings} from '../types';
 
 export function TopBar(props: {
@@ -39,6 +41,8 @@ export function TopBar(props: {
   // Подготовка живёт рядом со своей кнопкой: она ничего не пишет и никого, кроме отчёта под
   // шапкой, не касается — тянуть её через всю сборку окна незачем.
   const подготовка = usePrepare(props.article?.path ?? null, props.dirty);
+  // Выпуск живёт рядом с подготовкой и по тому же правилу: правка статьи гасит и состав, и сборку.
+  const выпуск = useRelease(props.article?.path ?? null, props.dirty);
 
   return (
     <>
@@ -170,7 +174,11 @@ export function TopBar(props: {
       отчёт={подготовка.отчёт}
       ошибка={подготовка.ошибка}
       onЗакрыть={подготовка.закрыть}
+      onКВыпуску={() => void выпуск.начать()}
+      кВыпускуДоступен={выпуск.шаг === 'нет' && выпуск.состав === null}
     />
+
+    <ReleasePanel settings={props.settings} выпуск={выпуск} />
     </>
   );
 }

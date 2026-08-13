@@ -65,3 +65,29 @@
 .prepare-where { flex: 0 0 auto; color: var(--ink-quiet); font-size: 12px; }
 .prepare-skipped { margin: 10px 0 0; color: var(--ink-quiet); font-size: 12px; }
 .prepare-failed strong { color: var(--layer-deleted); }
+
+/* Панель предварительного выпуска: состав файлов и итог полной сборки. Стоит под отчётом
+   подготовки и живёт по тем же правилам показа. */
+.release {
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-soft);
+  padding: 10px 16px;
+  font-size: 13px;
+}
+
+.release-build { margin-top: 10px; display: grid; gap: 8px; justify-items: start; }
+.release-ok { margin: 0; color: var(--layer-prevAi); }
+.release-fail { margin: 0; color: var(--layer-deleted); }
+
+.release-log {
+  margin: 0;
+  max-height: 16rem;
+  overflow: auto;
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
