@@ -26,5 +26,9 @@
   "sidebar.mainSidebar.category.BIMCORE Plugin": {
     "message": "BIMCORE Plugin",
     "description": "The label for category 'BIMCORE Plugin' in sidebar 'mainSidebar'"
+  },
+  "sidebar.mainSidebar.category.Interior Template": {
+    "message": "Plantilla de interiores",
+    "description": "The label for category 'Interior Template' in sidebar 'mainSidebar'"
   }
 }

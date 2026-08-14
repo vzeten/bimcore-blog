@@ -414,5 +414,14 @@
   "theme.SearchBar.label": {
     "message": "Поиск",
     "description": "The ARIA label and placeholder for search button"
+  },
+  "cta.template.title": {
+    "message": "Хотите облегчить себе работу в Revit?"
+  },
+  "cta.template.text": {
+    "message": "Используйте наш шаблон для проектирования интерьеров в Revit."
+  },
+  "cta.template.button": {
+    "message": "Узнать подробнее о шаблоне"
   }
 }

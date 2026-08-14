@@ -1,5 +1,6 @@
 ﻿import React from 'react';
 import Translate, {translate} from '@docusaurus/Translate';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import styles from '../css/cta.module.css';
 
 const ctaData = {
@@ -52,6 +53,17 @@ const ctaData = {
     link: 'https://community.bimcore.one/',
     button: translate({id: 'cta.plugin.button', message: 'Join the Community'}),
   },
+  // Статьи-инструкции к листам интерьерного шаблона. Ведёт на страницу раздела
+  // «О шаблоне» — внутренняя ссылка, там же карточка товара с ценой и описанием.
+  template: {
+    title: translate({id: 'cta.template.title', message: 'Want to make your work in Revit easier?'}),
+    text: translate({
+      id: 'cta.template.text',
+      message: 'Use our template for interior design in Revit.',
+    }),
+    link: '/guides/templates/',
+    button: translate({id: 'cta.template.button', message: 'Learn more about the template'}),
+  },
   help: {
     title: translate({id: 'cta.help.title', message: "Can't find what you need?"}),
     text: translate({
@@ -65,13 +77,16 @@ const ctaData = {
 
 export default function CTA({type = 'blog'}) {
   const data = ctaData[type];
+  // Внутренняя ссылка обязана получить префикс локали (/ru/, /es/) — иначе
+  // с русской страницы уводит на английскую. Внешние (с протоколом) хук не трогает.
+  const link = useBaseUrl(data?.link ?? '/');
   if (!data) return null;
 
   return (
     <div className={styles.ctaBlock}>
       <p className={styles.ctaTitle}>{data.title}</p>
       <p className={styles.ctaText}>{data.text}</p>
-      <a href={data.link} className={styles.ctaButton} target={data.link.startsWith('http') ? '_blank' : '_self'} rel="noopener noreferrer">
+      <a href={link} className={styles.ctaButton} target={data.link.startsWith('http') ? '_blank' : '_self'} rel="noopener noreferrer">
         {data.button} →
       </a>
     </div>

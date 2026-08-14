@@ -414,5 +414,14 @@
   "theme.SearchPage.noResultsText": {
     "message": "No se encontró ningún documento",
     "description": "The paragraph for empty search result"
+  },
+  "cta.template.title": {
+    "message": "¿Quiere facilitar su trabajo en Revit?"
+  },
+  "cta.template.text": {
+    "message": "Use nuestra plantilla para el diseño de interiores en Revit."
+  },
+  "cta.template.button": {
+    "message": "Más sobre la plantilla"
   }
 }
