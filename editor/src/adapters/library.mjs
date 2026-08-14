@@ -11,7 +11,29 @@ import {initialReadiness, readState, путьФайлаСостояния, write
 import {ФОРМАТ, parseGitLog, parseGitStatus} from '../core/gitLog.mjs';
 import {авторПравки} from '../core/externalEdit.mjs';
 import {latestSnapshot} from './draftStore.mjs';
-import {файлСтатьи} from '../core/articles.mjs';
+import {файлСтатьи, путьВерсии} from '../core/articles.mjs';
+import {ИМЯ_КАТЕГОРИИ} from '../core/articleKind.mjs';
+import {articlePlace} from '../core/frontmatterRules.mjs';
+
+/**
+ * Лежит ли рядом с этой версией `_category_.json`, то есть каталог — категория.
+ *
+ * Смотрится тот же путь во ВСЕХ корнях того же рода, а не только в своём: у переводов своего
+ * `_category_.json` нет — категорию объявляет основное дерево сайта. Спроси программа только свой
+ * корень, и `docs/lessons/index.mdx` был бы страницей категории, а его русский двойник — обычной
+ * статьёй, хотя это одна и та же страница на двух языках.
+ */
+export function категорияРядом(repo, rel, settings) {
+  const roots = settings['контент'];
+  const место = articlePlace(rel, roots);
+  if (место.kind === 'вне контента') return false;
+
+  const внутри = место.inside.split('/').slice(0, -1).join('/');
+
+  return roots
+    .filter((root) => root['род'] === место.kind)
+    .some((root) => fs.existsSync(path.join(repo, путьВерсии(root, внутри ? `${внутри}/${ИМЯ_КАТЕГОРИИ}` : ИМЯ_КАТЕГОРИИ))));
+}
 
 /** Файлы и папки с подчёркиванием и точкой — служебные: ни Docusaurus, ни программа их не читают. */
 export function walk(dir, out = []) {
@@ -137,6 +159,10 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
 
       items.push({
         path: rel,
+        // Один факт с диска для правила вида: остальное решает ядро.
+        категорияРядом: категорияРядом(repo, rel, settings),
+        вКорнеРода: !articlePlace(rel, settings['контент']).inside.includes('/'),
+        адресКорня: String(readField(frontmatterRaw, 'slug') ?? '').trim().replace(/^["']|["']$/g, '') === '/',
         // Пустое название не подменяется здесь: чем его заменить — правило статьи, а не адаптера.
         title: readField(frontmatterRaw, 'title'),
         скрыта: isUnlisted(frontmatterRaw),
