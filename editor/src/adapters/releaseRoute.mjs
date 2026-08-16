@@ -7,7 +7,9 @@
 import path from 'node:path';
 
 import {выпускВозможен, составВыпуска} from '../core/release.mjs';
-import {годныйПуть, версииСтатьи, отпечатокСостава} from './releaseFacts.mjs';
+import {итогВыпуска} from '../core/releaseSummary.mjs';
+import {годныйПуть, версииСтатьи, заглушкиВерсий, отпечатокСостава, скрытыеВерсии} from './releaseFacts.mjs';
+import {расхождениеССайтом} from './gitFile.mjs';
 import {запомнитьСборку} from './buildMemory.mjs';
 import {причинаПадения, собратьСайт} from './siteBuild.mjs';
 import {badFields, badPath} from './httpBody.mjs';
@@ -24,7 +26,7 @@ let сборкаИдёт = false;
  * Обрабатывает `/api/release` (состав) и `/api/release/build` (полная сборка).
  * Возвращает true, если запрос был к одной из них.
  */
-export async function releaseRoute({req, res, url, repo, settings, тело, insideRepo, send, запуск}) {
+export async function releaseRoute({req, res, url, repo, settings, git, publishedRef, тело, insideRepo, send, запуск}) {
   const это = url.pathname === '/api/release' || url.pathname === '/api/release/build';
   if (!это || req.method !== 'POST') return false;
 
@@ -55,10 +57,28 @@ export async function releaseRoute({req, res, url, repo, settings, тело, ins
     return true;
   }
 
-  const состав = составВыпуска({версии: версииСтатьи(repo, rel, settings)});
+  const версии = версииСтатьи(repo, rel, settings);
+  const состав = составВыпуска({версии});
 
   if (url.pathname === '/api/release') {
-    send(res, 200, {path: rel, ...состав, можно: выпускВозможен(состав)});
+    // Вместе с составом считается человеческий итог: что действительно изменится на сайте.
+    // Перечень путей остаётся в ответе для технических подробностей, но решение человек принимает
+    // по итогу, а не по списку файлов.
+    const изменённые = await расхождениеССайтом(git, publishedRef, состав.файлы.map((файл) => файл.путь));
+
+    send(res, 200, {
+      path: rel,
+      ...состав,
+      можно: выпускВозможен(состав),
+      // Спросить git не удалось — итога нет вовсе: «ничего не меняется» здесь было бы враньём.
+      итог: изменённые === null ? null : итогВыпуска({
+        файлы: состав.файлы,
+        изменённые,
+        заглушки: заглушкиВерсий(repo, версии, settings),
+        скрытые: скрытыеВерсии(repo, версии),
+        всеЛокали: Object.keys(settings['локали']),
+      }),
+    });
     return true;
   }
 

@@ -14,7 +14,7 @@
 
 import {useEffect, useState} from 'react';
 import {requestJson} from './api';
-import type {PrepareReport} from './types';
+import type {PrepareReport} from './publishTypes';
 
 export interface Подготовка {
   отчёт: PrepareReport | null;

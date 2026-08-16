@@ -161,6 +161,12 @@ button { font: inherit; cursor: pointer; }
 
 .ghost-on { background: var(--bg-soft); border-color: #c6ccd4; }
 
+/* Публикация — главное действие человека в этом окне, и выглядеть она должна главной: остальные
+   кнопки шапки бледные, а искать основную среди одинаковых серых человек не должен. */
+.ghost-main { border-color: var(--layer-current); color: var(--layer-current); font-weight: 600; }
+.ghost-main:hover:not(:disabled) { background: var(--bg-soft); border-color: var(--layer-current); }
+.ghost-main:disabled { border-color: var(--line); color: #b4bac1; font-weight: 500; }
+
 /* ---------- полоса комментариев ---------- */
 
 .gutter {

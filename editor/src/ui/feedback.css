@@ -66,30 +66,89 @@
 .prepare-skipped { margin: 10px 0 0; color: var(--ink-quiet); font-size: 12px; }
 .prepare-failed strong { color: var(--layer-deleted); }
 
-/* Панель предварительного выпуска: состав файлов и итог полной сборки. Стоит под отчётом
-   подготовки и живёт по тем же правилам показа. */
-.release {
-  border-bottom: 1px solid var(--line);
-  background: var(--bg-soft);
-  padding: 10px 16px;
+/* Панель публикации: выпадает прямо под кнопкой «Опубликовать» и остаётся узкой. Полоса во всю
+   ширину окна не показывала, откуда она взялась, и терялась среди статьи. Общие классы отчёта
+   «Доработать» (.prepare-*) здесь не трогаются: у панели свои, иначе одна правка меняла бы обе.
+
+   Опора — .publish-anchor вокруг самой кнопки: панель держится за кнопку, а не за край шапки. */
+.publish-anchor { position: relative; display: flex; }
+
+.publish {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  /* Узкая, но не уже читаемого, и никогда не шире окна: на узком экране остаются отступы по краям. */
+  width: min(30rem, calc(100vw - 24px));
+  /* Предел высоты с запасом на саму шапку: в узком окне её строки переносятся, панель уезжает ниже,
+     и предел «во весь экран минус чуть-чуть» всё равно свесил бы низ за край. Лишнее прокручивается
+     внутри панели, а не пропадает. */
+  max-height: min(60vh, calc(100vh - 8rem));
+  overflow: auto;
+  /* Длинный путь и вывод сборщика не должны раздвигать панель. */
+  overflow-wrap: anywhere;
+  text-align: left;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(17, 20, 24, 0.16);
+  padding: 12px 14px;
   font-size: 13px;
+  font-weight: 400;
+  color: var(--ink);
+  cursor: default;
 }
 
-.release-build { margin-top: 10px; display: grid; gap: 8px; justify-items: start; }
-.release-ok { margin: 0; color: var(--layer-prevAi); }
-.release-fail { margin: 0; color: var(--layer-deleted); }
+.publish-head { display: flex; align-items: flex-start; gap: 10px; }
+.publish-head strong { flex: 1; }
 
-.release-log {
-  margin: 0;
-  max-height: 16rem;
+/* Крестик — знакомое место закрытия: правый верхний угол блока. */
+.publish-close {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--ink-quiet);
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.publish-close:hover:not(:disabled) { color: var(--ink); }
+.publish-close:disabled { color: #cfd4da; cursor: default; }
+
+.publish-quiet { margin: 10px 0 0; color: var(--ink-quiet); font-size: 12px; }
+.publish-quiet-inline { color: var(--ink-quiet); font-size: 12px; }
+.publish-ok { margin: 10px 0 0; color: var(--layer-prevAi); }
+
+.publish-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+
+.publish-item {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  border-left: 3px solid var(--line);
+  padding-left: 8px;
+}
+
+.publish-block { border-left-color: var(--layer-deleted); }
+.publish-label { flex: 0 0 auto; color: var(--ink-quiet); font-size: 12px; min-width: 7rem; }
+
+/* Основные действия — справа, к той же стороне, где стоит сама кнопка публикации. */
+.publish-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+/* Сведения для диагностики: неприметное раскрытие, а не действие. Стоит отдельно от кнопок. */
+.publish-tech { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; }
+.publish-tech summary { color: var(--ink-quiet); font-size: 12px; cursor: pointer; }
+.publish-tech summary:hover { color: var(--ink); }
+
+.publish-log {
+  margin: 8px 0 0;
+  max-height: 14rem;
   overflow: auto;
-  width: 100%;
-  background: var(--bg);
+  background: var(--bg-soft);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
   font-size: 12px;
   white-space: pre-wrap;
 }
-
-.release-ask { display: flex; gap: 8px; }

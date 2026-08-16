@@ -1,9 +1,9 @@
 import {useState} from 'react';
 import {изменениеНеНаСайте, скрытаВОкне, type Field} from '../headFields';
 import {PrepareReport} from './PrepareReport';
-import {ReleasePanel} from './ReleasePanel';
+import {PublishPanel} from './PublishPanel';
 import {usePrepare} from '../usePrepare';
-import {useRelease} from '../useRelease';
+import {usePublish} from '../usePublish';
 import type {Article, SaveState, Settings} from '../types';
 
 export function TopBar(props: {
@@ -15,7 +15,8 @@ export function TopBar(props: {
   colors: boolean;
   onOpen: (path: string) => void;
   onColors: (value: boolean) => void;
-  onSave: () => void;
+  /** Записать окно на диск. Отвечает, легла ли работа целиком: это нужно публикации. */
+  onSave: () => Promise<boolean>;
   /** Поля шапки в окне: из них берётся видимость — своего признака у шапки окна нет. */
   fields: Field[];
   /** Удаление статьи целиком. Спрашивается здесь же, применяется только после ответа сервера. */
@@ -41,8 +42,14 @@ export function TopBar(props: {
   // Подготовка живёт рядом со своей кнопкой: она ничего не пишет и никого, кроме отчёта под
   // шапкой, не касается — тянуть её через всю сборку окна незачем.
   const подготовка = usePrepare(props.article?.path ?? null, props.dirty);
-  // Выпуск живёт рядом с подготовкой и по тому же правилу: правка статьи гасит и состав, и сборку.
-  const выпуск = useRelease(props.article?.path ?? null, props.dirty, props.article?.заход ?? 0);
+  // Публикация живёт рядом: она сама сохраняет, проверяет, собирает и отправляет, поэтому ей нужны
+  // и путь версии, и признак несохранённого, и умение записать окно на диск.
+  const публикация = usePublish(
+    props.article?.path ?? null,
+    props.dirty,
+    props.article?.заход ?? 0,
+    props.onSave,
+  );
 
   return (
     <>
@@ -123,14 +130,15 @@ export function TopBar(props: {
           className="ghost"
           disabled={!props.dirty || props.просмотр}
           title={props.просмотр ? п.идётПросмотр : ''}
-          onClick={props.onSave}
+          onClick={() => void props.onSave()}
         >
           {props.dirty ? п.сохранить : п.сохранено}
         </button>
 
-        {/* Подготовка судит о том, что записано в файл, поэтому с несохранёнными правками кнопка
-            заперта: иначе отчёт говорил бы не о том, что человек видит на экране. В просмотре
-            старой версии она заперта по той же причине, что и «Сохранить». */}
+        {/* «Доработать» — необязательное действие: человек может открыть его заранее и посмотреть,
+            что стоит поправить. Разрешением на публикацию оно не является, и публикация его не
+            требует. Судит оно о том, что записано в файл, поэтому с несохранёнными правками
+            заперто — иначе говорило бы не о том, что человек видит на экране. */}
         <button
           className="ghost"
           disabled={подготовка.идёт || props.dirty || props.просмотр || !props.article}
@@ -163,9 +171,26 @@ export function TopBar(props: {
           )
         )}
 
-        <button className="ghost" disabled title={п.скороОпубликовать}>
-          {п.опубликовать}
-        </button>
+        {/* Главное действие человека и единственное, которое ему нужно знать. Оно не зависит ни
+            от «Доработать», ни от какого-либо другого нажатия: всё, что нужно для публикации,
+            программа делает внутри него сама. Заперто оно только там, где писать вообще нельзя —
+            в просмотре старой версии.
+
+            Панель публикации живёт тут же, в одной опоре с кнопкой: она выпадает прямо под ней,
+            а не полосой во всю ширину окна. Опора — вокруг самой кнопки, а не вокруг всей шапки:
+            иначе панель отрывалась бы от кнопки, стоило появиться соседнему действию. */}
+        <div className="publish-anchor">
+          <button
+            className="ghost ghost-main"
+            disabled={публикация.шаг !== 'нет' || props.просмотр || !props.article}
+            title={props.просмотр ? п.идётПросмотр : ''}
+            onClick={() => void публикация.начать()}
+          >
+            {п.опубликовать}
+          </button>
+
+          <PublishPanel settings={props.settings} публикация={публикация} />
+        </div>
       </div>
     </header>
 
@@ -174,11 +199,7 @@ export function TopBar(props: {
       отчёт={подготовка.отчёт}
       ошибка={подготовка.ошибка}
       onЗакрыть={подготовка.закрыть}
-      onКВыпуску={() => void выпуск.начать()}
-      кВыпускуДоступен={выпуск.шаг === 'нет' && выпуск.состав === null}
     />
-
-    <ReleasePanel settings={props.settings} выпуск={выпуск} />
     </>
   );
 }

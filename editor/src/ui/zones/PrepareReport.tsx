@@ -1,4 +1,5 @@
-import type {PrepareFinding, PrepareReport as Отчёт, Settings} from '../types';
+import type {PrepareFinding, PrepareReport as Отчёт} from '../publishTypes';
+import type {Settings} from '../types';
 
 /**
  * Отчёт подготовки: что мешает выпуску и что стоит поправить.
@@ -15,9 +16,6 @@ export function PrepareReport(props: {
   отчёт: Отчёт | null;
   ошибка: string | null;
   onЗакрыть: () => void;
-  /** Переход к выпуску предлагается только там, где выпуску ничто не мешает. */
-  onКВыпуску: () => void;
-  кВыпускуДоступен: boolean;
 }) {
   const п = props.settings.подготовка;
 
@@ -41,10 +39,8 @@ export function PrepareReport(props: {
     <section className="prepare" aria-label={п.заголовок}>
       <div className="prepare-head">
         <strong>{прошла ? п.чисто : п.заголовок}</strong>
-        {/* Выпуск предлагается только после зелёной подготовки: пройти мимо неё нельзя. */}
-        {прошла && props.кВыпускуДоступен && (
-          <button className="ghost" onClick={props.onКВыпуску}>{props.settings.выпуск.перейти}</button>
-        )}
+        {/* Кнопки публикации здесь нет намеренно: «Доработать» — необязательный взгляд на статью,
+            а не разрешение публиковать. Публикация живёт своей кнопкой и своим маршрутом. */}
         <button className="ghost" onClick={props.onЗакрыть}>{п.закрыть}</button>
       </div>
 

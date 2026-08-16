@@ -7,10 +7,11 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {articlePlace} from '../core/frontmatterRules.mjs';
+import {articlePlace, isUnlisted} from '../core/frontmatterRules.mjs';
 import {путиДругихВерсий, файлСтатьи} from '../core/articles.mjs';
 import {ИМЯ_КАТЕГОРИИ, границаСостава, видВерсии} from '../core/articleKind.mjs';
 import {readField, splitArticle} from '../core/articleFile.mjs';
+import {этоЗаглушка} from '../core/newArticle.mjs';
 import {категорияРядом, statePath} from './library.mjs';
 
 /**
@@ -65,6 +66,44 @@ export function версииСтатьи(repo, rel, settings) {
         файлыПапки: рядом.filter((файл) => !файлСтатьи(файл) && файл !== состояние),
       };
     });
+}
+
+/**
+ * Локали, версия которых до сих пор заглушка перевода. Правило «что считать заглушкой» здесь не
+ * пишется — оно там же, где заглушка создаётся; здесь только чтение файлов с диска.
+ */
+export function заглушкиВерсий(repo, версии, settings) {
+  return (версии ?? [])
+    .filter((версия) => {
+      try {
+        const {body} = splitArticle(fs.readFileSync(path.join(repo, версия.путь), 'utf8'));
+        return этоЗаглушка(body, settings);
+      } catch {
+        // Прочитать не удалось — заглушкой не объявляем: догадка тут хуже молчания.
+        return false;
+      }
+    })
+    .map((версия) => версия.локаль);
+}
+
+/**
+ * Локали, версия которых на сайте скрыта (в меню её нет, живёт только по прямой ссылке).
+ *
+ * Признак читается тем же правилом, что и везде в программе, и он доказан шапкой файла — в отличие
+ * от заглушки, написанной человеком руками: такую от настоящего перевода отличить нечем, а
+ * догадываться о ней программа не станет. Зато скрытость человеку про язык говорит многое.
+ */
+export function скрытыеВерсии(repo, версии) {
+  return (версии ?? [])
+    .filter((версия) => {
+      try {
+        const {frontmatterRaw} = splitArticle(fs.readFileSync(path.join(repo, версия.путь), 'utf8'));
+        return isUnlisted(frontmatterRaw);
+      } catch {
+        return false;
+      }
+    })
+    .map((версия) => версия.локаль);
 }
 
 /**

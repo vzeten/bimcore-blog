@@ -197,6 +197,35 @@ export interface Settings {
   сборка: {пределМинут: number};
   /** Почему коммит статьи не сделан: код отказа — слова человеку. */
   отказыКоммита: Record<string, string>;
+  /** Почему статья не отправлена на сайт: код отказа — слова человеку. */
+  отказыОтправки: Record<string, string>;
+  /**
+   * Слова публикации статьи. `шаги`, `версии` и `причины` — карты по признаку и коду, а не
+   * поимённо: код без своей фразы показывается вместе с кодом, а не проглатывается.
+   */
+  публикация: {
+    заголовок: string;
+    вопрос: string;
+    готово: string;
+    опубликовано: string;
+    даПубликовать: string;
+    неПубликовать: string;
+    стоитПоправить: string;
+    картинкиНеМенялись: string;
+    картинкиИзменились: string;
+    подробности: string;
+    закрытьДо: string;
+    закрытьНельзя: string;
+    закрытьПосле: string;
+    отменитьНельзя: string;
+    номерЗаписи: string;
+    ответСборки: string;
+    скрыта: string;
+    постороннего: string;
+    шаги: Record<string, string>;
+    версии: Record<string, string>;
+    причины: Record<string, string>;
+  };
   /** Слова панели выпуска. `назначения` и `разрывы` — карты по признаку, а не поимённо. */
   выпуск: {
     перейти: string;
@@ -214,6 +243,18 @@ export interface Settings {
     передумать: string;
     фиксирую: string;
     зафиксировано: string;
+    отправить: string;
+    считаюОтправку: string;
+    спроситьОтправку: string;
+    даОтправить: string;
+    неОтправлять: string;
+    отправляю: string;
+    отправлено: string;
+    ужеНаСайте: string;
+    уедет: string;
+    уедутФайлы: string;
+    чужиеФайлы: string;
+    выводОтправки: string;
     выводСборки: string;
     спрятатьВывод: string;
     быстрыхПроверокМало: string;
@@ -247,49 +288,3 @@ export interface Settings {
 }
 
 export type PanelMode = 'статьи' | 'версии' | null;
-
-/** Одна находка подготовки, как её отдаёт ядро. Поля сверх кода и уровня не у всех находок. */
-export interface PrepareFinding {
-  код: string;
-  уровень: string;
-  этап: string;
-  путь?: string;
-  поле?: string;
-  локаль?: string;
-  значение?: string;
-  длина?: number;
-  предел?: number;
-}
-
-/** Один файл состава выпуска: что это и к какой языковой версии относится. */
-export interface ReleaseFile {
-  путь: string;
-  назначение: string;
-  локаль: string | null;
-}
-
-/** Состав выпуска: доказанные файлы, недоказанное и можно ли выпускать. */
-export interface ReleaseComposition {
-  path: string;
-  файлы: ReleaseFile[];
-  разрывы: {причина: string; путь?: string; локаль?: string | null}[];
-  можно: boolean;
-}
-
-/** Итог полной сборки сайта. Вывод сборщика хранится целиком: разбирать его программа не берётся. */
-export interface ReleaseBuild {
-  path: string;
-  зелёная: boolean;
-  оборвана: boolean;
-  времяМс: number;
-  причина: string;
-  вывод: string;
-}
-
-/** Ответ подготовки: находки, вердикт и честный перечень этапов, которые не выполнялись. */
-export interface PrepareReport {
-  path: string;
-  находки: PrepareFinding[];
-  прошла: boolean;
-  невыполненные: string[];
-}

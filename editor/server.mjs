@@ -20,6 +20,7 @@ import {saveRoute} from './src/adapters/saveRoute.mjs';
 import {prepareRoute} from './src/adapters/prepareRoute.mjs';
 import {releaseRoute} from './src/adapters/releaseRoute.mjs';
 import {publishRoute} from './src/adapters/publishRoute.mjs';
+import {pushRoute} from './src/adapters/pushRoute.mjs';
 import {detectPublishedRef} from './src/adapters/gitFile.mjs';
 import {фиксироватьВнешнюю} from './src/adapters/externalVersion.mjs';
 
@@ -130,13 +131,19 @@ async function api(req, res, url) {
     req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send, articles,
   })) return;
 
-  // Предварительный выпуск: состав файлов статьи и полная сборка сайта. Git не трогается ничем.
+  // Предварительный выпуск: состав файлов статьи и полная сборка сайта. Git только читается —
+  // ветка сайта нужна, чтобы сказать человеку, что в статье действительно изменится.
   if (await releaseRoute({
-    req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send,
+    req, res, url, repo: REPO, settings: readSettings(), git, publishedRef, тело, insideRepo, send,
   })) return;
 
-  // Коммит статьи — единственная ручка, меняющая git. Отправки в ней нет.
+  // Коммит статьи — единственная ручка, меняющая местный git. Отправки в ней нет.
   if (await publishRoute({
+    req, res, url, repo: REPO, settings: readSettings(), git, тело, insideRepo, send,
+  })) return;
+
+  // Отправка на сайт: сначала показ того, что уедет, и только отдельным заходом сама отправка.
+  if (await pushRoute({
     req, res, url, repo: REPO, settings: readSettings(), git, тело, insideRepo, send,
   })) return;
 

@@ -175,7 +175,7 @@ export function App() {
         colors={colors}
         onOpen={(path) => void open(path)}
         onColors={setColors}
-        onSave={() => void save()}
+        onSave={save}
         fields={fields}
         onDelete={() => void удаление.удалить()}
         удаление={удаление.идёт}
