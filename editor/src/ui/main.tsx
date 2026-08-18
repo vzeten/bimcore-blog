@@ -6,6 +6,7 @@ import './registry.css';
 import './properties.css';
 import './feedback.css';
 import './versions.css';
+import './imagePanel.css';
 
 /** Белый экран вместо программы недопустим: ошибку надо показать словами. */
 class Guard extends Component<{children: ReactNode}, {error: Error | null}> {

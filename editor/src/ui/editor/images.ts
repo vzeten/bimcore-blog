@@ -149,41 +149,52 @@ export async function pasteImage(
 }
 
 /**
- * Отправляет новый файл картинки на сервер. Бросает, если замена не прошла.
- * Сетевая часть отделена от выбора файла и перезагрузки — так проверяется поведение без DOM.
+ * Отправляет новый файл картинки на сервер и возвращает его ответ (в нём вес и предупреждение
+ * о тяжёлом файле). Бросает, если замена не прошла — вызывающему нечего показывать успехом.
+ * Сетевая часть отделена от выбора файла и панели — так поведение проверяется без DOM.
+ * Страница не перезагружается никогда: показ обновляет токен замены (`картинкаЗаменена`).
  */
-export async function uploadReplacement(article: string, src: string, file: File): Promise<void> {
-  await requestJson('/api/asset/replace', {
+export async function uploadReplacement(article: string, src: string, file: File): Promise<PasteResult> {
+  return requestJson<PasteResult>('/api/asset/replace', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({article, src, base64: await toBase64(file)}),
   });
 }
 
+/** Ответ смены формата: новый адрес картинки и новый отпечаток файла статьи. */
+export interface ReformatResult extends PasteResult {
+  reformatted?: boolean;
+  новыйSrc?: string;
+  отпечаток?: string;
+  /** Почему старый файл остался: на него ссылаются либо убрать не удалось. `null` — удалён. */
+  старыйОставлен?: 'ссылки' | 'сбой' | null;
+}
+
 /**
- * Заменяет файл картинки. Страница перезагружается ТОЛЬКО при успехе:
- * если замена не прошла, `uploadReplacement` бросает — до перезагрузки дело не доходит.
- * `onFail` показывает ошибку в окне (панель ошибки), а не через alert.
- *
- * TODO(В1-07): подключить к кнопке замены картинки в интерфейсе и покрыть весь пользовательский путь.
- * Пока к кнопке НЕ подключено — точка входа на будущее; тестом покрыта только сетевая часть
- * (`uploadReplacement`), не весь путь.
+ * Смена формата картинки: сервер кладёт новый файл с новым расширением, обновляет ссылку
+ * в файле статьи и убирает старый файл, если на него не осталось ссылок. Окну для этого нужны
+ * точный текст узла, номер его вхождения и отпечаток файла статьи — сервер обязан доказать,
+ * что правит ровно то место, которое видел человек.
  */
-export async function replaceImage(article: string, src: string, onFail: (message: string) => void): Promise<void> {
-  const picker = document.createElement('input');
-  picker.type = 'file';
-  picker.accept = 'image/*';
-
-  picker.onchange = async () => {
-    const file = picker.files?.[0];
-    if (!file) return;
-    try {
-      await uploadReplacement(article, src, file);
-      window.location.reload();
-    } catch (error) {
-      onFail(error instanceof Error ? error.message : label('ошибкаЗамены'));
-    }
-  };
-
-  picker.click();
+export async function uploadReformat(запрос: {
+  article: string;
+  src: string;
+  узел: string;
+  номер: number;
+  отпечаток: string;
+  file: File;
+}): Promise<ReformatResult> {
+  return requestJson<ReformatResult>('/api/asset/reformat', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      article: запрос.article,
+      src: запрос.src,
+      узел: запрос.узел,
+      номер: запрос.номер,
+      отпечаток: запрос.отпечаток,
+      base64: await toBase64(запрос.file),
+    }),
+  });
 }

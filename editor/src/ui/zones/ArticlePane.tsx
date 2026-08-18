@@ -1,9 +1,11 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {Transaction} from '@codemirror/state';
 import type {EditorView} from '@codemirror/view';
 import type {Deletion} from '../../core/colorize';
+import {ImagePanel} from '../editor/ImagePanel';
 import {SelectionToolbar, decideEdit} from '../editor/SelectionToolbar';
 import {useEditor, type Spot} from '../editor/useEditor';
+import type {КартинкаВОкне} from '../livePreview/inline';
 import {Properties} from './Properties';
 import type {Field} from '../headFields';
 import type {Article, Settings} from '../types';
@@ -18,6 +20,10 @@ export function ArticlePane(props: {
   onPaste: (file: File, view: EditorView) => void;
   /** Загрузка файла для поля-картинки в свойствах. `null` в ответе — не вышло, причина показана. */
   загрузить: (file: File) => Promise<string | null>;
+  /** Текст окна совпадает с файлом — условие входа в смену формата картинки. */
+  сохранено: boolean;
+  /** Файл статьи изменён сервером при смене формата: наверх уходят новые тело и отпечаток. */
+  ссылкаОбновлена: (данные: {текст: string; отпечаток: string}) => void;
   /**
    * Идёт просмотр старой версии: рабочий редактор прячется, но остаётся живым.
    * Снять его с экрана насовсем нельзя — вместе с ним пропадут несохранённые правки
@@ -32,6 +38,10 @@ export function ArticlePane(props: {
 }) {
   const [spot, setSpot] = useState<Spot | null>(null);
   const [menu, setMenu] = useState(false);
+  const [картинка, setКартинка] = useState<КартинкаВОкне | null>(null);
+  // Пока панель меняет файл, правка текста её не закрывает: человек обязан получить итог
+  // операции, которая уже меняет диск. Ref, а не состояние: признак читает обработчик редактора.
+  const файловаяОперация = useRef(false);
 
   // Пока человек не выбрал, с чего продолжать, документ показывается, но не правится:
   // любой из двух выборов подставляет свой вариант целиком, и набранное пропало бы.
@@ -43,8 +53,23 @@ export function ArticlePane(props: {
     onDeletions: props.onDeletions,
     onSelection: setSpot,
     onPaste: props.onPaste,
+    onImage: setКартинка,
+    // Панель свойств картинки держит позицию узла на момент открытия: любая правка текста
+    // (своя, чужая, подстановка версии) сдвигает позиции, и панель закрывается, а не правит
+    // наугад. Кроме времени файловой операции: диск уже меняется, и итог обязан дойти
+    // до человека (находка ворот 2026-08-17); применять устаревшую позицию панель не станет —
+    // она сверяет текст сама.
+    onDocChanged: () => {
+      if (!файловаяОперация.current) setКартинка(null);
+    },
     толькоЧтение: выборНеСделан,
   });
+
+  // Просмотр старой версии прячет рабочий редактор — панель картинки уходит вместе с ним:
+  // её правки относятся к рабочему тексту, а на экране в это время другой.
+  useEffect(() => {
+    if (props.скрыт === true) setКартинка(null);
+  }, [props.скрыт]);
 
   // Возврат кладёт текст ТРАНЗАКЦИЕЙ в живой редактор, а не пересозданием зоны: пересоздание
   // стёрло бы историю отмены, а вместе с ней и обещание обратимости.
@@ -120,6 +145,25 @@ export function ArticlePane(props: {
         view={view.current}
         articlePath={props.article.path}
       />
+
+      {картинка !== null && !выборНеСделан && view.current !== null && (
+        <ImagePanel
+          /* Ключ перемонтирует панель при нажатии другой картинки: без него поле alt-текста
+             и итог остались бы от прежней, и «Готово» записало бы чужой alt. */
+          key={`${картинка.from}:${картинка.src}`}
+          settings={props.settings}
+          картинка={картинка}
+          view={view.current}
+          articlePath={props.article.path}
+          сохранено={props.сохранено}
+          отпечаток={props.article.отпечаток}
+          ссылкаОбновлена={props.ссылкаОбновлена}
+          onЗанято={(идёт) => {
+            файловаяОперация.current = идёт;
+          }}
+          onClose={() => setКартинка(null)}
+        />
+      )}
     </div>
   );
 

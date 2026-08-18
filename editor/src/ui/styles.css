@@ -237,10 +237,13 @@ button { font: inherit; cursor: pointer; }
 .md-table-wrap th { background: var(--bg-soft); font-weight: 600; }
 .md-table-raw { font-family: ui-monospace, Consolas, monospace; font-size: 0.82em; line-height: 1.5; }
 
-.md-image { display: block; margin: 14px 0; }
-.md-image img { display: block; max-width: 100%; border-radius: 8px; border: 1px solid var(--line); }
-.md-caption { display: block; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 12px; color: var(--ink-quiet); margin-top: 5px; }
-.md-caption-missing { color: var(--layer-deleted); }
+/* Отступы как у картинки на сайте. У строки, в которой нет ничего кроме картинки, обнуляются
+   и высота строки, и её кегль: пустой строчный бокс вокруг блока держится на них обоих, и без
+   этого над картинкой и под ней остаются две пустые полосы ростом со строку текста. Текст в
+   такой строке не живёт по построению — правило включается только для одинокой картинки. */
+.paper .cm-line.md-image-line { line-height: 0; font-size: 0; padding: 0 2px; }
+.md-image { display: block; margin: 10px 0; }
+.md-image img { display: block; max-width: 100%; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; }
 
 .layer-site { color: var(--layer-site); }
 .layer-prevHuman { color: var(--layer-prevHuman); }

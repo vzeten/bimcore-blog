@@ -100,3 +100,44 @@ export function tableRow(text: string, at: Selection): Edit | null {
 
   return {from: bounds.to, to: bounds.to, insert, caret: 3};
 }
+
+/**
+ * Разбор картинки в границах узла, который нашло синтаксическое дерево редактора.
+ * Своего обхода текста здесь нет — правило работает только с текстом готового узла,
+ * иначе появился бы второй разборщик markdown рядом со штатным.
+ */
+export const РАЗБОР_КАРТИНКИ = /^!\[((?:\\.|[^\]\\])*)\]\(([^)\s]+)/;
+
+/**
+ * Правка подписи (alt) картинки: меняется ровно диапазон подписи, остальной узел не трогается.
+ * `null` — правки нет: узел перестал быть этой картинкой (текст сдвинулся, `src` другой)
+ * либо подпись не изменилась. Неизменённая подпись обязана давать `null`, а не пустую правку:
+ * текст статьи не переписывается без действия человека.
+ */
+export function imageAlt(nodeText: string, nodeFrom: number, alt: string, ожидаемыйSrc: string): Edit | null {
+  const found = РАЗБОР_КАРТИНКИ.exec(nodeText);
+  if (!found || found[2] !== ожидаемыйSrc) return null;
+
+  const insert = alt.replace(/\r?\n/g, ' ').replace(/[\\\]]/g, '\\$&');
+  if (insert === found[1]) return null;
+
+  return {from: nodeFrom + 2, to: nodeFrom + 2 + found[1].length, insert};
+}
+
+/** Подпись картинки для показа человеку: без знаков экранирования, которыми она записана в файле. */
+export function shownAlt(raw: string): string {
+  return raw.replace(/\\([\\\]])/g, '$1');
+}
+
+/**
+ * Правка адреса картинки в узле после смены формата файла: меняется ровно диапазон адреса,
+ * подпись и остальной узел не трогаются. `null` — узел не та картинка, которую меняли
+ * (текст сдвинулся или адрес уже другой): править наугад нельзя.
+ */
+export function imageSrc(nodeText: string, nodeFrom: number, старыйSrc: string, новыйSrc: string): Edit | null {
+  const found = РАЗБОР_КАРТИНКИ.exec(nodeText);
+  if (!found || found[2] !== старыйSrc) return null;
+
+  const start = nodeFrom + 2 + found[1].length + 2;
+  return {from: start, to: start + found[2].length, insert: новыйSrc};
+}

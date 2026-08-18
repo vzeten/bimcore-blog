@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {badFields} from './httpBody.mjs';
+import {записатьПоверх, папкаСтатьи, цельВнутриСтатьи} from './assetGuards.mjs';
 import {типКартинки} from '../core/imageType.mjs';
 
 /** Какие картинки умеет отдавать программа. Типы чужого формата, а не наша настройка. */
@@ -34,13 +35,48 @@ export async function assetRoute({req, res, url, repo, settings, тело, insid
       return true;
     }
 
-    const target = path.join(repo, path.dirname(payload.article), payload.src);
-    if (!insideRepo(target) || !fs.existsSync(target)) {
+    // Статья обязана существовать и быть файлом — то же правило, что у вставки (`принятьФайл`).
+    const dir = папкаСтатьи(repo, payload.article, insideRepo);
+    if (dir === null) {
+      send(res, 404, {error: settings['ошибкиСервера']['нетСтатьи']});
+      return true;
+    }
+
+    // Путь картинки обязан остаться внутри папки статьи: `..`, абсолютный, `/static/...` или
+    // ссылка-папка в середине пути заменили бы файл чужой статьи или общий файл сайта.
+    const место = цельВнутриСтатьи(dir, payload.src);
+    if (место === null) {
+      send(res, 400, {error: settings['ошибкиСервера']['картинкаВнеСтатьи']});
+      return true;
+    }
+    if (!место.есть) {
       send(res, 404, {error: settings['ошибкиСервера']['нетКартинки']});
       return true;
     }
-    fs.writeFileSync(target, Buffer.from(payload.base64, 'base64'));
-    send(res, 200, {replaced: true});
+    const target = место.target;
+
+    // GIF под замену не подпадает (решение владельца 2026-08-16): он обязан сохранять
+    // анимацию, и его замена — отдельная работа, а не молчаливое «получится само».
+    const цель = path.extname(target).slice(1).toLowerCase().replace('jpeg', 'jpg');
+    if (цель !== 'jpg' && цель !== 'png') {
+      send(res, 400, {error: settings['ошибкиСервера']['заменаТолькоJpgPng']});
+      return true;
+    }
+
+    // Формат решают байты нового файла, а не его имя: смена формата под старым именем
+    // (JPEG в файле `.png`) — это уже не замена, а порча ссылки на будущее.
+    const bytes = Buffer.from(payload.base64, 'base64');
+    if (типКартинки(bytes) !== цель) {
+      send(res, 400, {error: settings['ошибкиСервера']['неТотФормат']});
+      return true;
+    }
+
+    записатьПоверх(repo, target, bytes);
+    send(res, 200, {
+      replaced: true,
+      тяжёлая: bytes.length > settings['картинки']['максимумКилобайт'] * 1024,
+      килобайт: Math.round(bytes.length / 1024),
+    });
     return true;
   }
 
@@ -96,7 +132,9 @@ export async function assetRoute({req, res, url, repo, settings, тело, insid
     }
 
     const ext = path.extname(base).slice(1).toLowerCase();
-    res.writeHead(200, {'Content-Type': ТИПЫ[ext] || 'application/octet-stream'});
+    // `no-cache`: после замены файла под тем же именем браузер обязан спросить сервер заново,
+    // иначе после перезапуска программы он показывал бы прежнюю картинку из кэша.
+    res.writeHead(200, {'Content-Type': ТИПЫ[ext] || 'application/octet-stream', 'Cache-Control': 'no-cache'});
     res.end(fs.readFileSync(base));
     return true;
   }

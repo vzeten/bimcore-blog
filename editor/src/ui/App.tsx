@@ -6,6 +6,8 @@ import {TopBar} from './zones/TopBar';
 import {VersionStrip} from './zones/VersionStrip';
 import {VersionView} from './zones/VersionView';
 import {ArticlePane} from './zones/ArticlePane';
+import {makeСсылкаОбновлена} from './imageFormatSync';
+import {useHistoryBack} from './useHistoryBack';
 import {CommentGutter} from './zones/CommentGutter';
 import {Bars} from './zones/Bars';
 import {useCreate} from './useCreate';
@@ -93,13 +95,8 @@ export function App() {
     setОшибка, setКонфликтСохранения, setСостояние: setСостояниеСохранения,
   });
 
-  // Свежий обработчик «назад» в ref — сам обработчик ставится один раз (см. useEffect ниже).
-  const переходыРеф = useRef<(event: PopStateEvent) => void>(() => undefined);
-  переходыРеф.current = (event: PopStateEvent) => {
-    const st = event.state as {вид?: string; path?: string} | null;
-    if (st?.вид === 'статья' && st.path) void open(st.path, false);
-    else void closeArticle();
-  };
+  // Кнопка «назад» браузера — отдельным правилом: реестр — начальный экран, выхода из программы нет.
+  useHistoryBack({open, closeArticle: () => void closeArticle()});
 
   const создание = useCreate({
     открыть: (path) => open(path),
@@ -135,15 +132,6 @@ export function App() {
       })
       .catch((error: unknown) => setОшибка(error instanceof Error ? error.message : label('ошибкаЗапроса')));
     void refresh();
-
-    // Реестр — начальный экран. Кнопка «назад» браузера должна возвращать сюда, а не выходить из программы.
-    history.replaceState({вид: 'реестр'}, '');
-    // Обработчик ставится один раз, поэтому зовёт свежие переходы через ref: иначе он навсегда
-    // запомнил бы самые первые, у которых открытой статьи ещё не было, — и при сбое записи
-    // черновика не смог бы вернуть шаг истории на статью.
-    const назад = (event: PopStateEvent) => переходыРеф.current(event);
-    window.addEventListener('popstate', назад);
-    return () => window.removeEventListener('popstate', назад);
   }, []);
 
   useEffect(() => {
@@ -272,6 +260,9 @@ export function App() {
               onPaste={(file, view) => void runSafe(() => pasteImage(file, article!.path, view,
                 () => !просмотрРеф.current && статьяСейчас.current === article!.path))}
               загрузить={загрузитьОбложку}
+              // Смена формата картинки требует, чтобы файл был ровно тем, что видит человек.
+              сохранено={!dirty && состояниеСохранения === 'сохранено' && !конфликтСохранения}
+              ссылкаОбновлена={makeСсылкаОбновлена({текстСейчас, setText, setArticle})}
             />
 
             {!реестр && !просмотрИдёт && <CommentGutter settings={settings} deletions={deletions} />}

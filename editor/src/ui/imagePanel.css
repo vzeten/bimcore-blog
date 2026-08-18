@@ -1,0 +1,31 @@
+/* Панель свойств картинки: встаёт у самой картинки, не двигая текст (ImagePanel.tsx). */
+
+.image-panel {
+  position: fixed; z-index: 40; width: 280px; padding: 10px 12px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+  display: flex; flex-direction: column; gap: 8px;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13px;
+}
+
+.image-panel-head { display: flex; align-items: baseline; gap: 8px; }
+.image-panel-file { flex: 1; color: var(--ink-quiet); font-size: 12px; overflow-wrap: anywhere; }
+.image-panel-close { border: none; background: none; cursor: pointer; color: var(--ink-quiet); font-size: 14px; padding: 0 2px; }
+.image-panel-close:disabled { color: var(--line); cursor: default; }
+
+.image-panel-alt { display: flex; flex-direction: column; gap: 4px; }
+.image-panel-alt span { color: var(--ink-quiet); font-size: 12px; }
+.image-panel-alt input { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+
+/* Кнопки — те же, что у остальных кнопок редактора (образец — .insert-open). */
+.image-panel-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.image-panel-actions button {
+  border: 1px solid var(--line); background: #fff; border-radius: 7px;
+  padding: 4px 11px; font-size: 13px;
+}
+.image-panel-actions button:hover:not(:disabled) { background: var(--bg-soft); }
+.image-panel-actions button:disabled { color: var(--ink-quiet); cursor: default; }
+
+.image-panel-ask { color: var(--ink); }
+.image-panel-error { color: var(--layer-deleted); }
+.image-panel-done { color: var(--ink-quiet); }

@@ -1,7 +1,7 @@
 // Имя каждого теста повторяет формулировку правила.
 // Проверяется результат применения правки к тексту, а не устройство функции.
 import {describe, expect, it} from 'vitest';
-import {heading, list, wrap, link, table, tableRow, type Edit, type Selection} from '../src/core/commands';
+import {heading, list, wrap, link, table, tableRow, imageAlt, imageSrc, shownAlt, type Edit, type Selection} from '../src/core/commands';
 
 /** Применяет правку к тексту так же, как это делает редактор. */
 function apply(text: string, edit: Edit): string {
@@ -95,5 +95,71 @@ describe('команды правки текста', () => {
   it('строка таблицы вне таблицы не добавляется и текст не портится', () => {
     const text = 'обычный абзац, не таблица';
     expect(tableRow(text, {from: 0, to: text.length})).toBeNull();
+  });
+});
+
+describe('правка подписи картинки', () => {
+  const УЗЕЛ = '![старая подпись](./img-01.jpg)';
+
+  it('меняется ровно диапазон подписи, ссылка и разметка не трогаются', () => {
+    const edit = imageAlt(УЗЕЛ, 0, 'новая', './img-01.jpg')!;
+    expect(apply(УЗЕЛ, edit)).toBe('![новая](./img-01.jpg)');
+  });
+
+  it('позиция узла в документе сдвигает правку целиком', () => {
+    const doc = `перед\n${УЗЕЛ}`;
+    const edit = imageAlt(УЗЕЛ, 6, 'новая', './img-01.jpg')!;
+    expect(apply(doc, edit)).toBe('перед\n![новая](./img-01.jpg)');
+  });
+
+  it('неизменённая подпись не рождает правки вовсе', () => {
+    expect(imageAlt(УЗЕЛ, 0, 'старая подпись', './img-01.jpg')).toBeNull();
+  });
+
+  it('пустая подпись допустима: заполнять её не обязательно', () => {
+    const edit = imageAlt(УЗЕЛ, 0, '', './img-01.jpg')!;
+    expect(apply(УЗЕЛ, edit)).toBe('![](./img-01.jpg)');
+  });
+
+  it('узел с другой ссылкой правку не получает: текст под панелью успел смениться', () => {
+    expect(imageAlt(УЗЕЛ, 0, 'новая', './img-02.jpg')).toBeNull();
+  });
+
+  it('не-картинка правку не получает', () => {
+    expect(imageAlt('обычный текст', 0, 'новая', './img-01.jpg')).toBeNull();
+  });
+
+  it('закрывающая скобка в подписи экранируется, а не ломает разметку', () => {
+    const edit = imageAlt(УЗЕЛ, 0, 'скобка ] внутри', './img-01.jpg')!;
+    expect(apply(УЗЕЛ, edit)).toBe('![скобка \\] внутри](./img-01.jpg)');
+  });
+
+  it('экранированная подпись читается обратно без знаков экранирования', () => {
+    expect(shownAlt('скобка \\] внутри')).toBe('скобка ] внутри');
+    expect(shownAlt('обычная подпись')).toBe('обычная подпись');
+  });
+
+  it('правка экранированной подписи на ту же самую не рождает правки', () => {
+    const узел = '![скобка \\] внутри](./img-01.jpg)';
+    expect(imageAlt(узел, 0, 'скобка ] внутри', './img-01.jpg')).toBeNull();
+  });
+});
+
+describe('правка адреса картинки после смены формата', () => {
+  const УЗЕЛ = '![Подпись](./img-01.jpg)';
+
+  it('меняется ровно адрес, подпись не трогается', () => {
+    const edit = imageSrc(УЗЕЛ, 0, './img-01.jpg', './img-01.png')!;
+    expect(apply(УЗЕЛ, edit)).toBe('![Подпись](./img-01.png)');
+  });
+
+  it('позиция узла в документе сдвигает правку целиком', () => {
+    const doc = `перед\n${УЗЕЛ}`;
+    const edit = imageSrc(УЗЕЛ, 6, './img-01.jpg', './img-01.png')!;
+    expect(apply(doc, edit)).toBe('перед\n![Подпись](./img-01.png)');
+  });
+
+  it('узел с другим адресом правку не получает: текст под панелью успел смениться', () => {
+    expect(imageSrc(УЗЕЛ, 0, './img-02.jpg', './img-02.png')).toBeNull();
   });
 });

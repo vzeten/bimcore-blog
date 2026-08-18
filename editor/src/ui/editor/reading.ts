@@ -5,10 +5,15 @@ import {EditorState, type Extension} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
 import {markdown} from '@codemirror/lang-markdown';
 import {livePreview} from '../livePreview';
+import type {КартинкаВОкне} from '../livePreview/inline';
 
-/** Общий показ: разметка, перенос строк, живой вид блоков. Путь нужен живому показу картинок. */
-export function чтениеСтатьи(path: () => string): Extension[] {
-  return [markdown(), EditorView.lineWrapping, livePreview(path)];
+/**
+ * Общий показ: разметка, перенос строк, живой вид блоков. Путь нужен живому показу картинок.
+ * `onImage` — нажатие по картинке; просмотр версии его не передаёт, и там нажатие молчит:
+ * панель свойств правит текст, а в просмотре разрешено только чтение.
+ */
+export function чтениеСтатьи(path: () => string, onImage?: (картинка: КартинкаВОкне) => void): Extension[] {
+  return [markdown(), EditorView.lineWrapping, livePreview(path, onImage)];
 }
 
 /**

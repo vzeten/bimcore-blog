@@ -94,8 +94,9 @@ describe('замена картинки', () => {
     await expect(uploadReplacement('docs/a/index.mdx', './img-01.png', fakeFile)).rejects.toThrow('нет такой картинки');
   });
 
-  it('успешная замена проходит без ошибки', async () => {
-    stubFetch({ok: true, json: async () => ({replaced: true})});
-    await expect(uploadReplacement('docs/a/index.mdx', './img-01.png', fakeFile)).resolves.toBeUndefined();
+  it('успешная замена возвращает ответ сервера — в нём вес для предупреждения', async () => {
+    stubFetch({ok: true, json: async () => ({replaced: true, тяжёлая: false, килобайт: 12})});
+    await expect(uploadReplacement('docs/a/index.mdx', './img-01.png', fakeFile))
+      .resolves.toEqual({replaced: true, тяжёлая: false, килобайт: 12});
   });
 });

@@ -12,6 +12,7 @@ import {editTimes, listArticles, опубликованные} from './src/adapt
 import {errorResponse, readBody} from './src/adapters/httpBody.mjs';
 import {draftRoute} from './src/adapters/draftRoute.mjs';
 import {assetRoute} from './src/adapters/assets.mjs';
+import {assetReformatRoute} from './src/adapters/assetReformat.mjs';
 import {versionsRoute} from './src/adapters/versionsRoute.mjs';
 import {deleteRoute} from './src/adapters/deleteRoute.mjs';
 import {articleRoute} from './src/adapters/articleRoute.mjs';
@@ -155,6 +156,9 @@ async function api(req, res, url) {
 
   // Картинки статьи — отдельным модулем: сервер иначе выходит за лимит размера файла.
   if (await assetRoute({req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send})) return;
+
+  // Смена формата картинки: новый файл и обновлённая ссылка в статье одной операцией.
+  if (await assetReformatRoute({req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send})) return;
 
   return send(res, 404, {error: readSettings()['ошибкиСервера']['неизвестныйЗапрос']});
 }

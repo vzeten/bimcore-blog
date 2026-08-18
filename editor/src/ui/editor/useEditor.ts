@@ -5,6 +5,7 @@ import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
 import {запретПравки, чтениеСтатьи} from './reading';
 import {layerColors, слоиОкна} from '../layerColors';
 import type {Deletion} from '../../core/colorize';
+import {правкаПанелиКартинки, type КартинкаВОкне} from '../livePreview/inline';
 import type {Article} from '../types';
 
 export interface Spot {
@@ -21,6 +22,13 @@ export function useEditor(options: {
   onDeletions: (deletions: Deletion[]) => void;
   onSelection: (spot: Spot | null) => void;
   onPaste: (file: File, view: EditorView) => void;
+  /** Нажатие по картинке в тексте: открыть панель её свойств. */
+  onImage?: (картинка: КартинкаВОкне) => void;
+  /**
+   * Любое изменение документа, включая подстановку версии: панель свойств картинки держит
+   * позицию узла и после чужой правки обязана закрыться, а не править сдвинувшийся текст.
+   */
+  onDocChanged?: () => void;
   /**
    * Правка запрещена, пока человек не выбрал, с чего продолжать (файл или автосохранение).
    * Иначе набранное в этот момент пропадает при любом из двух выборов: оба подставляют
@@ -50,7 +58,10 @@ export function useEditor(options: {
           drawSelection(),
           highlightActiveLine(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
-          ...чтениеСтатьи(() => свежие.current.article.path),
+          ...чтениеСтатьи(
+            () => свежие.current.article.path,
+            (картинка) => свежие.current.onImage?.(картинка),
+          ),
           ...(options.толькоЧтение === true ? запретПравки() : []),
           // Цепочка слоёв читается свежей на каждый пересчёт, а не запоминается при создании
           // редактора: иначе после сохранения цвет остался бы прежним до повторного открытия
@@ -77,6 +88,10 @@ export function useEditor(options: {
             // пары. Курсор и выделение при этом пересчитываются как обычно.
             const своя = update.transactions.every((tr) => tr.annotation(Transaction.remote) !== true);
             if (update.docChanged && своя) свежие.current.onText(update.state.doc.toString());
+            // Правка самой панели картинки закрытия не требует: панель обязана успеть
+            // показать итог и закрывает себя сама.
+            const отПанели = update.transactions.some((tr) => tr.annotation(правкаПанелиКартинки) === true);
+            if (update.docChanged && !отПанели) свежие.current.onDocChanged?.();
             if (!update.selectionSet && !update.docChanged) return;
             свежие.current.onSelection(spotOf(update.view));
           }),
