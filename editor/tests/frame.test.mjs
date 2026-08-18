@@ -193,6 +193,14 @@ describe('каркас окна', () => {
     expect(своиПисатели.every((файл) => код.some((item) => item.file === файл && item.текст.includes('export function setUnlisted')))).toBe(true);
   });
 
+  it('весть панели о новом адресе картинки сверяется с живым номером выбора, а не с прежним', () => {
+    // Предохранитель от возврата дефекта: номер из отрисовки прежней панели совпал бы сам с собой,
+    // и поздний ответ старой картинки достался бы новой выбранной (находка ворот 2026-08-18).
+    const зона = fs.readFileSync(path.join(EDITOR, 'src', 'ui', 'zones', 'ArticlePane.tsx'), 'utf8');
+
+    expect(зона).toContain('перенестиВыбор(было, выборРеф.current');
+  });
+
   it('статусов ровно три и первый — черновик', () => {
     const settings = JSON.parse(fs.readFileSync(path.join(EDITOR, 'settings.json'), 'utf8'));
     expect(settings['статусы']).toHaveLength(3);

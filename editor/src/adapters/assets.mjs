@@ -7,7 +7,7 @@ import path from 'node:path';
 
 import {badFields} from './httpBody.mjs';
 import {записатьПоверх, папкаСтатьи, цельВнутриСтатьи} from './assetGuards.mjs';
-import {типКартинки} from '../core/imageType.mjs';
+import {обложкойМожно, теломМожно, типКартинки} from '../core/imageType.mjs';
 
 /** Какие картинки умеет отдавать программа. Типы чужого формата, а не наша настройка. */
 const ТИПЫ = {
@@ -55,11 +55,12 @@ export async function assetRoute({req, res, url, repo, settings, тело, insid
     }
     const target = место.target;
 
-    // GIF под замену не подпадает (решение владельца 2026-08-16): он обязан сохранять
-    // анимацию, и его замена — отдельная работа, а не молчаливое «получится само».
+    // Заменять можно любую картинку тела статьи — JPG, PNG и GIF (решение владельца 2026-08-18).
+    // Прежнее «GIF только на GIF» снято им же: файл не перекодируется, и анимация нового GIF
+    // остаётся его собственной.
     const цель = path.extname(target).slice(1).toLowerCase().replace('jpeg', 'jpg');
-    if (цель !== 'jpg' && цель !== 'png') {
-      send(res, 400, {error: settings['ошибкиСервера']['заменаТолькоJpgPng']});
+    if (!теломМожно(цель)) {
+      send(res, 400, {error: settings['ошибкиСервера']['заменаТолькоКартинок']});
       return true;
     }
 
@@ -80,25 +81,6 @@ export async function assetRoute({req, res, url, repo, settings, тело, insid
     return true;
   }
 
-  // Вставка картинки из буфера. Имя даёт программа: правило проекта — img-NN, только латиница.
-  if (url.pathname === '/api/asset/paste' && req.method === 'POST') {
-    const принято = await принятьФайл({req, res, repo, settings, тело, insideRepo, send});
-    if (принято === null) return true;
-
-    const {dir, bytes} = принято;
-    const ext = (принято.payload.ext || 'png').toLowerCase().replace(/[^a-z0-9]/g, '');
-
-    let next = 1;
-    for (const name of fs.readdirSync(dir)) {
-      const found = /^img-(\d+)\./.exec(name);
-      if (found) next = Math.max(next, Number(found[1]) + 1);
-    }
-
-    const номер = String(next).padStart(2, '0');
-    положить(dir, `${settings['картинки']['шаблонИмени'].replace('{номер}', номер)}.${ext}`, bytes, settings, send, res);
-    return true;
-  }
-
   // Обложка статьи. Отдельная ручка, а не признак у вставки: забытый признак молча дал бы
   // обложке имя картинки тела (`img-NN`) и пропустил бы проверку типа. Имя постоянное —
   // `cover.png` или `cover.jpg`, поэтому повторная загрузка заменяет файл того же типа,
@@ -109,8 +91,10 @@ export async function assetRoute({req, res, url, repo, settings, тело, insid
 
     // Тип решает содержимое файла: имя переименовывается одним движением, а тип от браузера
     // взят из того же имени. Чужой формат в обложке роняет сборку сайта уже после публикации.
+    // Обложкой могут быть только PNG и JPG: программа знает и GIF, но он законен лишь в теле
+    // статьи, и одного списка типов в окне выбора мало — окно ручку не сторожит.
     const ext = типКартинки(принято.bytes);
-    if (ext === null) {
+    if (ext === null || !обложкойМожно(ext)) {
       send(res, 400, {error: settings['ошибкиСервера']['неверныйТипОбложки']});
       return true;
     }
@@ -159,18 +143,12 @@ async function принятьФайл({req, res, repo, settings, тело, insid
     return null;
   }
 
-  // Проверяется сам файл статьи, а не только папка над ним. Иначе `docs/выдумка.mdx` положил бы
-  // картинку прямо в корень раздела: папка-то есть. Картинка живёт рядом со своей статьёй (SPEC 1.3),
-  // а значит статья обязана существовать.
-  const файл = path.join(repo, payload.article);
-  if (!insideRepo(файл) || !fs.existsSync(файл) || !fs.statSync(файл).isFile()) {
+  // Папка берётся тем же заслоном, что у замены и у вставки: проверяется сам файл статьи (иначе
+  // `docs/выдумка.mdx` положил бы обложку прямо в корень раздела — папка-то есть) и настоящий
+  // путь папки, потому что ссылка-папка в середине увела бы запись за пределы репозитория.
+  const dir = папкаСтатьи(repo, payload.article, insideRepo);
+  if (dir === null) {
     send(res, 404, {error: settings['ошибкиСервера']['нетСтатьи']});
-    return null;
-  }
-
-  const dir = path.dirname(файл);
-  if (!fs.existsSync(dir)) {
-    send(res, 404, {error: settings['ошибкиСервера']['нетПапкиСтатьи']});
     return null;
   }
 

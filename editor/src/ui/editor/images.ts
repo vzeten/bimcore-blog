@@ -1,6 +1,9 @@
 import type {EditorView} from '@codemirror/view';
 import {label} from '../labels';
 import {requestJson} from '../api';
+import {dominantEol} from '../../core/articleFile.mjs';
+import {типКартинки} from '../../core/imageType.mjs';
+import {местоВставкиКартинки} from '../../core/imageInsert';
 
 interface PasteResult {
   src?: string;
@@ -16,29 +19,6 @@ export async function toBase64(file: File): Promise<string> {
   let binary = '';
   for (let i = 0; i < bytes.length; i += КУСОК) binary += String.fromCharCode(...bytes.subarray(i, i + КУСОК));
   return btoa(binary);
-}
-
-/**
- * Кладёт картинку тела статьи и возвращает путь, которым на неё надо ссылаться.
- * Имя файлу даёт сервер по шаблону из настроек, а не человек: имя выбранного файла может быть
- * кириллическим или с пробелами, а такое имя роняет сборку сайта (SPEC 2.2).
- *
- * Обложка идёт своей дорогой — `uploadCover`: у неё другое имя файла и другая проверка типа.
- */
-export async function uploadAsset(article: string, file: File): Promise<PasteResult> {
-  const answer = await requestJson<PasteResult>('/api/asset/paste', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      article,
-      base64: await toBase64(file),
-      ext: (file.type.split('/')[1] || 'png').replace('jpeg', 'jpg'),
-    }),
-  });
-
-  // Без адреса от сервера ссылаться не на что: `![](undefined)` и пустой `image` роняют сборку.
-  if (!answer.src) throw new Error(label('ошибкаКартинки'));
-  return answer;
 }
 
 /**
@@ -59,6 +39,34 @@ export async function uploadCover(article: string, file: File): Promise<PasteRes
   // Без адреса от сервера в шапку писать нечего: пустой `image` роняет сборку сайта.
   if (!answer.src) throw new Error(label('ошибкаКартинки'));
   return answer;
+}
+
+/**
+ * Открыть окно выбора файла и отдать выбранное. Одно место на весь редактор: вставка новой
+ * картинки и замена существующей предлагают один и тот же список форматов и одинаково молчат,
+ * когда человек закрыл окно, ничего не выбрав.
+ */
+export function выбратьФайл(типы: string, взять: (file: File) => void): void {
+  const поле = document.createElement('input');
+  поле.type = 'file';
+  поле.accept = типы;
+
+  поле.onchange = () => {
+    const файл = поле.files?.[0];
+    if (файл) взять(файл);
+  };
+
+  поле.click();
+}
+
+/**
+ * Какого рода выбранный файл — по его содержимому, тем же правилом, что и на сервере.
+ * `null` — это не картинка статьи. Тип от браузера для этого не годится: он взят из имени файла,
+ * а имя лжёт (JPEG в файле `.png`), и по нему окно выбрало бы не ту дорогу замены и показало бы
+ * человеку неверный формат в вопросе о смене.
+ */
+export async function породаКартинки(file: File): Promise<string | null> {
+  return типКартинки(new Uint8Array(await file.arrayBuffer()));
 }
 
 /** Тяжёлый файл — не ошибка, а предупреждение: картинка уже лежит на месте, решает человек. */
@@ -122,30 +130,82 @@ export function makeCoverUpload(deps: {
   };
 }
 
+/** Куда легла новая картинка: адрес файла и границы её узла в тексте — для панели alt-текста. */
+export interface ВставленнаяКартинка {
+  src: string;
+  узелОт: number;
+  узелДо: number;
+}
+
 /**
- * Вставка картинки из буфера. `актуально` — можно ли ещё менять рабочий текст: пока запрос шёл,
- * человек мог уйти в просмотр старой версии, а там правка рабочего текста запрещена — она
- * заводит автосохранение и дописывает черновик прямо во время чтения версии.
- * Файл картинки при этом уже загружен и остаётся на месте: терять его незачем.
+ * Вставка новой картинки в статью. Два шага сервера подряд: сначала файл едет в служебный
+ * карантин, потом ложится рядом со статьёй под свободным именем — и только после этого окно
+ * дописывает ссылку. Пока файл едет, человек мог уйти в другую статью или в просмотр старой
+ * версии; тогда ссылку писать некуда, и уже уложенная картинка забирается обратно, чтобы
+ * не остаться в папке статьи бесхозной.
+ *
+ * `null` — вставки не было, и это не ошибка: окно сменилось, картинка никуда не легла.
+ * Место вставки считается ПОСЛЕ ответа сервера, по живому тексту и живому курсору: за время
+ * запроса человек мог печатать, и запомненная заранее позиция указывала бы не туда.
  */
-export async function pasteImage(
+export async function вставитьКартинку(
   file: File,
   article: string,
   view: EditorView,
   актуально: () => boolean = () => true,
-): Promise<void> {
-  const answer = await uploadAsset(article, file);
+): Promise<ВставленнаяКартинка | null> {
+  const готово = await requestJson<{жетон?: string}>('/api/asset/prepare', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({article, base64: await toBase64(file)}),
+  });
+  if (!готово.жетон) throw new Error(label('ошибкаКартинки'));
 
-  // Человек уже не в рабочем тексте — дописывать в него нельзя, даже свою же картинку.
-  if (!актуально()) return;
+  // Окно сменилось, пока файл ехал: он остался только в карантине и уборка унесёт его сама.
+  if (!актуально() || !view.dom.isConnected) return null;
 
-  // Курсор уводим на следующую строку: пока он на строке картинки, видна разметка, а не картинка.
-  const at = view.state.selection.main;
-  const text = `![](${answer.src})\n`;
-  view.dispatch({changes: {from: at.from, to: at.to, insert: text}, selection: {anchor: at.from + text.length}});
+  const уложено = await requestJson<PasteResult>('/api/asset/place', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({article, жетон: готово.жетон}),
+  });
+  // Без адреса от сервера ссылаться не на что: `![](undefined)` роняет сборку сайта.
+  if (!уложено.src) throw new Error(label('ошибкаКартинки'));
+
+  if (!актуально() || !view.dom.isConnected) {
+    await забратьОбратно(article, уложено.src);
+    return null;
+  }
+
+  const текст = view.state.doc.toString();
+  const место = местоВставкиКартинки(текст, view.state.selection.main.to, уложено.src, dominantEol(текст));
+  // Правка только дописывает (`to` равно `from`): выделенный человеком текст остаётся на месте.
+  view.dispatch({
+    changes: {from: место.from, to: место.from, insert: место.insert},
+    selection: {anchor: место.курсор},
+    scrollIntoView: true,
+  });
   view.focus();
+  предупредитьОРазмере(уложено);
 
-  предупредитьОРазмере(answer);
+  return {src: уложено.src, узелОт: место.узелОт, узелДо: место.узелДо};
+}
+
+/**
+ * Забрать уже уложенную картинку обратно в карантин. Неудача самой уборки человеку не
+ * показывается: разговор о картинке, которой он на экране не видел (он уже в другой статье),
+ * отправил бы его искать несуществующую беду. В журнал окна она при этом попадает.
+ */
+async function забратьОбратно(article: string, src: string): Promise<void> {
+  try {
+    await requestJson('/api/asset/withdraw', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({article, src}),
+    });
+  } catch (ошибка) {
+    console.error('картинку не удалось забрать обратно', ошибка);
+  }
 }
 
 /**
@@ -197,4 +257,38 @@ export async function uploadReformat(запрос: {
       base64: await toBase64(запрос.file),
     }),
   });
+}
+
+/**
+ * Вставка картинки для окна: берёт открытую статью из ref и молчит, когда окно сменилось.
+ * Живёт здесь, а не в App, по той же причине, что и загрузка обложки: правило «окно сменилось —
+ * ничего не дописываем» проверяется тестом, а App держится в пределах размера файла (SPEC 4.9).
+ *
+ * Сменой окна считается другая статья, повторное открытие той же самой и просмотр старой версии:
+ * в первых двух случаях редактор уже другой, в третьем правка рабочего текста завела бы
+ * автосохранение прямо во время чтения версии.
+ */
+export function makeImageInsert(deps: {
+  runSafe: (action: () => Promise<void>, contextKey?: string) => Promise<boolean>;
+  статья: Признак<string | null>;
+  заход: Признак<number>;
+  просмотр: Признак<boolean>;
+}): (file: File, view: EditorView) => Promise<ВставленнаяКартинка | null> {
+  return async (file, view) => {
+    const куда = deps.статья.current;
+    // Статьи на экране нет — класть файл некуда: пути к папке не существует.
+    if (!куда) return null;
+
+    const заход = deps.заход.current;
+    const тоЖеОкно = (): boolean => !deps.просмотр.current
+      && deps.статья.current === куда && deps.заход.current === заход;
+
+    let итог: ВставленнаяКартинка | null = null;
+    await deps.runSafe(async () => {
+      итог = await вставитьКартинку(file, куда, view, тоЖеОкно);
+    }, 'ошибкаКартинки');
+
+    // Тип берётся явно: значение присвоено внутри замыкания, и вывод типов этого не видит.
+    return итог as ВставленнаяКартинка | null;
+  };
 }

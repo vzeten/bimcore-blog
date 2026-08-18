@@ -1,8 +1,11 @@
 import {useEffect, useRef, useState} from 'react';
 import {Transaction} from '@codemirror/state';
 import type {EditorView} from '@codemirror/view';
+import {типыТелаСтатьи} from '../../core/imageType.mjs';
+import {выбратьФайл, type ВставленнаяКартинка} from '../editor/images';
 import type {Deletion} from '../../core/colorize';
 import {ImagePanel} from '../editor/ImagePanel';
+import {перенестиВыбор} from '../editor/imagePanelPlace';
 import {SelectionToolbar, decideEdit} from '../editor/SelectionToolbar';
 import {useEditor, type Spot} from '../editor/useEditor';
 import type {КартинкаВОкне} from '../livePreview/inline';
@@ -17,7 +20,11 @@ export function ArticlePane(props: {
   onFields: (fields: Field[]) => void;
   onText: (text: string) => void;
   onDeletions: (deletions: Deletion[]) => void;
-  onPaste: (file: File, view: EditorView) => void;
+  /**
+   * Вставка новой картинки: файл едет на сервер, ссылка дописывается в текст. `null` в ответе —
+   * вставки не было (окно сменилось или запрос не прошёл), и панель свойств не открывается.
+   */
+  вставитьКартинку: (file: File, view: EditorView) => Promise<ВставленнаяКартинка | null>;
   /** Загрузка файла для поля-картинки в свойствах. `null` в ответе — не вышло, причина показана. */
   загрузить: (file: File) => Promise<string | null>;
   /** Текст окна совпадает с файлом — условие входа в смену формата картинки. */
@@ -39,6 +46,14 @@ export function ArticlePane(props: {
   const [spot, setSpot] = useState<Spot | null>(null);
   const [menu, setMenu] = useState(false);
   const [картинка, setКартинка] = useState<КартинкаВОкне | null>(null);
+  // Номер выбора картинки. Он и есть ключ панели: нажали другую картинку — панель создаётся
+  // заново и поля в ней чистые; сменился адрес той же выбранной — панель остаётся, иначе
+  // с ней пропали бы и набранный alt, и показанный итог операции.
+  const [выбор, setВыбор] = useState(0);
+  // Тот же номер живым значением: поздний ответ прежней панели приходит с её собственным
+  // номером, и сверять его надо с тем выбором, который на экране СЕЙЧАС, а не с тем, что был
+  // виден при её отрисовке. Иначе весть о старой картинке досталась бы новой.
+  const выборРеф = useRef(0);
   // Пока панель меняет файл, правка текста её не закрывает: человек обязан получить итог
   // операции, которая уже меняет диск. Ref, а не состояние: признак читает обработчик редактора.
   const файловаяОперация = useRef(false);
@@ -52,8 +67,12 @@ export function ArticlePane(props: {
     onText: props.onText,
     onDeletions: props.onDeletions,
     onSelection: setSpot,
-    onPaste: props.onPaste,
-    onImage: setКартинка,
+    onPaste: (file, editor) => void вставить(file, editor),
+    onImage: (картинка) => {
+      выборРеф.current += 1;
+      setВыбор(выборРеф.current);
+      setКартинка(картинка);
+    },
     // Панель свойств картинки держит позицию узла на момент открытия: любая правка текста
     // (своя, чужая, подстановка версии) сдвигает позиции, и панель закрывается, а не правит
     // наугад. Кроме времени файловой операции: диск уже меняется, и итог обязан дойти
@@ -148,9 +167,10 @@ export function ArticlePane(props: {
 
       {картинка !== null && !выборНеСделан && view.current !== null && (
         <ImagePanel
-          /* Ключ перемонтирует панель при нажатии другой картинки: без него поле alt-текста
-             и итог остались бы от прежней, и «Готово» записало бы чужой alt. */
-          key={`${картинка.from}:${картинка.src}`}
+          /* Ключ перемонтирует панель при выборе другой картинки: без него поле alt-текста
+             и итог остались бы от прежней, и «Готово» записало бы чужой alt. Адрес в ключ
+             не входит: он меняется у той же выбранной картинки при смене формата. */
+          key={`выбор-${выбор}`}
           settings={props.settings}
           картинка={картинка}
           view={view.current}
@@ -158,6 +178,10 @@ export function ArticlePane(props: {
           сохранено={props.сохранено}
           отпечаток={props.article.отпечаток}
           ссылкаОбновлена={props.ссылкаОбновлена}
+          /* Адрес, границы узла и место на экране у выбранной картинки стали другими:
+             без этого следующее действие из панели адресовало бы уже несуществующий файл. */
+          выбор={выбор}
+          onПеремена={(данные) => setКартинка((было) => перенестиВыбор(было, выборРеф.current, данные))}
           onЗанято={(идёт) => {
             файловаяОперация.current = идёт;
           }}
@@ -172,6 +196,13 @@ export function ArticlePane(props: {
     const button = blocks.find((item) => item.подпись === подпись);
     if (!editor || !button) return;
 
+    // Картинка — не текстовая вставка: сначала человек выбирает файл, потом сервер кладёт его
+    // рядом со статьёй, и только затем в текст дописывается ссылка.
+    if (button.команда === 'картинка') {
+      выбратьКартинку(editor);
+      return;
+    }
+
     const at = {from: editor.state.selection.main.from, to: editor.state.selection.main.to};
     const edit = decideEdit(button, editor.state.doc.toString(), at, {
       settings: props.settings,
@@ -185,4 +216,46 @@ export function ArticlePane(props: {
     });
     editor.focus();
   }
+
+  /** Выбор файла картинки. Предлагается ровно то, что примет сервер: PNG, JPG и GIF. */
+  function выбратьКартинку(editor: EditorView): void {
+    выбратьФайл(типыТелаСтатьи(), (file) => void вставить(file, editor));
+  }
+
+  /**
+   * Вставка картинки и сразу за ней — панель её свойств: человек видит поле «Alt-текст» и может
+   * заполнить его, не разыскивая картинку нажатием.
+   */
+  async function вставить(file: File, editor: EditorView): Promise<void> {
+    const готово = await props.вставитьКартинку(file, editor);
+    if (готово === null || !editor.dom.isConnected) return;
+
+    // Координаты берутся сразу: редактор строит виджет картинки в той же правке, что и текст,
+    // поэтому ждать отрисовки нечего. Ожидание кадра здесь было бы хуже — в неактивной вкладке
+    // браузер такие кадры не выдаёт вовсе, и панель не появилась бы никогда.
+    const место = уКартинки(editor, готово.узелОт);
+    if (место === null) return;
+
+    выборРеф.current += 1;
+    setВыбор(выборРеф.current);
+    setКартинка({src: готово.src, alt: '', from: готово.узелОт, to: готово.узелДо, ...место});
+  }
+}
+
+/**
+ * Где на экране картинка в этой позиции. Сначала спрашивается сам её виджет — он знает свои
+ * настоящие края; если виджет ещё не построен, берётся место позиции в тексте.
+ * `null` — показать панель не у чего: строка вне видимой части.
+ */
+function уКартинки(editor: EditorView, позиция: number): {left: number; top: number} | null {
+  const узел = editor.domAtPos(позиция).node;
+  const элемент = узел instanceof HTMLElement ? узел : узел.parentElement;
+  const картинка = элемент?.closest('.md-image') ?? элемент?.querySelector('.md-image');
+  if (картинка instanceof HTMLElement) {
+    const место = картинка.getBoundingClientRect();
+    return {left: место.left, top: место.top};
+  }
+
+  const место = editor.coordsAtPos(позиция);
+  return место === null ? null : {left: место.left, top: место.top};
 }

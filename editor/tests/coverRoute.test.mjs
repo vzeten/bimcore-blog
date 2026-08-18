@@ -11,7 +11,6 @@ const НАСТРОЙКИ = {
   картинки: {шаблонИмени: 'img-{номер}', имяОбложки: 'cover', максимумКилобайт: 500},
   ошибкиСервера: {
     плохойЗапрос: 'неверный запрос',
-    нетПапкиСтатьи: 'нет папки статьи',
     неверныйТипОбложки: 'обложкой может быть только PNG или JPG',
     нетКартинки: 'нет такой картинки',
     нетФайла: 'нет файла',
@@ -25,6 +24,15 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0
   0x49, 0x44, 0x41, 0x54, 1, 2, 0x49, 0x45, 0x4e, 0x44]);
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0xff, 0xda, 1, 2, 0xff, 0xd9]);
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>', 'utf8');
+// Целый GIF: сигнатура, описание экрана, объявленная в нём палитра, кадр и метка конца.
+// Картинкой тела статьи он считается, обложкой — нет.
+const GIF = Buffer.concat([
+  Buffer.from('GIF89a', 'binary'),
+  Buffer.from([2, 0, 2, 0, 0x80, 0, 0]),
+  Buffer.from([0, 0, 0, 0xff, 0xff, 0xff]),
+  Buffer.from([0x2c, 0, 0, 0, 0, 2, 0, 2, 0, 0, 2, 2, 0x44, 1, 0]),
+  Buffer.from([0x3b]),
+]);
 
 const песочницы = [];
 
@@ -97,6 +105,16 @@ describe('загрузка обложки статьи', () => {
   it('SVG обложкой не принимается, и файл в папку не попадает', async () => {
     const repo = репозиторий();
     const ответ = await загрузить(repo, SVG);
+
+    expect(ответ.code).toBe(400);
+    expect(ответ.data.error).toBe(НАСТРОЙКИ.ошибкиСервера.неверныйТипОбложки);
+    expect(fs.readdirSync(path.join(repo, path.dirname(REL)))).toEqual(['index.mdx']);
+  });
+
+  it('GIF обложкой не принимается, хотя картинкой тела статьи он законен', async () => {
+    // Список типов в окне выбора ручку не сторожит: проверка обязана быть на сервере.
+    const repo = репозиторий();
+    const ответ = await загрузить(repo, GIF);
 
     expect(ответ.code).toBe(400);
     expect(ответ.data.error).toBe(НАСТРОЙКИ.ошибкиСервера.неверныйТипОбложки);
@@ -209,12 +227,12 @@ describe('загрузка обложки статьи', () => {
     expect(ответ.data.error).toBe(НАСТРОЙКИ.ошибкиСервера.плохойЗапрос);
   });
 
-  it('картинка тела статьи по-прежнему получает имя по шаблону, а не имя обложки', async () => {
+  it('картинка тела статьи этой ручке не принадлежит: у неё своя дорога', async () => {
     // Две дороги, два правила имени: обложка не должна перетирать картинки тела и наоборот.
     const repo = репозиторий();
-    const ответ = await запрос(repo, '/api/asset/paste', {article: REL, base64: PNG.toString('base64'), ext: 'png'});
+    const ответ = await запрос(repo, '/api/asset/prepare', {article: REL, base64: PNG.toString('base64')});
 
-    expect(ответ.data.src).toBe('./img-01.png');
-    expect(лежит(repo, 'cover.png')).toBe(false);
+    expect(ответ.принято).toBe(false);
+    expect(fs.readdirSync(path.join(repo, path.dirname(REL)))).toEqual(['index.mdx']);
   });
 });

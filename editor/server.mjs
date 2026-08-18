@@ -13,6 +13,7 @@ import {errorResponse, readBody} from './src/adapters/httpBody.mjs';
 import {draftRoute} from './src/adapters/draftRoute.mjs';
 import {assetRoute} from './src/adapters/assets.mjs';
 import {assetReformatRoute} from './src/adapters/assetReformat.mjs';
+import {assetIntakeRoute} from './src/adapters/assetIntake.mjs';
 import {versionsRoute} from './src/adapters/versionsRoute.mjs';
 import {deleteRoute} from './src/adapters/deleteRoute.mjs';
 import {articleRoute} from './src/adapters/articleRoute.mjs';
@@ -159,6 +160,9 @@ async function api(req, res, url) {
 
   // Смена формата картинки: новый файл и обновлённая ссылка в статье одной операцией.
   if (await assetReformatRoute({req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send})) return;
+
+  // Приём новой картинки в статью: карантин, а затем укладка рядом со статьёй под свободным именем.
+  if (await assetIntakeRoute({req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send})) return;
 
   return send(res, 404, {error: readSettings()['ошибкиСервера']['неизвестныйЗапрос']});
 }

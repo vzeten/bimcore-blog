@@ -15,7 +15,7 @@ const НАСТРОЙКИ = {
     нетСтатьи: 'нет такой статьи',
     нетКартинки: 'нет такой картинки',
     картинкаВнеСтатьи: 'путь ведёт из папки статьи наружу',
-    заменаТолькоJpgPng: 'заменять можно только JPG и PNG',
+    заменаТолькоКартинок: 'заменять можно только картинки статьи — JPG, PNG или GIF',
     неТотФормат: 'новый файл должен быть того же формата',
   },
 };
@@ -26,6 +26,16 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0
   0x49, 0x44, 0x41, 0x54, 1, 2, 0x49, 0x45, 0x4e, 0x44]);
 const PNG2 = Buffer.concat([PNG, Buffer.from([7, 7, 7])]);
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0xff, 0xda, 1, 2, 0xff, 0xd9]);
+// Целый GIF: сигнатура, описание экрана, объявленная в нём палитра, кадр и метка конца.
+const GIF = Buffer.concat([
+  Buffer.from('GIF89a', 'binary'),
+  Buffer.from([2, 0, 2, 0, 0x80, 0, 0]),
+  Buffer.from([0, 0, 0, 0xff, 0xff, 0xff]),
+  Buffer.from([0x2c, 0, 0, 0, 0, 2, 0, 2, 0, 0, 2, 2, 0x44, 1, 0]),
+  Buffer.from([0x3b]),
+]);
+// Второй GIF отличается кадром: доказывает, что на диск легли именно новые байты.
+const GIF2 = Buffer.concat([GIF.subarray(0, GIF.length - 1), Buffer.from([0x21, 0xf9, 4, 0, 0, 0, 0, 0, 0x3b])]);
 
 const песочницы = [];
 
@@ -41,7 +51,8 @@ function репозиторий() {
   fs.mkdirSync(path.join(repo, 'docs', 'a'), {recursive: true});
   fs.writeFileSync(path.join(repo, REL), '---\ntitle: A\n---\n\nтекст\n', 'utf8');
   fs.writeFileSync(path.join(repo, 'docs', 'a', 'img-01.png'), PNG);
-  fs.writeFileSync(path.join(repo, 'docs', 'a', 'img-02.gif'), Buffer.from('GIF89a...', 'utf8'));
+  fs.writeFileSync(path.join(repo, 'docs', 'a', 'img-02.gif'), GIF);
+  fs.writeFileSync(path.join(repo, 'docs', 'a', 'схема.webp'), Buffer.from('RIFFxxxxWEBPVP8 ', 'binary'));
 
   fs.mkdirSync(path.join(repo, 'docs', 'b'), {recursive: true});
   fs.writeFileSync(path.join(repo, 'docs', 'b', 'index.mdx'), '---\ntitle: B\n---\n\nтекст\n', 'utf8');
@@ -158,13 +169,42 @@ describe('замена файла картинки', () => {
     expect(байты(repo, 'docs', 'a', 'img-01.png').equals(PNG)).toBe(true);
   });
 
-  it('GIF заменой этой пробы не трогается', async () => {
+  it('JPG заменяется другим JPG: на диск ложатся ровно новые байты', async () => {
+    const repo = репозиторий();
+    fs.writeFileSync(path.join(repo, 'docs', 'a', 'img-03.jpg'), JPEG);
+    const другой = Buffer.concat([JPEG.subarray(0, JPEG.length - 2), Buffer.from([7, 7, 0xff, 0xd9])]);
+
+    const ответ = await заменить(repo, {src: './img-03.jpg', bytes: другой});
+
+    expect(ответ.code).toBe(200);
+    expect(байты(repo, 'docs', 'a', 'img-03.jpg').equals(другой)).toBe(true);
+  });
+
+  it('GIF заменяется другим GIF: байты новые, формат и анимация свои', async () => {
+    // Файл не перекодируется нигде: на диск ложатся ровно выбранные байты (слово владельца 2026-08-18).
+    const repo = репозиторий();
+    const ответ = await заменить(repo, {src: './img-02.gif', bytes: GIF2});
+
+    expect(ответ.code).toBe(200);
+    expect(байты(repo, 'docs', 'a', 'img-02.gif').equals(GIF2)).toBe(true);
+  });
+
+  it('под именем GIF картинка другого формата заменой не принимается', async () => {
+    // Смена формата — другая дорога: там меняются и расширение файла, и ссылка в статье.
     const repo = репозиторий();
     const ответ = await заменить(repo, {src: './img-02.gif', bytes: PNG2});
 
     expect(ответ.code).toBe(400);
-    expect(ответ.data.error).toBe(НАСТРОЙКИ.ошибкиСервера.заменаТолькоJpgPng);
-    expect(байты(repo, 'docs', 'a', 'img-02.gif').toString('utf8')).toBe('GIF89a...');
+    expect(ответ.data.error).toBe(НАСТРОЙКИ.ошибкиСервера.неТотФормат);
+    expect(байты(repo, 'docs', 'a', 'img-02.gif').equals(GIF)).toBe(true);
+  });
+
+  it('картинка формата, которого программа не знает, заменой не трогается', async () => {
+    const repo = репозиторий();
+    const ответ = await заменить(repo, {src: './схема.webp', bytes: PNG2});
+
+    expect(ответ.code).toBe(400);
+    expect(ответ.data.error).toBe(НАСТРОЙКИ.ошибкиСервера.заменаТолькоКартинок);
   });
 
   it('несуществующая картинка — отказ, а не создание файла', async () => {
@@ -199,7 +239,8 @@ describe('замена файла картинки', () => {
     const repo = репозиторий();
     await заменить(repo);
 
-    expect(fs.readdirSync(path.join(repo, 'docs', 'a')).sort()).toEqual(['img-01.png', 'img-02.gif', 'index.mdx']);
+    expect(fs.readdirSync(path.join(repo, 'docs', 'a')).sort())
+      .toEqual(['img-01.png', 'img-02.gif', 'index.mdx', 'схема.webp'].sort());
     const tmp = path.join(repo, 'editor', '.tmp');
     expect(fs.existsSync(tmp) ? fs.readdirSync(tmp) : []).toEqual([]);
   });
