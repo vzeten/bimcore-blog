@@ -2,7 +2,7 @@ import type {EditorView} from '@codemirror/view';
 import {label} from '../labels';
 import {requestJson} from '../api';
 import {dominantEol} from '../../core/articleFile.mjs';
-import {типКартинки} from '../../core/imageType.mjs';
+import {отказТяжёлогоГифа, type ПравилоГифа} from './imageGuard';
 import {местоВставкиКартинки} from '../../core/imageInsert';
 
 interface PasteResult {
@@ -57,16 +57,6 @@ export function выбратьФайл(типы: string, взять: (file: File
   };
 
   поле.click();
-}
-
-/**
- * Какого рода выбранный файл — по его содержимому, тем же правилом, что и на сервере.
- * `null` — это не картинка статьи. Тип от браузера для этого не годится: он взят из имени файла,
- * а имя лжёт (JPEG в файле `.png`), и по нему окно выбрало бы не ту дорогу замены и показало бы
- * человеку неверный формат в вопросе о смене.
- */
-export async function породаКартинки(file: File): Promise<string | null> {
-  return типКартинки(new Uint8Array(await file.arrayBuffer()));
 }
 
 /** Тяжёлый файл — не ошибка, а предупреждение: картинка уже лежит на месте, решает человек. */
@@ -152,8 +142,14 @@ export async function вставитьКартинку(
   file: File,
   article: string,
   view: EditorView,
+  правилоГифа: ПравилоГифа | null,
   актуально: () => boolean = () => true,
 ): Promise<ВставленнаяКартинка | null> {
+  // Заслон стоит первым, до чтения файла и до первого запроса: иначе тяжёлая анимация уедет
+  // на сервер текстом и оборвёт соединение раньше, чем он успеет её отвергнуть.
+  const тяжёлая = await отказТяжёлогоГифа(file, правилоГифа);
+  if (тяжёлая !== null) throw new Error(тяжёлая);
+
   const готово = await requestJson<{жетон?: string}>('/api/asset/prepare', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -273,6 +269,8 @@ export function makeImageInsert(deps: {
   статья: Признак<string | null>;
   заход: Признак<number>;
   просмотр: Признак<boolean>;
+  /** Предел анимации и слова отказа — из настроек, второго числа в коде нет. */
+  правилоГифа: ПравилоГифа | null;
 }): (file: File, view: EditorView) => Promise<ВставленнаяКартинка | null> {
   return async (file, view) => {
     const куда = deps.статья.current;
@@ -285,7 +283,7 @@ export function makeImageInsert(deps: {
 
     let итог: ВставленнаяКартинка | null = null;
     await deps.runSafe(async () => {
-      итог = await вставитьКартинку(file, куда, view, тоЖеОкно);
+      итог = await вставитьКартинку(file, куда, view, deps.правилоГифа, тоЖеОкно);
     }, 'ошибкаКартинки');
 
     // Тип берётся явно: значение присвоено внутри замыкания, и вывод типов этого не видит.

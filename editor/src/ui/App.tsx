@@ -13,6 +13,7 @@ import {Bars} from './zones/Bars';
 import {useCreate} from './useCreate';
 import type {Field} from './headFields';
 import {makeCoverUpload, makeImageInsert} from './editor/images';
+import {правилоАнимации} from './editor/imageGuard';
 import {requestJson} from './api';
 import {useDelete} from './useDelete';
 import {useAutosave} from './useAutosave';
@@ -82,6 +83,7 @@ export function App() {
   // в другую статью, открыть её заново или уйти в просмотр старой версии.
   const положитьКартинку = makeImageInsert({
     runSafe, статья: статьяСейчас, заход: открытие, просмотр: просмотрРеф,
+    правилоГифа: правилоАнимации(settings),
   });
 
   // Пара «тело + шапка» в окне: обычная правка и подстановка целой пары при возврате к версии.

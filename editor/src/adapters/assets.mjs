@@ -8,6 +8,7 @@ import path from 'node:path';
 import {badFields} from './httpBody.mjs';
 import {записатьПоверх, папкаСтатьи, цельВнутриСтатьи} from './assetGuards.mjs';
 import {обложкойМожно, теломМожно, типКартинки} from '../core/imageType.mjs';
+import {весКартинки, гифПеревесил, текстОтказаГиф} from '../core/imageWeight.mjs';
 
 /** Какие картинки умеет отдавать программа. Типы чужого формата, а не наша настройка. */
 const ТИПЫ = {
@@ -72,11 +73,18 @@ export async function assetRoute({req, res, url, repo, settings, тело, insid
       return true;
     }
 
+    // Предел анимации сторожит и замену: иначе тяжёлый GIF попадал бы рядом со статьёй
+    // в обход правила — просто через другую дверь.
+    const предел = settings['картинки']['пределГифМегабайт'];
+    if (гифПеревесил(цель, bytes.length, предел)) {
+      send(res, 400, {error: текстОтказаГиф(settings['ошибкиСервера']['гифБольшеПредела'], предел)});
+      return true;
+    }
+
     записатьПоверх(repo, target, bytes);
     send(res, 200, {
       replaced: true,
-      тяжёлая: bytes.length > settings['картинки']['максимумКилобайт'] * 1024,
-      килобайт: Math.round(bytes.length / 1024),
+      ...весКартинки(цель, bytes.length, settings['картинки']['максимумКилобайт']),
     });
     return true;
   }
@@ -99,7 +107,7 @@ export async function assetRoute({req, res, url, repo, settings, тело, insid
       return true;
     }
 
-    положить(принято.dir, `${settings['картинки']['имяОбложки']}.${ext}`, принято.bytes, settings, send, res);
+    положить(принято.dir, `${settings['картинки']['имяОбложки']}.${ext}`, принято.bytes, settings, send, res, ext);
     return true;
   }
 
@@ -156,13 +164,13 @@ async function принятьФайл({req, res, repo, settings, тело, insid
 }
 
 /** Записать файл в папку статьи и ответить путём, которым на него надо ссылаться. */
-function положить(dir, name, bytes, settings, send, res) {
+function положить(dir, name, bytes, settings, send, res, формат) {
   fs.writeFileSync(path.join(dir, name), bytes);
 
   send(res, 200, {
     src: `./${name}`,
     // Тяжёлый файл — предупреждение, а не отказ: картинка уже на месте, решает человек.
-    тяжёлая: bytes.length > settings['картинки']['максимумКилобайт'] * 1024,
-    килобайт: Math.round(bytes.length / 1024),
+    // Правило одно на все дороги и живёт в ядре.
+    ...весКартинки(формат, bytes.length, settings['картинки']['максимумКилобайт']),
   });
 }

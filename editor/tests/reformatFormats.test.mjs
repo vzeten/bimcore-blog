@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {НАСТРОЙКИ, REL, УЗЕЛ, БАЙТЫ, JPEG, сменить, репозиторий, файл} from './reformatHarness.mjs';
+import {гифВесом} from './gifFixture.mjs';
 
 describe('смена формата картинки — какие форматы', () => {
   it('занятое имя не отказывает: программа берёт следующее свободное у каждого рода картинки', async () => {
@@ -231,5 +232,41 @@ title: A
     if (ответ.code === 200) return; // запись прошла: система разрешает писать поверх, случай не воспроизводится
     expect(fs.existsSync(файл(repo, 'img-01.png'))).toBe(false);
     expect(fs.readFileSync(path.join(repo, REL), 'utf8')).toContain('](./img-01.jpg)');
+  });
+});
+
+describe('предел веса анимации при смене формата', () => {
+  const МБ = 1024 * 1024;
+
+  it('GIF ровно в предел становится новым файлом статьи байт в байт', async () => {
+    const repo = репозиторий();
+    const гиф = гифВесом(5 * МБ);
+
+    const ответ = await сменить(repo, {base64: гиф.toString('base64')});
+
+    expect(ответ.code).toBe(200);
+    expect(ответ.data.новыйSrc).toBe('./img-01.gif');
+    expect(fs.readFileSync(файл(repo, 'img-01.gif')).equals(гиф)).toBe(true);
+  });
+
+  it('GIF на один байт больше предела не меняет ни файла, ни ссылки в статье', async () => {
+    const repo = репозиторий();
+    const текстБыл = fs.readFileSync(path.join(repo, REL), 'utf8');
+
+    const ответ = await сменить(repo, {base64: гифВесом(5 * МБ + 1).toString('base64')});
+
+    expect(ответ.code).toBe(400);
+    expect(ответ.data.error).toBe('GIF больше 5 МБ. Уменьшите анимацию заранее');
+    expect(fs.readFileSync(path.join(repo, REL), 'utf8')).toBe(текстБыл);
+    expect(fs.readdirSync(path.join(repo, 'docs', 'a')).sort()).toEqual(['img-01.jpg', 'index.mdx']);
+  });
+
+  it('про вес принятого GIF человеку не говорится', async () => {
+    const repo = репозиторий();
+
+    const ответ = await сменить(repo, {base64: гифВесом(Math.round(1.5 * МБ)).toString('base64')});
+
+    expect(ответ.code).toBe(200);
+    expect(ответ.data.тяжёлая).toBe(false);
   });
 });

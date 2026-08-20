@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {НАСТРОЙКИ, PNG, REL, SVG, вставить, запрос, карантин, подготовить, репозиторий, уложить, файлы} from './intakeHarness.mjs';
+import {гифВесом} from './gifFixture.mjs';
 
 describe('приём новой картинки в статью', () => {
   it('файл не той породы в статью не попадает вовсе', async () => {
@@ -182,6 +183,74 @@ describe('приём новой картинки в статью', () => {
 
     expect(ответ.code).toBe(400);
     expect(файлы(repo)).toEqual(['index.mdx']);
+    expect(карантин(repo)).toEqual([]);
+  });
+});
+
+describe('предел веса анимации при вставке', () => {
+  const МБ = 1024 * 1024;
+
+  it('GIF немного меньше предела вставляется и ложится рядом со статьёй байт в байт', async () => {
+    const repo = репозиторий();
+    const гиф = гифВесом(5 * МБ - 1024);
+
+    const ответ = await вставить(repo, гиф);
+
+    expect(ответ.code).toBe(200);
+    expect(fs.readFileSync(path.join(repo, 'docs', 'a', 'img-01.gif')).equals(гиф)).toBe(true);
+  });
+
+  it('GIF ровно в предел вставляется: предел включительный', async () => {
+    const repo = репозиторий();
+
+    const ответ = await вставить(repo, гифВесом(5 * МБ));
+
+    expect(ответ.code).toBe(200);
+    expect(файлы(repo)).toEqual(['img-01.gif', 'index.mdx']);
+  });
+
+  it('GIF на один байт больше предела не принимается и рядом со статьёй не появляется', async () => {
+    const repo = репозиторий();
+
+    const ответ = await подготовить(repo, гифВесом(5 * МБ + 1));
+
+    expect(ответ.code).toBe(400);
+    expect(ответ.data.error).toBe('GIF больше 5 МБ. Уменьшите анимацию заранее');
+    // Ни рядом со статьёй, ни даже в служебном карантине: отказ случается до касания диска.
+    expect(файлы(repo)).toEqual(['index.mdx']);
+    expect(карантин(repo)).toEqual([]);
+  });
+
+  it('про вес принятого GIF человеку не говорится: сжимать анимацию ему нечем', async () => {
+    // Живой файл владельца: gigapixelai.gif около полутора мегабайт.
+    const repo = репозиторий();
+
+    const ответ = await вставить(repo, гифВесом(Math.round(1.5 * МБ)));
+
+    expect(ответ.code).toBe(200);
+    expect(ответ.data.тяжёлая).toBe(false);
+  });
+
+  it('подменённый в карантине тяжёлый GIF рядом со статьёй не ложится', async () => {
+    // Между подготовкой и укладкой файл мог смениться, поэтому предел проверяется дважды.
+    const repo = репозиторий();
+    const готово = await подготовить(repo, гифВесом(1024 * 64));
+    const путь = path.join(repo, 'editor', '.tmp', готово.data.жетон);
+    fs.writeFileSync(путь, гифВесом(5 * МБ + 1));
+
+    const ответ = await уложить(repo, готово.data.жетон);
+
+    expect(ответ.code).toBe(400);
+    expect(файлы(repo)).toEqual(['index.mdx']);
+  });
+
+  it('файл с именем .gif, который GIF не является, отвергается по содержимому', async () => {
+    const repo = репозиторий();
+
+    const ответ = await подготовить(repo, Buffer.from('GIF89a, а дальше просто текст', 'utf8'));
+
+    expect(ответ.code).toBe(400);
+    expect(ответ.data.error).toBe(НАСТРОЙКИ.ошибкиСервера.неверныйТипКартинки);
     expect(карантин(repo)).toEqual([]);
   });
 });

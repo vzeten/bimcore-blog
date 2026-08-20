@@ -1,7 +1,8 @@
 // Имя каждого теста повторяет формулировку правила.
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {requestJson} from '../src/ui/api';
-import {породаКартинки, uploadReplacement, вставитьКартинку} from '../src/ui/editor/images';
+import {uploadReplacement, вставитьКартинку} from '../src/ui/editor/images';
+import {отказТяжёлогоГифа, породаКартинки} from '../src/ui/editor/imageGuard';
 import {setLabels} from '../src/ui/labels';
 
 setLabels({
@@ -49,7 +50,15 @@ describe('вставка картинки', () => {
     dispatch: vi.fn(),
     focus: vi.fn(),
   });
-  const fakeFile = {type: 'image/png', arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer} as unknown as File;
+  const fakeFile = {
+    type: 'image/png',
+    size: 3,
+    slice: () => ({arrayBuffer: async () => new Uint8Array([0x89, 0x50, 0x4e, 0x47]).buffer}),
+    arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+  } as unknown as File;
+
+  /** Правило анимации в том виде, в каком его отдают настройки окну. */
+  const ПРАВИЛО = {пределМегабайт: 5, отказ: 'GIF больше {мегабайт} МБ. Уменьшите анимацию заранее'};
 
   /** Ответы сервера по адресам: у вставки два шага и отдельная отмена. */
   function stubПоАдресам(ответы: Record<string, unknown>) {
@@ -65,7 +74,7 @@ describe('вставка картинки', () => {
     const вызовы = stubПоАдресам({'/api/asset/prepare': {}});
     const view = fakeView();
 
-    await expect(вставитьКартинку(fakeFile, 'docs/a/index.mdx', view as never))
+    await expect(вставитьКартинку(fakeFile, 'docs/a/index.mdx', view as never, ПРАВИЛО))
       .rejects.toThrow('картинку вставить не удалось');
     expect(view.dispatch).not.toHaveBeenCalled();
     expect(вызовы).toEqual(['/api/asset/prepare']);
@@ -75,7 +84,7 @@ describe('вставка картинки', () => {
     stubПоАдресам({'/api/asset/prepare': {жетон: 'ж1.png'}, '/api/asset/place': {}});
     const view = fakeView();
 
-    await expect(вставитьКартинку(fakeFile, 'docs/a/index.mdx', view as never))
+    await expect(вставитьКартинку(fakeFile, 'docs/a/index.mdx', view as never, ПРАВИЛО))
       .rejects.toThrow('картинку вставить не удалось');
     expect(view.dispatch).not.toHaveBeenCalled();
   });
@@ -84,7 +93,7 @@ describe('вставка картинки', () => {
     stubПоАдресам({'/api/asset/prepare': {жетон: 'ж1.png'}, '/api/asset/place': {src: './img-01.png'}});
     const view = fakeView();
 
-    const готово = await вставитьКартинку(fakeFile, 'docs/a/index.mdx', view as never);
+    const готово = await вставитьКартинку(fakeFile, 'docs/a/index.mdx', view as never, ПРАВИЛО);
 
     expect(view.dispatch).toHaveBeenCalledTimes(1);
     const правка = view.dispatch.mock.calls[0][0];
@@ -99,7 +108,7 @@ describe('вставка картинки', () => {
     const вызовы = stubПоАдресам({'/api/asset/prepare': {жетон: 'ж1.png'}});
     const view = fakeView();
 
-    const готово = await вставитьКартинку(fakeFile, 'docs/a/index.mdx', view as never, () => false);
+    const готово = await вставитьКартинку(fakeFile, 'docs/a/index.mdx', view as never, ПРАВИЛО, () => false);
 
     expect(готово).toBeNull();
     expect(view.dispatch).not.toHaveBeenCalled();
@@ -117,7 +126,7 @@ describe('вставка картинки', () => {
     });
     const view = fakeView();
 
-    const готово = await вставитьКартинку(fakeFile, 'docs/a/index.mdx', view as never, () => {
+    const готово = await вставитьКартинку(fakeFile, 'docs/a/index.mdx', view as never, ПРАВИЛО, () => {
       // Первая проверка проходит (файл ещё едет), вторая — уже нет.
       const было = ушёл;
       ушёл = true;
@@ -171,5 +180,91 @@ describe('порода выбранного файла', () => {
 
   it('файл не той породы не выдаётся за картинку', async () => {
     await expect(породаКартинки(файл([1, 2, 3, 4], 'image/png'))).resolves.toBeNull();
+  });
+});
+
+describe('заслон окна перед отправкой тяжёлой анимации', () => {
+  const МБ = 1024 * 1024;
+  const ПРАВИЛО = {пределМегабайт: 5, отказ: 'GIF больше {мегабайт} МБ. Уменьшите анимацию заранее'};
+
+  /**
+   * Файл, каким его видит браузер у настоящей анимации в 170 МБ: размер известен сразу, начало
+   * читается кусочком, а прочитать его ЦЕЛИКОМ нельзя — попытка ломает вкладку. Такой файл и есть
+   * слепое место: прежде окно читало его целиком, переводило в текст и отправляло, а сервер
+   * обрывал тело раньше своих проверок (наблюдение владельца 2026-08-20).
+   */
+  function гигантскийГиф() {
+    const начало = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0, 0]);
+    const читалиЦеликом = vi.fn(() => {
+      throw new Error('файл 170 МБ читать целиком нельзя');
+    });
+
+    return {
+      файл: {
+        type: 'image/gif',
+        size: 170 * МБ,
+        slice: () => ({arrayBuffer: async () => начало.buffer}),
+        arrayBuffer: читалиЦеликом,
+      } as unknown as File,
+      читалиЦеликом,
+    };
+  }
+
+  const fakeView = () => ({
+    state: {doc: {toString: () => 'текст'}, selection: {main: {from: 0, to: 0}}},
+    dom: {isConnected: true},
+    dispatch: vi.fn(),
+    focus: vi.fn(),
+  });
+
+  it('анимация тяжелее предела до сервера не едет: человеку сказано про предел, а не про сервер', async () => {
+    const {файл, читалиЦеликом} = гигантскийГиф();
+    const запросы = vi.fn();
+    vi.stubGlobal('fetch', запросы);
+    const view = fakeView();
+
+    await expect(вставитьКартинку(файл, 'docs/a/index.mdx', view as never, ПРАВИЛО))
+      .rejects.toThrow('GIF больше 5 МБ. Уменьшите анимацию заранее');
+
+    // Ни одного запроса и ни одного полного чтения: файл остался лежать, где лежал.
+    expect(запросы).not.toHaveBeenCalled();
+    expect(читалиЦеликом).not.toHaveBeenCalled();
+    // Статья, картинка и курсор не тронуты.
+    expect(view.dispatch).not.toHaveBeenCalled();
+    expect(view.focus).not.toHaveBeenCalled();
+  });
+
+  it('тот же отказ выдаётся и заслоном замены, до чтения выбранного файла', async () => {
+    const {файл, читалиЦеликом} = гигантскийГиф();
+
+    await expect(отказТяжёлогоГифа(файл, ПРАВИЛО))
+      .resolves.toBe('GIF больше 5 МБ. Уменьшите анимацию заранее');
+    expect(читалиЦеликом).not.toHaveBeenCalled();
+  });
+
+  it('анимация в пределе заслон проходит: полутора мегабайтам он не мешает', async () => {
+    const начало = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0, 0]);
+    const файл = {
+      size: Math.round(1.5 * МБ),
+      slice: () => ({arrayBuffer: async () => начало.buffer}),
+    } as unknown as File;
+
+    await expect(отказТяжёлогоГифа(файл, ПРАВИЛО)).resolves.toBeNull();
+  });
+
+  it('тяжёлый файл другой породы заслон не трогает: предел назначен анимации', async () => {
+    const начало = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const файл = {
+      size: 170 * МБ,
+      slice: () => ({arrayBuffer: async () => начало.buffer}),
+    } as unknown as File;
+
+    await expect(отказТяжёлогоГифа(файл, ПРАВИЛО)).resolves.toBeNull();
+  });
+
+  it('настроек ещё нет — заслон молчит, и слово остаётся за сервером', async () => {
+    const {файл} = гигантскийГиф();
+
+    await expect(отказТяжёлогоГифа(файл, null)).resolves.toBeNull();
   });
 });

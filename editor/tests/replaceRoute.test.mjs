@@ -1,90 +1,17 @@
 // Имя каждого теста повторяет формулировку правила.
 // Ручка замены картинки: новые байты ложатся под прежним именем, путь не выходит из папки
 // статьи, формат нового файла обязан совпасть с форматом заменяемого.
-import {afterEach, describe, expect, it} from 'vitest';
+import {describe, expect, it} from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 import {assetRoute} from '../src/adapters/assets.mjs';
 
-const НАСТРОЙКИ = {
-  картинки: {шаблонИмени: 'img-{номер}', имяОбложки: 'cover', максимумКилобайт: 500},
-  ошибкиСервера: {
-    плохойЗапрос: 'неверный запрос',
-    нетСтатьи: 'нет такой статьи',
-    нетКартинки: 'нет такой картинки',
-    картинкаВнеСтатьи: 'путь ведёт из папки статьи наружу',
-    заменаТолькоКартинок: 'заменять можно только картинки статьи — JPG, PNG или GIF',
-    неТотФормат: 'новый файл должен быть того же формата',
-  },
-};
-
-const REL = 'docs/a/index.mdx';
-// Целые картинки: у PNG после сигнатуры идёт `IHDR`, у JPEG в хвосте метка конца.
-const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52,
-  0x49, 0x44, 0x41, 0x54, 1, 2, 0x49, 0x45, 0x4e, 0x44]);
-const PNG2 = Buffer.concat([PNG, Buffer.from([7, 7, 7])]);
-const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0xff, 0xda, 1, 2, 0xff, 0xd9]);
-// Целый GIF: сигнатура, описание экрана, объявленная в нём палитра, кадр и метка конца.
-const GIF = Buffer.concat([
-  Buffer.from('GIF89a', 'binary'),
-  Buffer.from([2, 0, 2, 0, 0x80, 0, 0]),
-  Buffer.from([0, 0, 0, 0xff, 0xff, 0xff]),
-  Buffer.from([0x2c, 0, 0, 0, 0, 2, 0, 2, 0, 0, 2, 2, 0x44, 1, 0]),
-  Buffer.from([0x3b]),
-]);
-// Второй GIF отличается кадром: доказывает, что на диск легли именно новые байты.
-const GIF2 = Buffer.concat([GIF.subarray(0, GIF.length - 1), Buffer.from([0x21, 0xf9, 4, 0, 0, 0, 0, 0, 0x3b])]);
-
-const песочницы = [];
-
-afterEach(() => {
-  while (песочницы.length > 0) fs.rmSync(песочницы.pop(), {recursive: true, force: true});
-});
-
-/** Репозиторий с двумя статьями: у каждой своя папка и своя картинка. */
-function репозиторий() {
-  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-replace-'));
-  песочницы.push(repo);
-
-  fs.mkdirSync(path.join(repo, 'docs', 'a'), {recursive: true});
-  fs.writeFileSync(path.join(repo, REL), '---\ntitle: A\n---\n\nтекст\n', 'utf8');
-  fs.writeFileSync(path.join(repo, 'docs', 'a', 'img-01.png'), PNG);
-  fs.writeFileSync(path.join(repo, 'docs', 'a', 'img-02.gif'), GIF);
-  fs.writeFileSync(path.join(repo, 'docs', 'a', 'схема.webp'), Buffer.from('RIFFxxxxWEBPVP8 ', 'binary'));
-
-  fs.mkdirSync(path.join(repo, 'docs', 'b'), {recursive: true});
-  fs.writeFileSync(path.join(repo, 'docs', 'b', 'index.mdx'), '---\ntitle: B\n---\n\nтекст\n', 'utf8');
-  fs.writeFileSync(path.join(repo, 'docs', 'b', 'img-01.png'), PNG);
-
-  fs.mkdirSync(path.join(repo, 'static'), {recursive: true});
-  fs.writeFileSync(path.join(repo, 'static', 'общая.png'), PNG);
-
-  return repo;
-}
-
-/** Один запрос к ручке замены. Возвращает код ответа и разобранный JSON. */
-async function заменить(repo, {article = REL, src = './img-01.png', bytes = PNG2} = {}) {
-  const ответ = {};
-  await assetRoute({
-    req: {method: 'POST'},
-    res: {},
-    url: new URL('http://localhost/api/asset/replace'),
-    repo,
-    settings: НАСТРОЙКИ,
-    тело: async () => ({article, src, base64: Buffer.from(bytes).toString('base64')}),
-    insideRepo: (target) => path.resolve(target).startsWith(path.resolve(repo) + path.sep),
-    send: (res, code, data) => {
-      ответ.code = code;
-      ответ.data = data;
-    },
-  });
-
-  return ответ;
-}
-
-const байты = (repo, ...кусок) => fs.readFileSync(path.join(repo, ...кусок));
+import {
+  НАСТРОЙКИ, REL, PNG, PNG2, JPEG, GIF, GIF2, байты, заменить, репозиторий, убратьПотом,
+} from './replaceHarness.mjs';
+import {гифВесом} from './gifFixture.mjs';
 
 describe('замена файла картинки', () => {
   it('новые байты ложатся под прежним именем, ссылка в тексте не меняется', async () => {
@@ -120,7 +47,7 @@ describe('замена файла картинки', () => {
     // Текстуально путь статьи внутри репозитория, но файловая система ведёт его за пределы.
     const repo = репозиторий();
     const чужое = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-outside-'));
-    песочницы.push(чужое);
+    убратьПотом(чужое);
     fs.mkdirSync(path.join(чужое, 'a'), {recursive: true});
     fs.writeFileSync(path.join(чужое, 'a', 'index.mdx'), '---\ntitle: X\n---\n', 'utf8');
     fs.writeFileSync(path.join(чужое, 'a', 'img-01.png'), PNG);
@@ -281,5 +208,57 @@ describe('замена файла картинки', () => {
 
     expect(ответ.code).toBe(400);
     expect(ответ.data.error).toBe(НАСТРОЙКИ.ошибкиСервера.плохойЗапрос);
+  });
+});
+
+describe('предел веса анимации при замене', () => {
+  const МБ = 1024 * 1024;
+
+  it('GIF немного меньше предела заменяет прежний байт в байт', async () => {
+    const repo = репозиторий();
+    const гиф = гифВесом(5 * МБ - 1024);
+
+    const ответ = await заменить(repo, {src: './img-02.gif', bytes: гиф});
+
+    expect(ответ.code).toBe(200);
+    expect(байты(repo, 'docs', 'a', 'img-02.gif').equals(гиф)).toBe(true);
+  });
+
+  it('GIF ровно в предел заменяет прежний: предел включительный', async () => {
+    const repo = репозиторий();
+
+    const ответ = await заменить(repo, {src: './img-02.gif', bytes: гифВесом(5 * МБ)});
+
+    expect(ответ.code).toBe(200);
+    expect(байты(repo, 'docs', 'a', 'img-02.gif').length).toBe(5 * МБ);
+  });
+
+  it('GIF на один байт больше предела не заменяет ничего: прежний файл остаётся как был', async () => {
+    const repo = репозиторий();
+    const былиБайты = байты(repo, 'docs', 'a', 'img-02.gif');
+
+    const ответ = await заменить(repo, {src: './img-02.gif', bytes: гифВесом(5 * МБ + 1)});
+
+    expect(ответ.code).toBe(400);
+    expect(ответ.data.error).toBe('GIF больше 5 МБ. Уменьшите анимацию заранее');
+    expect(байты(repo, 'docs', 'a', 'img-02.gif').equals(былиБайты)).toBe(true);
+  });
+
+  it('про вес принятого GIF человеку не говорится', async () => {
+    const repo = репозиторий();
+
+    const ответ = await заменить(repo, {src: './img-02.gif', bytes: гифВесом(Math.round(1.5 * МБ))});
+
+    expect(ответ.data.тяжёлая).toBe(false);
+  });
+
+  it('тяжёлый PNG по-прежнему принимается с советом сжать: отказ бывает только у анимации', async () => {
+    const repo = репозиторий();
+    const тяжёлый = Buffer.concat([PNG2, Buffer.alloc(600 * 1024)]);
+
+    const ответ = await заменить(repo, {bytes: тяжёлый});
+
+    expect(ответ.code).toBe(200);
+    expect(ответ.data.тяжёлая).toBe(true);
   });
 });
