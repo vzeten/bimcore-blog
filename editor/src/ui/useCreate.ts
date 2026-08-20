@@ -7,7 +7,7 @@ import {label} from './labels';
  * размера файла (SPEC 4.9), а правило «создано — значит открываем» лежало одним куском.
  */
 export function useCreate(deps: {
-  открыть: (path: string) => Promise<void>;
+  открыть: (path: string) => Promise<unknown>;
   /** Перечитать список статей: созданной в нём ещё нет. */
   обновить: () => Promise<void>;
   onОшибка: (текст: string) => void;

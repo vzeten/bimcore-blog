@@ -31,7 +31,9 @@ button { font: inherit; cursor: pointer; }
 .topbar-name { min-width: 0; display: flex; flex-direction: column; }
 .topbar-title { font-size: 14px; line-height: 1.3; }
 .topbar-path { font-size: 11px; color: var(--ink-quiet); }
-.topbar-locales { display: flex; gap: 2px; }
+.topbar-locales { display: flex; align-items: center; gap: 2px; }
+/* Вопрос о начале языковой версии стоит в одной строке со своими вкладками. */
+.lang-ask { display: flex; align-items: center; gap: 6px; margin-left: 10px; font-size: 12px; }
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
 .lang {

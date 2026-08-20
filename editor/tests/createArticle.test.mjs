@@ -7,29 +7,7 @@ import path from 'node:path';
 
 import {createArticle} from '../src/adapters/createArticle.mjs';
 
-const RU = 'i18n/ru/docusaurus-plugin-content-docs/current';
-const EN = 'docs';
-
-const НАСТРОЙКИ = {
-  основнойЯзык: 'ru',
-  обязательныйЯзык: 'en',
-  // Новая статья рождается скрытой: файлы попадают в репозиторий сразу, и недописанная
-  // статья не должна оказаться в меню сайта. Значение — настройка, а не хардкод (SPEC 4.4).
-  видимость: {новаяСкрыта: true},
-  статусы: ['Черновик', 'Готова к публикации', 'Опубликована'],
-  хранение: {файлСостояния: '_state.json'},
-  заглушкаПеревода: {заголовок: 'Translation placeholder:', тело: 'Placeholder.', описание: 'Placeholder page.'},
-  поляСоздания: {
-    docs: {порядок: ['title', 'slug', 'sidebar_label', 'sidebar_position', 'description', 'image', 'unlisted'], значения: {description: ''}},
-    blog: {порядок: ['title', 'slug', 'description', 'date', 'authors', 'tags', 'keywords', 'image', 'unlisted'], значения: {description: '', authors: '[ivan]', tags: '[]', keywords: '[]'}},
-    проба: {порядок: ['title', 'slug', 'unlisted'], значения: {}},
-  },
-  контент: [
-    {локаль: 'en', род: 'docs', папка: EN, наСайте: true},
-    {локаль: 'ru', род: 'docs', папка: RU, наСайте: true},
-    {локаль: 'ru', род: 'проба', папка: 'editor/sandbox', наСайте: false},
-  ],
-};
+import {EN, ES, RU, НАСТРОЙКИ} from './newArticleHarness.mjs';
 
 const песочницы = [];
 function репозиторий() {
@@ -37,7 +15,7 @@ function репозиторий() {
   песочницы.push(repo);
   // В разделе всегда уже есть хотя бы одна статья: дерево разделов строится из статей,
   // и пустых разделов на сайте не бывает — они роняют сборку.
-  for (const корень of [`${RU}/lessons`, `${EN}/lessons`, 'editor/sandbox']) {
+  for (const корень of [`${RU}/lessons`, `${EN}/lessons`, `${ES}/lessons`, 'editor/sandbox']) {
     fs.mkdirSync(path.join(repo, корень, 'уже-есть'), {recursive: true});
     fs.writeFileSync(path.join(repo, корень, 'уже-есть/index.mdx'), '---\ntitle: "Уже есть"\n---\n', 'utf8');
   }
@@ -55,21 +33,57 @@ const создать = (repo, правки = {}) => createArticle({
 const есть = (repo, ...куски) => fs.existsSync(path.join(repo, ...куски));
 
 describe('создание статьи на диске', () => {
-  it('в документации появляются русская статья и английская заглушка', () => {
+  it('в документации появляются русская статья и скрытые заглушки остальных языков сайта', () => {
     const repo = репозиторий();
 
     const итог = создать(repo);
 
     expect(итог.path).toBe(`${RU}/lessons/kak-uskorit-revit/index.mdx`);
-    expect(есть(repo, RU, 'lessons/kak-uskorit-revit/index.mdx')).toBe(true);
-    expect(есть(repo, EN, 'lessons/kak-uskorit-revit/index.mdx')).toBe(true);
+    for (const корень of [RU, EN, ES]) {
+      expect(есть(repo, корень, 'lessons/kak-uskorit-revit/index.mdx')).toBe(true);
+    }
+  });
+
+  it('раздела нет в языке заглушки — папка создаётся вместе с ней, а не отказ', () => {
+    // Так живут «Семейства» и «Справка», которых в испанской папке нет вовсе. Сборка сайта такую
+    // папку принимает: со скрытой заглушкой она уже не пустая (проверено сборкой 2026-08-20).
+    const repo = репозиторий();
+    fs.rmSync(path.join(repo, ES, 'lessons'), {recursive: true, force: true});
+
+    const итог = создать(repo);
+
+    expect(итог.ошибка).toBe(undefined);
+    expect(есть(repo, ES, 'lessons/kak-uskorit-revit/index.mdx')).toBe(true);
+  });
+
+  it('текст заглушки написан на языке своей страницы, а не на языке исходной версии', () => {
+    const repo = репозиторий();
+    создать(repo);
+
+    const испанская = fs.readFileSync(path.join(repo, ES, 'lessons/kak-uskorit-revit/index.mdx'), 'utf8');
+    expect(испанская).toContain('Marcador de traducción:');
+    expect(испанская).not.toContain('Translation placeholder:');
+  });
+
+  it('созданные версии названы все до одной: каждой нужен свой первый снимок истории', () => {
+    // Снимок делается по этому перечню. Верни он одну открытую версию — реестр подписал бы
+    // заглушки «Неизвестный», а при первом открытии счёл бы их содержимое чужой правкой.
+    const repo = репозиторий();
+
+    const итог = создать(repo);
+
+    expect(итог.версии.sort()).toEqual([
+      `${EN}/lessons/kak-uskorit-revit/index.mdx`,
+      `${ES}/lessons/kak-uskorit-revit/index.mdx`,
+      `${RU}/lessons/kak-uskorit-revit/index.mdx`,
+    ].sort());
   });
 
   it('у каждой созданной версии есть состояние «черновик»', () => {
     const repo = репозиторий();
     создать(repo);
 
-    for (const корень of [RU, EN]) {
+    for (const корень of [RU, EN, ES]) {
       const состояние = JSON.parse(fs.readFileSync(path.join(repo, корень, 'lessons/kak-uskorit-revit/_state.json'), 'utf8'));
       expect(состояние.готовность).toBe('Черновик');
     }
@@ -123,6 +137,33 @@ describe('создание статьи на диске', () => {
     expect(есть(repo, RU, 'lessons/kak-uskorit-revit')).toBe(false);
     // Чужое не тронуто: папка раздела на месте.
     expect(есть(repo, RU, 'lessons')).toBe(true);
+  });
+
+  it('запись оборвалась на середине последнего файла — не остаётся ни одного файла статьи', () => {
+    // Файл, начатый и недописанный, — та же статья-калека: половина версий на диске, читатель
+    // получает поломанную страницу. Откат обязан убрать и его, а не только дописанные до конца.
+    const repo = репозиторий();
+    const настоящая = fs.writeFileSync;
+    let записей = 0;
+    const шпион = vi.spyOn(fs, 'writeFileSync').mockImplementation((цель, данные, настройки) => {
+      записей += 1;
+      if (записей !== 3) return настоящая(цель, данные, настройки);
+      // Третий файл заводится и получает кусок содержимого, а дальше запись обрывается: так
+      // выглядит кончившееся место на диске. Файл при этом на диске остаётся.
+      настоящая(цель, String(данные).slice(0, 12), настройки);
+      throw new Error('место на диске кончилось');
+    });
+
+    const итог = создать(repo);
+
+    шпион.mockRestore();
+    expect(итог.ошибка).toBe('неЗаписалось');
+    for (const корень of [RU, EN, ES]) {
+      expect(есть(repo, корень, 'lessons/kak-uskorit-revit/index.mdx')).toBe(false);
+      expect(есть(repo, корень, 'lessons/kak-uskorit-revit')).toBe(false);
+      // Чужое не тронуто: папка раздела и соседняя статья на месте.
+      expect(есть(repo, корень, 'lessons/уже-есть/index.mdx')).toBe(true);
+    }
   });
 
   it('раздел с выходом за корень отклоняется, а не пишет мимо репозитория', () => {

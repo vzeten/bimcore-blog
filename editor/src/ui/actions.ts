@@ -202,6 +202,28 @@ export async function createArticle(
 }
 
 /**
+ * Начало языковой версии у существующей статьи. Запрос уходит только после явного согласия
+ * человека: до него окно ничего не спрашивает у сервера и ни одного файла не появляется.
+ *
+ * Путь новой версии считает сервер — окно называет только открытую статью и выбранный язык.
+ */
+export async function startLocale(
+  запрос: {path: string; локаль: string},
+  effects: {ok: (созданная: {path: string}) => void | Promise<void>; fail: (reason: string) => void},
+  request: Request = requestJson,
+): Promise<void> {
+  try {
+    await effects.ok(await request<{path: string}>('/api/article/locale', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(запрос),
+    }));
+  } catch (error) {
+    effects.fail(причина(error));
+  }
+}
+
+/**
  * Удаление статьи со всеми языковыми версиями. `ok` зовётся только после подтверждения сервера:
  * убрать статью из окна раньше значит показать человеку, что её нет, когда она на диске осталась.
  *

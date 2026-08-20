@@ -48,13 +48,18 @@ export function useNavigation(deps: {
     });
   };
 
-  const open = async (path: string, push = true): Promise<void> => {
+  /**
+   * Открыть статью. Отвечает, состоялся ли переход: зовущий не должен рассказывать человеку
+   * об открытой версии, когда окно осталось на прежней статье — например, потому что не легла
+   * ждущая правка или файл не прочитался.
+   */
+  const open = async (path: string, push = true): Promise<boolean> => {
     const s = deps.settingsRef.current;
-    if (!s) return; // настройки ещё не загрузились — «назад» ничего не делает, но не падает
+    if (!s) return false; // настройки ещё не загрузились — «назад» ничего не делает, но не падает
 
     // Уходя, ждущую правку дописываем, а не выбрасываем (почему — в `autosaveQueue`).
     // Не записалось — не уходим: работа есть только в окне, и уйти значит её потерять.
-    if (!(await автосохранениеДописано())) return;
+    if (!(await автосохранениеДописано())) return false;
 
     const моё = открытие.current + 1;
     открытие.current = моё;
@@ -68,12 +73,13 @@ export function useNavigation(deps: {
       fail: (причина) => deps.setОшибка(причина),
     });
 
-    if (art === null) return;
+    if (art === null) return false;
     // Пока грузилась новая статья, человек мог печатать дальше в старой: дописываем и это.
-    if (!(await автосохранениеДописано()) || моё !== открытие.current) return;
+    if (!(await автосохранениеДописано()) || моё !== открытие.current) return false;
 
     применить(art, path, s);
     if (push) history.pushState({вид: 'статья', path}, '');
+    return true;
   };
 
   const closeArticle = async (): Promise<void> => {

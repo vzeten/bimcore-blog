@@ -18,6 +18,7 @@ import {versionsRoute} from './src/adapters/versionsRoute.mjs';
 import {deleteRoute} from './src/adapters/deleteRoute.mjs';
 import {articleRoute} from './src/adapters/articleRoute.mjs';
 import {createRoute} from './src/adapters/createRoute.mjs';
+import {localeRoute} from './src/adapters/localeRoute.mjs';
 import {saveRoute} from './src/adapters/saveRoute.mjs';
 import {prepareRoute} from './src/adapters/prepareRoute.mjs';
 import {releaseRoute} from './src/adapters/releaseRoute.mjs';
@@ -107,6 +108,7 @@ async function api(req, res, url) {
 
   // Создание статьи — отдельным модулем, как и остальные ручки.
   if (await createRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, send})) return;
+  if (await localeRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, send})) return;
 
   // Удаление статьи — тоже отдельным модулем. Опубликованную ветку ручка получает функцией:
   // на момент запуска сервера она ещё не определена, а к запросу уже известна.

@@ -4,6 +4,7 @@ import {PrepareReport} from './PrepareReport';
 import {PublishPanel} from './PublishPanel';
 import {usePrepare} from '../usePrepare';
 import {usePublish} from '../usePublish';
+import {useLocaleStart} from '../useLocaleStart';
 import type {Article, SaveState, Settings} from '../types';
 
 export function TopBar(props: {
@@ -13,7 +14,12 @@ export function TopBar(props: {
   dirty: boolean;
   состояниеСохранения: SaveState;
   colors: boolean;
-  onOpen: (path: string) => void;
+  /**
+   * Открыть языковую версию. Отвечает промисом: начало новой версии обязано дождаться открытия,
+   * иначе слова о ней гаснут — переход в статью гасит показанное сообщение, и человек не узнаёт,
+   * что именно произошло.
+   */
+  onOpen: (path: string) => void | Promise<boolean | void>;
   onColors: (value: boolean) => void;
   /** Записать окно на диск. Отвечает, легла ли работа целиком: это нужно публикации. */
   onSave: () => Promise<boolean>;
@@ -25,6 +31,10 @@ export function TopBar(props: {
   удаление: boolean;
   /** Идёт просмотр старой версии: писать на диск нельзя ничем, включая видимость. */
   просмотр: boolean;
+  /** Перечитать реестр: у статьи прибавилась языковая версия, и список обязан это показать. */
+  onОбновить: () => Promise<void>;
+  /** Сказать человеку словами: версия начата либо начать её не вышло. */
+  onСообщить: (текст: string) => void;
 }) {
   const п = props.settings.подписи;
   const в = props.settings.видимость;
@@ -36,6 +46,22 @@ export function TopBar(props: {
   const окно = props.article === null ? null : `${props.article.path}|${props.article.заход ?? 0}`;
   const [спрашиваю, setСпрашиваю] = useState<string | null>(null);
   const спросили = спрашиваю !== null && спрашиваю === окно;
+
+  // Начало отсутствующей языковой версии живёт рядом со своими вкладками, как подготовка и
+  // публикация — рядом со своими кнопками. До согласия человека оно ничего не пишет и ни о чём
+  // не спрашивает сервер.
+  const началоЛокали = useLocaleStart({
+    путь: () => props.article?.path ?? null,
+    // Окно то же, что помнит вопрос об удалении: путь плюс номер захода в статью.
+    окно: () => окно,
+    // Несохранённое кладём на диск сами: сервер берёт название и адрес новой версии из файла
+    // исходной. Записывать нечего — считаем, что всё уже легло.
+    сохранить: async () => (props.dirty ? props.onSave() : true),
+    обновить: props.onОбновить,
+    открыть: async (path) => (await props.onOpen(path)) === true,
+    onОшибка: props.onСообщить,
+    onНачато: props.onСообщить,
+  });
 
   const скрыта = скрытаВОкне(props.fields);
   const неНаСайте = изменениеНеНаСайте(props.article, скрыта);
@@ -76,19 +102,53 @@ export function TopBar(props: {
             const своя = here ? скрыта : props.article!.видимостьВерсий?.[code] === true;
             const спрятана = state !== 'нет' && своя;
 
+            // Языка нет — вкладка не заперта, а предлагает его начать. Запертая вкладка была
+            // тупиком: человек видел дыру в переводах и ничего не мог с ней сделать в программе.
+            // Нажатие только задаёт вопрос — ни одного файла до ответа не появляется.
+            const нет = state === 'нет';
+
             return (
               <button
                 key={code}
                 className={`lang lang-${срыв ? 'срыв' : state}${here ? ' lang-on' : ''}${спрятана ? ' lang-скрыта' : ''}`}
                 title={срыв ? props.settings.реестр.нетНаСайте : подсказка(code, state, спрятана, props.settings)}
-                disabled={state === 'нет'}
-                onClick={() => path && props.onOpen(path)}
+                // Просмотр старой версии ничего не пишет: на это время начало версии заперто,
+                // как и остальные пишущие кнопки шапки.
+                disabled={нет && (props.просмотр || началоЛокали.идёт)}
+                onClick={() => (нет ? началоЛокали.спросить(code) : path && props.onOpen(path))}
               >
                 {code.toUpperCase()}
                 {state === 'устарела' && <span className="lang-mark">•</span>}
               </button>
             );
           })}
+
+          {/* Вопрос стоит рядом со вкладками, а не отдельным окном: человек видит, про какой
+              язык спрашивают, и обе кнопки сразу. «Не начинать» не отправляет на сервер ничего,
+              и на диске после отказа не остаётся ни одного файла. */}
+          {началоЛокали.спрошено !== null && !props.просмотр && (
+            <span className="lang-ask">
+              <span className="topbar-ask">
+                {props.settings.локали[началоЛокали.спрошено] ?? началоЛокали.спрошено}
+                {': '}
+                {п.локальНачатьСпросить}
+              </span>
+              <button
+                className="ghost"
+                disabled={началоЛокали.идёт}
+                onClick={() => void началоЛокали.начать(началоЛокали.спрошено!)}
+              >
+                {началоЛокали.идёт ? п.локальНачинается : п.локальНачать}
+              </button>
+              <button
+                className="ghost"
+                disabled={началоЛокали.идёт}
+                onClick={началоЛокали.отменить}
+              >
+                {п.локальНеНачинать}
+              </button>
+            </span>
+          )}
         </div>
       )}
 

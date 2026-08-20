@@ -168,12 +168,14 @@ export function App() {
         dirty={dirty}
         состояниеСохранения={состояниеСохранения}
         colors={colors}
-        onOpen={(path) => void open(path)}
+        onOpen={(path) => open(path)}
         onColors={setColors}
         onSave={save}
         fields={fields}
         onDelete={() => void удаление.удалить()}
         удаление={удаление.идёт}
+        onОбновить={refresh}
+        onСообщить={setОшибка}
         // Просмотр версии ничего не пишет: пишущие кнопки шапки на это время заперты.
         просмотр={просмотрИдёт}
       />

@@ -11,7 +11,7 @@ import {articlePlace, isUnlisted} from '../core/frontmatterRules.mjs';
 import {путиДругихВерсий, файлСтатьи} from '../core/articles.mjs';
 import {ИМЯ_КАТЕГОРИИ, границаСостава, видВерсии} from '../core/articleKind.mjs';
 import {readField, splitArticle} from '../core/articleFile.mjs';
-import {этоЗаглушка} from '../core/newArticle.mjs';
+import {этоЗаглушка} from '../core/stubText.mjs';
 import {категорияРядом, statePath} from './library.mjs';
 
 /**

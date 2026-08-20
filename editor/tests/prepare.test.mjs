@@ -19,7 +19,7 @@ const снимок = (шапки) => Object.entries(шапки)
 
 const ЦЕЛАЯ = {
   [RU]: 'title: "Проба"\nslug: /lessons/proba\ndescription: "Понятное описание"\nkeywords: [розетки]',
-  [EN]: 'title: "Translation placeholder: Проба"\nslug: /lessons/proba\ndescription: "Placeholder page. The English translation of this article is not ready yet."\nunlisted: true',
+  [EN]: 'title: "Translation placeholder: Проба"\nslug: /lessons/proba\ndescription: "Placeholder page. The translation of this article is not ready yet."\nunlisted: true',
 };
 
 const проверить = (шапки, категория = 'урок') => проверитьМестные(снимок(шапки), категория, НАСТРОЙКИ);

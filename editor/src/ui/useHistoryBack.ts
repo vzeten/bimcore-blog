@@ -4,7 +4,7 @@
 import {useEffect, useRef} from 'react';
 
 export function useHistoryBack(deps: {
-  open: (path: string, push?: boolean) => Promise<void>;
+  open: (path: string, push?: boolean) => Promise<unknown>;
   closeArticle: () => void;
 }) {
   // Свежий обработчик в ref — сам слушатель ставится один раз: иначе он навсегда запомнил бы

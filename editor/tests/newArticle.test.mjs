@@ -4,33 +4,7 @@ import {describe, expect, it} from 'vitest';
 import matter from 'gray-matter';
 import {адресГоден, адресИзНазвания, планСоздания, языкиРаздела} from '../src/core/newArticle.mjs';
 
-const НАСТРОЙКИ = {
-  обязательныйЯзык: 'en',
-  // Новая статья рождается скрытой: файлы попадают в репозиторий сразу, и недописанная
-  // статья не должна оказаться в меню сайта. Значение — настройка, а не хардкод (SPEC 4.4).
-  видимость: {новаяСкрыта: true},
-  основнойЯзык: 'ru',
-  локали: {en: 'English', ru: 'Русский', es: 'Español'},
-  статусы: ['Черновик', 'Готова к публикации', 'Опубликована'],
-  хранение: {файлСостояния: '_state.json'},
-  заглушкаПеревода: {
-    заголовок: 'Translation placeholder:',
-    тело: 'This English page is a placeholder.',
-    описание: 'Placeholder page, translation is not ready yet.',
-  },
-  поляСоздания: {
-    docs: {порядок: ['title', 'slug', 'sidebar_label', 'sidebar_position', 'description', 'image', 'unlisted'], значения: {description: ''}},
-    blog: {порядок: ['title', 'slug', 'description', 'date', 'authors', 'tags', 'keywords', 'image', 'unlisted'], значения: {description: '', authors: '[ivan]', tags: '[]', keywords: '[]'}},
-    проба: {порядок: ['title', 'slug', 'unlisted'], значения: {}},
-  },
-  контент: [
-    {локаль: 'en', род: 'docs', папка: 'docs', наСайте: true},
-    {локаль: 'en', род: 'blog', папка: 'blog', наСайте: true},
-    {локаль: 'ru', род: 'docs', папка: 'i18n/ru/docusaurus-plugin-content-docs/current', наСайте: true},
-    {локаль: 'ru', род: 'blog', папка: 'i18n/ru/docusaurus-plugin-content-blog', наСайте: true},
-    {локаль: 'ru', род: 'проба', папка: 'editor/sandbox', наСайте: false},
-  ],
-};
+import {НАСТРОЙКИ} from './newArticleHarness.mjs';
 
 const РАЗДЕЛ = 'docs/lessons';
 const план = (правки = {}) => планСоздания({
@@ -63,7 +37,7 @@ describe('адрес из названия', () => {
 
 describe('языки раздела', () => {
   it('в разделе документации доступны все языки этого рода', () => {
-    expect(языкиРаздела('docs/lessons', НАСТРОЙКИ, null)).toEqual(['en', 'ru']);
+    expect(языкиРаздела('docs/lessons', НАСТРОЙКИ, null)).toEqual(['en', 'ru', 'es']);
   });
 
   it('в песочнице язык только один — предлагать остальные значит обещать невозможное', () => {
@@ -81,7 +55,7 @@ describe('языки раздела', () => {
 
   it('порядок языков — тот же, что во всём окне', () => {
     // Список локалей один на программу; свой порядок здесь развёл бы окно с самим собой.
-    expect(языкиРаздела('blog', НАСТРОЙКИ, null)).toEqual(['en', 'ru']);
+    expect(языкиРаздела('blog', НАСТРОЙКИ, null)).toEqual(['en', 'ru', 'es']);
   });
 
   it('раздел заполнен только по-английски — русскую статью в нём завести нельзя', () => {
@@ -107,21 +81,12 @@ describe('языки раздела', () => {
 });
 
 describe('план создания статьи', () => {
-  it('в документации создаются две версии: русская и английская заглушка', () => {
-    // Русская статья без английского двойника не попадает в сборку вообще, молча (SPEC 2.4).
-    const {файлы} = план();
-
-    expect(файлы.map((ф) => ф.локаль)).toEqual(['en', 'ru']);
-    expect(файлы.filter((ф) => ф.заглушка)).toHaveLength(1);
-  });
-
-  it('обе версии ложатся по одному пути внутри своих корней', () => {
+  it('все версии ложатся по одному пути внутри своих корней', () => {
     // Реестр сшивает языки ПО ПУТИ: разойдись он на букву — программа покажет две статьи.
     const {файлы} = план();
     const хвост = (path) => path.split('/').slice(-3).join('/');
 
-    expect(хвост(файлы[0].path)).toBe(хвост(файлы[1].path));
-    expect(файлы.map((ф) => хвост(ф.path))).toEqual(['lessons/kak-uskorit-revit/index.mdx', 'lessons/kak-uskorit-revit/index.mdx']);
+    expect(new Set(файлы.map((ф) => хвост(ф.path)))).toEqual(new Set(['lessons/kak-uskorit-revit/index.mdx']));
   });
 
   it('видимость новой статьи задаётся настройкой, а не строкой в коде', () => {
@@ -162,31 +127,20 @@ describe('план создания статьи', () => {
     expect(свой.text).not.toContain('sidebar_position');
   });
 
-  it('статью можно создать сразу на английском, и тогда заглушка не нужна', () => {
-    const {файлы} = план({язык: 'en'});
+  it('своя версия рождается без описания: его пишет человек, а не программа', () => {
+    // Описание заглушки достаётся заглушке, а не языку. Переедь условие с признака заглушки
+    // на локаль — оно тихо вписало бы человеку текст про неготовый перевод.
+    const свой = план({язык: 'en'}).файлы.find((ф) => !ф.заглушка);
 
-    expect(файлы).toHaveLength(1);
-    expect(файлы[0].локаль).toBe('en');
-    expect(файлы[0].заглушка).toBe(false);
-    // Описание заглушки достаётся заглушке, а не языку: английская статья, написанная человеком,
-    // остаётся без описания, как любая своя версия, — его пишет он сам. Переедь условие с признака
-    // заглушки на локаль — оно тихо вписало бы человеку текст про неготовый перевод.
-    expect(matter(файлы[0].text).data.description).toBe(undefined);
-    expect(файлы[0].text).not.toContain('description:');
+    expect(matter(свой.text).data.description).toBe(undefined);
+    expect(свой.text).not.toContain('description:');
   });
 
   it('адрес документации абсолютный, с разделом и без локали, и одинаковый у версий', () => {
     const {файлы} = план();
-    const адреса = файлы.map((ф) => /slug: (.+)/.exec(ф.text)[1]);
+    const адреса = new Set(файлы.map((ф) => /slug: (.+)/.exec(ф.text)[1]));
 
-    expect(адреса).toEqual(['/lessons/kak-uskorit-revit', '/lessons/kak-uskorit-revit']);
-  });
-
-  it('английская заглушка помечена и не выглядит готовым переводом', () => {
-    const заглушка = план().файлы.find((ф) => ф.заглушка);
-
-    expect(заглушка.text).toContain('Translation placeholder:');
-    expect(заглушка.text).toContain('This English page is a placeholder.');
+    expect(адреса).toEqual(new Set(['/lessons/kak-uskorit-revit']));
   });
 
   it('в песочнице создаётся только своя версия: она живёт вне сайта', () => {
@@ -233,7 +187,7 @@ describe('план создания статьи', () => {
     // английский файл с русским заголовком и без русской версии вовсе.
     const {файлы} = план({раздел: 'docs/lessons'});
 
-    expect(файлы.map((ф) => ф.локаль).sort()).toEqual(['en', 'ru']);
+    expect(файлы.map((ф) => ф.локаль).sort()).toEqual(['en', 'es', 'ru']);
     expect(файлы.find((ф) => ф.локаль === 'ru').заглушка).toBe(false);
     expect(файлы.find((ф) => ф.локаль === 'en').заглушка).toBe(true);
   });
@@ -271,7 +225,7 @@ describe('план создания статьи', () => {
     }
   });
 
-  it('пустого описания в файле не бывает вовсе, а у английской заглушки оно своё, из настроек', () => {
+  it('пустого описания в файле не бывает вовсе, а у заглушки оно своё, из настроек', () => {
     // Прежнее правило писало своей версии `description: ""` — отменено разбором шапки 2026-08-10.
     // Пустых ключей не бывает: голое `description:` разбирается как `null` и роняет сборку, а
     // `description: ""` сборку проходит, но оставляет страницу вовсе без мета-описания.
@@ -283,8 +237,11 @@ describe('план создания статьи', () => {
 
     expect(matter(свой.text).data.description).toBe(undefined);
     expect(свой.text).not.toContain('description:');
-    expect(matter(файлы.find((файл) => файл.заглушка === true).text).data.description)
-      .toBe('Placeholder page, translation is not ready yet.');
+    // Описание берётся из строки того языка, на котором написана сама заглушка.
+    expect(matter(файлы.find((файл) => файл.локаль === 'en').text).data.description)
+      .toBe('Placeholder page.');
+    expect(matter(файлы.find((файл) => файл.локаль === 'es').text).data.description)
+      .toBe('Página marcador.');
   });
 
   it('название с кавычками и слешем даёт разбираемую шапку, а не сломанный YAML', () => {

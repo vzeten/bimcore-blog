@@ -55,7 +55,12 @@ export async function createRoute({req, res, url, repo, editorDir, settings, git
   try {
     const автор = (await gitAuthor(git)) ?? settings['реестр']['неизвестныйАвтор'];
     const сейчас = new Date().toISOString();
-    saveSnapshot(editorDir, settings, итог.path, fs.readFileSync(path.join(repo, итог.path), 'utf8'), автор, сейчас);
+    // Снимок нужен КАЖДОЙ созданной версии, а не только той, что открылась. Без него реестр
+    // подпишет заглушку «Неизвестный», а при первом её открытии посчитает содержимое чужой
+    // правкой со стороны — хотя завела файл сама программа.
+    for (const версия of итог.версии ?? [итог.path]) {
+      saveSnapshot(editorDir, settings, версия, fs.readFileSync(path.join(repo, версия), 'utf8'), автор, сейчас);
+    }
   } catch (error) {
     // История — служебный шаг: статья уже создана, и отменять её из-за этого нельзя.
     console.error(error);
