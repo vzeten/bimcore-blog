@@ -51,3 +51,5 @@ scripts/knowledge-redirect/dist/
 /editor/.drafts
 # Временные файлы атомарной записи картинок: живут мгновение, после сбоя не должны попасть в коммит
 /editor/.tmp
+# Временный обмен Claude и Codex: отчёты, доказательства и ID локальной сессии проверяющего
+/editor/.coordination/
