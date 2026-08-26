@@ -4,6 +4,7 @@ import {syntaxTree} from '@codemirror/language';
 import {Annotation, StateEffect, StateField, type Range} from '@codemirror/state';
 import {РАЗБОР_КАРТИНКИ, shownAlt} from '../../core/commands';
 import {строкаТолькоКартинка} from './imageCaret';
+import {знакМаркера, уровеньСписка} from './listMarker';
 
 /** Картинка, по которой человек нажал: всё, что нужно панели её свойств. */
 export interface КартинкаВОкне {
@@ -52,14 +53,20 @@ export const версииКартинок = StateField.define<Map<string, string
 const hidden = Decoration.replace({});
 
 class BulletWidget extends WidgetType {
-  eq(): boolean {
-    return true;
+  constructor(private readonly уровень: number) {
+    super();
+  }
+
+  // Уровень входит в сравнение: без него CodeMirror считает виджеты одинаковыми и оставляет
+  // прежний знак, а пункт после `Tab` уже стоит на другом уровне.
+  eq(другой: BulletWidget): boolean {
+    return другой.уровень === this.уровень;
   }
 
   toDOM(): HTMLElement {
     const dot = document.createElement('span');
     dot.className = 'md-bullet';
-    dot.textContent = '•';
+    dot.textContent = знакМаркера(this.уровень);
     return dot;
   }
 }
@@ -231,11 +238,15 @@ function build(view: EditorView, article: string, onImage?: (картинка: �
           return;
         }
 
-        // Маркер списка показываем точкой, как на сайте, а не дефисом из исходника.
+        // Маркер списка показываем знаком, как на сайте, а не дефисом из исходника. Знак берётся
+        // по уровню вложенности: сайт для `ul` своих правил не задаёт, и браузер меняет там точку
+        // на круг и дальше на квадрат. Номер нумерованного пункта не подменяется вовсе — он значим,
+        // и человек должен видеть в окне тот номер, который лежит в файле.
         if (name === 'ListMark' && !raw(node.from)) {
           const sign = doc.sliceString(node.from, node.to);
           if (sign === '-' || sign === '*' || sign === '+') {
-            list.push(Decoration.replace({widget: new BulletWidget()}).range(node.from, node.to));
+            const widget = new BulletWidget(уровеньСписка(node.node));
+            list.push(Decoration.replace({widget}).range(node.from, node.to));
           }
           return;
         }

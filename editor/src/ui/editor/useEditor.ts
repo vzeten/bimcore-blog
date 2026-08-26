@@ -3,6 +3,7 @@ import {EditorState, Transaction} from '@codemirror/state';
 import {EditorView, keymap, drawSelection, highlightActiveLine} from '@codemirror/view';
 import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
 import {запретПравки, чтениеСтатьи} from './reading';
+import {клавишиСписка} from './listKeys';
 import {layerColors, слоиОкна} from '../layerColors';
 import type {Deletion} from '../../core/colorize';
 import {правкаПанелиКартинки, type КартинкаВОкне} from '../livePreview/inline';
@@ -57,6 +58,9 @@ export function useEditor(options: {
           history(),
           drawSelection(),
           highlightActiveLine(),
+          // Уровень пункта списка стоит выше общей раскладки: в ней `Tab` не занят вовсе и
+          // уводил фокус из текста, а продолжение и конец списка по `Enter` уже даёт markdown.
+          клавишиСписка(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           ...чтениеСтатьи(
             () => свежие.current.article.path,
