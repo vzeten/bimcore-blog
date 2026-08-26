@@ -201,6 +201,16 @@ describe('каркас окна', () => {
     expect(зона).toContain('перенестиВыбор(было, выборРеф.current');
   });
 
+  it('в исходниках нет сырого нулевого байта: разделитель пишется escape-последовательностью', () => {
+    // Нулевой байт исполняется наравне с `\0`, но делает файл двоичным: git показывает «Binary file
+    // differs» вместо строки, поиск по коду молчит, а редактор при сохранении может его потерять.
+    // Разделитель от этого не становится другим — меняется только запись.
+    const двоичные = [...кодовые(path.join(EDITOR, 'src')), path.join(EDITOR, 'server.mjs')]
+      .filter((файл) => fs.readFileSync(файл).includes(0));
+
+    expect(двоичные).toEqual([]);
+  });
+
   it('статусов ровно три и первый — черновик', () => {
     const settings = JSON.parse(fs.readFileSync(path.join(EDITOR, 'settings.json'), 'utf8'));
     expect(settings['статусы']).toHaveLength(3);

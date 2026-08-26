@@ -1,291 +1,262 @@
 // Имя каждого теста повторяет формулировку правила.
-// Ручка отправки проверяется на НАСТОЯЩЕМ git: местный репозиторий и отдельный «сервер сайта»
-// (голый репозиторий рядом). Подставной git тут ничего не доказал бы — проверяется именно то,
-// что уезжает на сервер и чего на нём после отказа не появилось.
-import {afterEach, beforeEach, describe, expect, it} from 'vitest';
+// Ручки отправки на сайт проверяются на НАСТОЯЩЕМ git с настоящим удалённым репозиторием: отправка
+// в рабочую ветку и есть публикация, и подставной git тут не доказал бы ничего.
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
 import {simpleGit} from 'simple-git';
 
 import {pushRoute} from '../src/adapters/pushRoute.mjs';
-import {запомнитьКоммит, запомнитьПоказ} from '../src/adapters/pushMemory.mjs';
+import {publishRoute} from '../src/adapters/publishRoute.mjs';
+import {releaseRoute} from '../src/adapters/releaseRoute.mjs';
+import {запомнитьСборку} from '../src/adapters/buildMemory.mjs';
+import {запомнитьПоказ} from '../src/adapters/pushMemory.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
+import {EN, ES, RU, СТАТЬЯ, запрос, сборщик, среда, убратьПесочницы} from './publishHarness.mjs';
 
-const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const НАСТРОЙКИ = JSON.parse(fs.readFileSync(path.join(EDITOR, 'settings.json'), 'utf8'));
-
-const RU = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/index.mdx';
-const EN = 'docs/lessons/proba/index.mdx';
-const СТАТЬЯ = '---\ntitle: "Проба"\nslug: /lessons/proba\n---\n\nТекст статьи.\n';
-
-const песочницы = [];
-
-/**
- * Местный репозиторий с одной статьёй в двух версиях и «сервер сайта» рядом. Статья лежит на диске,
- * но ещё не зафиксирована: её коммит делает сам тест — так же, как это делает ручка коммита.
- */
-async function среда() {
-  const корень = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-push-'));
-  песочницы.push(корень);
-  const repo = path.join(корень, 'работа');
-  const сервер = path.join(корень, 'сайт.git');
-
-  await simpleGit(корень).raw(['init', '--bare', '--initial-branch=main', сервер]);
-  fs.mkdirSync(repo, {recursive: true});
-  const git = simpleGit(repo);
-  await git.init(['--initial-branch=main']);
-  await git.addConfig('user.name', 'Проверка');
-  await git.addConfig('user.email', 'proverka@example.com');
-  await git.addConfig('commit.gpgsign', 'false');
-  await git.raw(['remote', 'add', 'origin', сервер]);
-
-  fs.writeFileSync(path.join(repo, 'README.md'), 'начало\n', 'utf8');
-  await git.raw(['add', '--', 'README.md']);
-  await git.raw(['commit', '-m', 'начало']);
-  await git.raw(['push', 'origin', 'main']);
-
-  for (const rel of [RU, EN]) {
-    fs.mkdirSync(path.join(repo, path.dirname(rel)), {recursive: true});
-    fs.writeFileSync(path.join(repo, rel), СТАТЬЯ, 'utf8');
-  }
-
-  return {repo, сервер, git};
-}
-
-/** Зафиксировать статью так же, как это делает ручка коммита, и запомнить коммит своим. */
-async function зафиксироватьСтатью({repo, git}, пути = [RU, EN]) {
-  for (const rel of пути) await git.raw(['add', '--', rel]);
-  await git.raw(['commit', '-m', 'статья: проба']);
-  const sha = (await git.raw(['rev-parse', 'HEAD'])).trim();
-  запомнитьКоммит(sha);
-
-  return sha;
-}
-
-/** Что сейчас лежит на «сервере сайта». Ветки там может не быть вовсе. */
-async function наСервере(сервер) {
-  try {
-    return (await simpleGit(сервер).raw(['rev-parse', 'refs/heads/main'])).trim();
-  } catch {
-    return null;
-  }
-}
+vi.setConfig({testTimeout: ЖДАТЬ_GIT, hookTimeout: ЖДАТЬ_GIT});
 
 afterEach(() => {
-  запомнитьКоммит(null);
+  запомнитьСборку(null);
   запомнитьПоказ(null);
-  while (песочницы.length > 0) fs.rmSync(песочницы.pop(), {recursive: true, force: true});
+  убратьПесочницы();
 });
 
-beforeEach(() => {
-  запомнитьКоммит(null);
-  запомнитьПоказ(null);
-});
+const собрать = (место) => запрос(releaseRoute, место, '/api/release/build', {path: RU}, {запуск: сборщик()});
+const записать = (место) => запрос(publishRoute, место, '/api/publish/commit', {path: RU, подтверждено: true});
+const показать = (место, тело = {path: RU}) => запрос(pushRoute, место, '/api/publish/plan', тело);
+const отправить = (место, тело) => запрос(pushRoute, место, '/api/publish/push', тело);
 
-/** Один запрос к ручке. */
-async function запрос({repo, git}, pathname, тело) {
-  const ответы = [];
-  const взято = await pushRoute({
-    req: {method: 'POST'},
-    res: {},
-    url: {pathname},
-    repo,
-    settings: {...НАСТРОЙКИ, отправка: {...НАСТРОЙКИ['отправка'], удалённый: 'origin'}},
-    git,
-    тело: async () => тело,
-    insideRepo: (target) => path.resolve(target).startsWith(path.resolve(repo) + path.sep),
-    send: (res, status, payload) => ответы.push({status, payload}),
-  });
+/** Пройти путь человека до готового к отправке коммита. Возвращает его полный SHA. */
+async function довестиДоКоммита(место) {
+  место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
+  await собрать(место);
 
-  return {взято, ...(ответы[0] ?? {})};
+  return (await записать(место)).payload.sha;
 }
 
-const показ = (с, тело = {path: RU}) => запрос(с, '/api/publish/plan', тело);
-const отправка = (с, тело) => запрос(с, '/api/publish/push', тело);
+/** SHA ветки на сервере сайта. */
+const наСервере = async (место) => (await simpleGit(место.сервер).raw(['rev-parse', 'main'])).trim();
 
-describe('ручка показа: что уедет на сайт', () => {
+describe('показ того, что уедет на сайт', () => {
   it('показывает уезжающие коммиты и их файлы, ничего не отправляя', async () => {
-    const с = await среда();
-    const sha = await зафиксироватьСтатью(с);
-    const былоНаСервере = await наСервере(с.сервер);
+    const место = await среда();
+    const sha = await довестиДоКоммита(место);
 
-    const {status, payload} = await показ(с);
+    const {status, payload} = await показать(место);
 
     expect(status).toBe(200);
     expect(payload.sha).toBe(sha);
-    expect(payload.коммиты.map((к) => к.sha)).toEqual([sha]);
-    expect(payload.файлы.sort()).toEqual([EN, RU]);
-    // Сервер сайта не тронут: показ ничего не отправляет.
-    expect(await наСервере(с.сервер)).toBe(былоНаСервере);
-  }, ЖДАТЬ_GIT);
+    expect(payload.коммиты).toHaveLength(1);
+    expect(payload.файлы).toEqual([RU]);
+    // Показ ничего не отправил: на сервере всё как было.
+    expect(await наСервере(место)).toBe(место.основа);
+  });
 
-  it('вместе со статьёй уехал бы файл чужой статьи — показ отказывает и называет файл', async () => {
-    const с = await среда();
-    const чужая = 'docs/lessons/чужая/index.mdx';
-    fs.mkdirSync(path.join(с.repo, path.dirname(чужая)), {recursive: true});
-    fs.writeFileSync(path.join(с.repo, чужая), СТАТЬЯ, 'utf8');
-    await зафиксироватьСтатью(с, [RU, EN, чужая]);
+  it('коммит сделан не программой — показ отказывает и называет его', async () => {
+    const место = await среда();
+    место.положить('ЧУЖОЕ.md', 'работа руками\n');
+    await место.git.raw(['add', '--', 'ЧУЖОЕ.md']);
+    await место.git.raw(['commit', '-m', 'руками']);
 
-    const {status, payload} = await показ(с);
+    const {status, payload} = await показать(место);
 
     expect(status).toBe(409);
-    expect(payload.код).toBe('чужиеФайлы');
-    expect(payload.чужие).toEqual([чужая]);
-  }, ЖДАТЬ_GIT);
+    expect(payload.код).toBe('неНашиКоммиты');
+    expect(payload.неНаши).toHaveLength(1);
+  });
 
   it('на сервере есть изменения, которых нет здесь, — отправки нет', async () => {
-    const с = await среда();
-    await зафиксироватьСтатью(с);
-    // Кто-то толкнул на сайт со стороны: делаем это отдельным клоном того же сервера.
-    const чужой = path.join(path.dirname(с.repo), 'другой');
-    await simpleGit(path.dirname(с.repo)).raw(['clone', с.сервер, чужой]);
-    const чужойGit = simpleGit(чужой);
-    await чужойGit.addConfig('user.name', 'Другой');
-    await чужойGit.addConfig('user.email', 'drugoi@example.com');
-    fs.writeFileSync(path.join(чужой, 'чужое.md'), 'со стороны\n', 'utf8');
-    await чужойGit.raw(['add', '--', 'чужое.md']);
-    await чужойGit.raw(['commit', '-m', 'со стороны']);
-    await чужойGit.raw(['push', 'origin', 'main']);
+    const место = await среда();
+    await довестиДоКоммита(место);
 
-    const {status, payload} = await показ(с);
+    const чужой = path.join(место.корень, 'чужой');
+    await место.git.raw(['clone', место.сервер, чужой]);
+    const другой = simpleGit(чужой);
+    await другой.addConfig('user.name', 'Другой');
+    await другой.addConfig('user.email', 'drugoy@example.com');
+    await другой.addConfig('commit.gpgsign', 'false');
+    fs.writeFileSync(path.join(чужой, 'ЧУЖОЕ.md'), 'чужое\n', 'utf8');
+    await другой.raw(['add', '--', 'ЧУЖОЕ.md']);
+    await другой.raw(['commit', '-m', 'чужое']);
+    await другой.raw(['push', 'origin', 'main']);
 
-    expect(status).toBe(409);
-    expect(payload.код).toBe('ветвиРазошлись');
-  }, ЖДАТЬ_GIT);
+    expect((await показать(место)).payload.код).toBe('ветвиРазошлись');
+  });
+
+  it('путь не статьи отправку не запускает вовсе', async () => {
+    const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ, [ES]: СТАТЬЯ, 'static/img/logo.png': 'картинка'});
+
+    expect((await показать(место, {path: 'static/img/logo.png'})).status).toBe(400);
+  });
 });
 
-describe('ручка отправки на сайт', () => {
+describe('отправка на сайт', () => {
   it('после показа и согласия коммит появляется на сервере сайта', async () => {
-    const с = await среда();
-    const sha = await зафиксироватьСтатью(с);
-    await показ(с);
+    const место = await среда();
+    const sha = await довестиДоКоммита(место);
+    await показать(место);
 
-    const {status, payload} = await отправка(с, {path: RU, sha, подтверждено: true});
+    const {status, payload} = await отправить(место, {path: RU, sha, подтверждено: true});
 
     expect(status).toBe(200);
     expect(payload.отправлено).toBe(true);
-    expect(await наСервере(с.сервер)).toBe(sha);
-  }, ЖДАТЬ_GIT);
+    expect(await наСервере(место)).toBe(sha);
+  });
+
+  it('вместе со статьёй уезжает заглушка языка, которого на сайте не было', async () => {
+    const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ}, {вКоммите: [RU, EN]});
+    await собрать(место);
+    const sha = (await записать(место)).payload.sha;
+    await показать(место);
+
+    const {payload} = await отправить(место, {path: RU, sha, подтверждено: true});
+
+    expect(payload.отправлено).toBe(true);
+    expect(payload.файлы).toContain(ES);
+  });
 
   it('без показа отправки не бывает: согласие относилось бы неизвестно к чему', async () => {
-    const с = await среда();
-    const sha = await зафиксироватьСтатью(с);
-    const было = await наСервере(с.сервер);
+    const место = await среда();
+    const sha = await довестиДоКоммита(место);
 
-    const {status, payload} = await отправка(с, {path: RU, sha, подтверждено: true});
+    const {payload} = await отправить(место, {path: RU, sha, подтверждено: true});
 
-    expect(status).toBe(409);
     expect(payload.код).toBe('показаНеБыло');
-    expect(await наСервере(с.сервер)).toBe(было);
-  }, ЖДАТЬ_GIT);
+    expect(await наСервере(место)).toBe(место.основа);
+  });
 
   it('без подтверждения человека отправки не бывает', async () => {
-    const с = await среда();
-    const sha = await зафиксироватьСтатью(с);
-    await показ(с);
-    const было = await наСервере(с.сервер);
+    const место = await среда();
+    const sha = await довестиДоКоммита(место);
+    await показать(место);
 
-    const {status} = await отправка(с, {path: RU, sha});
+    expect((await отправить(место, {path: RU, sha})).status).toBe(400);
+    expect(await наСервере(место)).toBe(место.основа);
+  });
 
-    expect(status).toBe(400);
-    expect(await наСервере(с.сервер)).toBe(было);
-  }, ЖДАТЬ_GIT);
+  it('согласие пришло на другой коммит, чем лежит сейчас, — отправки нет', async () => {
+    const место = await среда();
+    await довестиДоКоммита(место);
+    await показать(место);
 
-  it('коммит сделан не программой — отправки нет', async () => {
-    const с = await среда();
-    const sha = await зафиксироватьСтатью(с);
-    await показ(с);
-    // Сервер редактора перезапустили: память о своём коммите пропала.
-    запомнитьКоммит(null);
-    const было = await наСервере(с.сервер);
+    const {payload} = await отправить(место, {path: RU, sha: 'f'.repeat(40), подтверждено: true});
 
-    const {status, payload} = await отправка(с, {path: RU, sha, подтверждено: true});
-
-    expect(status).toBe(409);
-    expect(payload.код).toBe('неНашКоммит');
-    expect(await наСервере(с.сервер)).toBe(было);
-  }, ЖДАТЬ_GIT);
-
-  it('после показа набор уезжающего изменился — отправки нет, согласие спрашивается заново', async () => {
-    const с = await среда();
-    const sha = await зафиксироватьСтатью(с);
-    await показ(с);
-    // Набор мог измениться и без нового коммита здесь: например, ветку на сервере откатили назад,
-    // и впереди неё оказалось больше коммитов, чем человеку показывали.
-    запомнитьПоказ({sha, набор: 'то, что показывали раньше'});
-    const было = await наСервере(с.сервер);
-
-    const {status, payload} = await отправка(с, {path: RU, sha, подтверждено: true});
-
-    expect(status).toBe(409);
-    expect(payload.код).toBe('показУстарел');
-    expect(await наСервере(с.сервер)).toBe(было);
-  }, ЖДАТЬ_GIT);
-
-  it('после показа появился новый коммит — согласие относится к прежнему, отправки нет', async () => {
-    const с = await среда();
-    const sha = await зафиксироватьСтатью(с);
-    await показ(с);
-
-    fs.writeFileSync(path.join(с.repo, 'ещё.md'), 'после показа\n', 'utf8');
-    await с.git.raw(['add', '--', 'ещё.md']);
-    await с.git.raw(['commit', '-m', 'после показа']);
-    // Так это выглядит из программы: новый коммит стирает прежний показ, потому что человеку
-    // показывали другое.
-    запомнитьКоммит((await с.git.raw(['rev-parse', 'HEAD'])).trim());
-    const было = await наСервере(с.сервер);
-
-    // Согласие человека называет тот коммит, который ему показывали, — а в репозитории уже другой.
-    const {status, payload} = await отправка(с, {path: RU, sha, подтверждено: true});
-
-    expect(status).toBe(409);
     expect(payload.код).toBe('головаСместилась');
-    expect(await наСервере(с.сервер)).toBe(было);
-  }, ЖДАТЬ_GIT);
+    expect(await наСервере(место)).toBe(место.основа);
+  });
 
   it('повтор после успешной отправки говорит «уже на сайте» и второй раз не везёт', async () => {
-    const с = await среда();
-    const sha = await зафиксироватьСтатью(с);
-    await показ(с);
-    await отправка(с, {path: RU, sha, подтверждено: true});
+    const место = await среда();
+    const sha = await довестиДоКоммита(место);
+    await показать(место);
+    await отправить(место, {path: RU, sha, подтверждено: true});
 
-    await показ(с);
-    const {status, payload} = await отправка(с, {path: RU, sha, подтверждено: true});
+    await показать(место);
+    const {status, payload} = await отправить(место, {path: RU, sha, подтверждено: true});
 
     expect(status).toBe(200);
     expect(payload.уже).toBe(true);
     expect(payload.отправлено).toBe(false);
-    expect(await наСервере(с.сервер)).toBe(sha);
-  }, ЖДАТЬ_GIT);
+  });
 
   it('впереди лежит работа над самой программой — публикация статьи её не увозит', async () => {
-    const с = await среда();
-    fs.mkdirSync(path.join(с.repo, 'editor'), {recursive: true});
-    fs.writeFileSync(path.join(с.repo, 'editor/SPEC.md'), 'правила\n', 'utf8');
-    await с.git.raw(['add', '--', 'editor/SPEC.md']);
-    await с.git.raw(['commit', '-m', 'editor: правила']);
-    const sha = await зафиксироватьСтатью(с);
-    const было = await наСервере(с.сервер);
+    const место = await среда();
+    const sha = await довестиДоКоммита(место);
+    // Коммит нашей записи есть, а поверх него человек положил руками свою работу.
+    место.положить('ЧУЖОЕ.md', 'работа над программой\n');
+    await место.git.raw(['add', '--', 'ЧУЖОЕ.md']);
+    await место.git.raw(['commit', '-m', 'руками']);
 
-    const {status, payload} = await показ(с);
+    const {payload} = await показать(место);
+
+    expect(payload.код).toBe('неНашиКоммиты');
+    expect(await наСервере(место)).toBe(место.основа);
+    expect(sha).toMatch(/^[0-9a-f]{40}$/);
+  });
+
+  it('после удачной отправки запись о коммите из очереди снимается', async () => {
+    const место = await среда();
+    const sha = await довестиДоКоммита(место);
+    await показать(место);
+    await отправить(место, {path: RU, sha, подтверждено: true});
+
+    const очередь = JSON.parse(fs.readFileSync(path.join(место.editorDir, '.publish', 'commits.json'), 'utf8'));
+
+    expect(очередь.записи).toEqual([]);
+  });
+
+  it('запись о своём коммите испорчена — отправки нет: чей это коммит, доказать нечем', async () => {
+    const место = await среда();
+    await довестиДоКоммита(место);
+    fs.writeFileSync(path.join(место.editorDir, '.publish', 'commits.json'), 'не json', 'utf8');
+
+    const {payload} = await показать(место);
+
+    expect(payload.код).toBe('очередьБитая');
+    expect(await наСервере(место)).toBe(место.основа);
+  });
+});
+
+// Правило владельца запрещает читать локальный соседний перевод на всём пути решения о публикации,
+// а не только при сборке плана. Отправка прежде спрашивала состав по ВСЕМ версиям статьи — то есть
+// открывала и разбирала соседние файлы человека.
+describe('соседний перевод на пути отправки не читается', () => {
+  it('ни один файл соседнего языка не открывается ни на показе, ни при отправке', async () => {
+    const место = await среда();
+    await довестиДоКоммита(место);
+    const соседи = [path.join(место.repo, EN), path.join(место.repo, ES)];
+    const прочитанные = [];
+    const оригинал = fs.readFileSync;
+    const читатель = vi.spyOn(fs, 'readFileSync').mockImplementation((файл, ...ещё) => {
+      if (соседи.includes(String(файл))) прочитанные.push(String(файл));
+
+      return оригинал(файл, ...ещё);
+    });
+
+    try {
+      await показать(место);
+      await отправить(место, {path: RU, sha: (await место.git.raw(['rev-parse', 'HEAD'])).trim(), подтверждено: true});
+    } finally {
+      читатель.mockRestore();
+    }
+
+    expect(прочитанные).toEqual([]);
+  });
+
+  it('состав отправки берётся по одной открытой версии: путь соседа в него не входит', async () => {
+    const место = await среда();
+    await довестиДоКоммита(место);
+    // Чужой коммит трогает файл соседнего языка. Прежде он проходил бы по составу как «свой путь».
+    место.положить(ES, `${СТАТЬЯ}Работа руками.\n`);
+    await место.git.raw(['add', '--', ES]);
+    await место.git.raw(['commit', '-m', 'руками']);
+
+    const {status, payload} = await показать(место);
 
     expect(status).toBe(409);
-    expect(payload.код).toBe('чужиеФайлы');
-    expect(payload.чужие).toEqual(['editor/SPEC.md']);
+    expect(payload.код).toBe('неНашиКоммиты');
+  });
+});
 
-    const отказ = await отправка(с, {path: RU, sha, подтверждено: true});
-    expect(отказ.status).toBe(409);
-    expect(await наСервере(с.сервер)).toBe(было);
-  }, ЖДАТЬ_GIT);
+// Коммит, который убирает файл с сайта, отправляется наравне с обычным: пути в нём нет на диске ни
+// до, ни после, и доказать его принадлежность статье может только запись программы о своей работе.
+describe('отправка коммита, убирающего файл с сайта', () => {
+  const ОБЛОЖКА = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/cover.png';
 
-  it('путь не статьи отправку не запускает вовсе', async () => {
-    const с = await среда();
-    await зафиксироватьСтатью(с);
+  it('убранный путь не считается чужим и уезжает на сайт', async () => {
+    const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ, [ES]: СТАТЬЯ, [ОБЛОЖКА]: 'картинка'});
+    fs.rmSync(path.join(место.repo, ОБЛОЖКА));
+    await собрать(место);
+    const sha = (await записать(место)).payload.sha;
 
-    const {status} = await показ(с, {path: 'README.md'});
+    const показ = await показать(место);
+    expect(показ.status).toBe(200);
+    expect(показ.payload.файлы).toEqual([ОБЛОЖКА]);
 
-    expect(status).toBe(400);
-  }, ЖДАТЬ_GIT);
+    const {status} = await отправить(место, {path: RU, sha, подтверждено: true});
+
+    expect(status).toBe(200);
+    expect(await наСервере(место)).toBe(sha);
+  });
 });

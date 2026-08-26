@@ -220,6 +220,8 @@ export interface Settings {
     стоитПоправить: string;
     картинкиНеМенялись: string;
     картинкиИзменились: string;
+    пропадёт: string;
+    меткаПропажи: string;
     подробности: string;
     закрытьДо: string;
     закрытьНельзя: string;
@@ -229,6 +231,7 @@ export interface Settings {
     ответСборки: string;
     скрыта: string;
     постороннего: string;
+    неПривелось: string;
     шаги: Record<string, string>;
     версии: Record<string, string>;
     причины: Record<string, string>;

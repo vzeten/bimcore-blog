@@ -1,141 +1,153 @@
 // Имя каждого теста повторяет формулировку правила.
-// Ручки предварительного выпуска: состав файлов и полная сборка. Настоящий сборщик не зовётся —
-// он идёт минутами; проверяется то, ЧТО программа делает с его ответом.
-import {afterEach, describe, expect, it} from 'vitest';
+// Ручки предварительного выпуска: план публикации и полная сборка его точной копии. Настоящий
+// сборщик не зовётся — он идёт минутами; проверяется то, ЧТО программа делает с его ответом.
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
 
 import {releaseRoute} from '../src/adapters/releaseRoute.mjs';
-import {путьСборщика} from '../src/adapters/siteBuild.mjs';
+import {запомнитьСборку, зелёнаяСборка} from '../src/adapters/buildMemory.mjs';
+import {ЖДАТЬ_GIT} from './saveHarness.mjs';
+import {EN, ES, RU, СТАТЬЯ, НАСТРОЙКИ, запрос, сборщик, среда, убратьПесочницы} from './publishHarness.mjs';
 
-const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const НАСТРОЙКИ = JSON.parse(fs.readFileSync(path.join(EDITOR, 'settings.json'), 'utf8'));
-
-const RU = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/index.mdx';
-const EN = 'docs/lessons/proba/index.mdx';
-const СТАТЬЯ = '---\ntitle: "Проба"\nslug: /lessons/proba\n---\n\nТекст статьи.\n';
-
-const песочницы = [];
-function среда(файлы = {[RU]: СТАТЬЯ, [EN]: СТАТЬЯ}) {
-  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-release-'));
-  песочницы.push(repo);
-
-  for (const [rel, содержимое] of Object.entries(файлы)) {
-    fs.mkdirSync(path.join(repo, path.dirname(rel)), {recursive: true});
-    fs.writeFileSync(path.join(repo, rel), содержимое, 'utf8');
-  }
-
-  return repo;
-}
+vi.setConfig({testTimeout: ЖДАТЬ_GIT, hookTimeout: ЖДАТЬ_GIT});
 
 afterEach(() => {
-  while (песочницы.length > 0) fs.rmSync(песочницы.pop(), {recursive: true, force: true});
+  запомнитьСборку(null);
+  убратьПесочницы();
 });
 
-/** Один запрос к ручке. `запуск` подменяет сборщик: настоящая сборка идёт минутами. */
-async function запрос(repo, pathname, тело, запуск) {
-  const ответы = [];
-  const взято = await releaseRoute({
-    req: {method: 'POST'},
-    res: {},
-    url: {pathname},
-    repo,
-    settings: НАСТРОЙКИ,
-    тело: async () => тело,
-    insideRepo: (target) => path.resolve(target).startsWith(path.resolve(repo) + path.sep),
-    send: (res, status, payload) => ответы.push({status, payload}),
-    запуск,
-  });
+const ручка = (место, pathname, тело, запуск) => запрос(releaseRoute, место, pathname, тело, {запуск});
 
-  return {взято, ...(ответы[0] ?? {})};
+/** Кто-то другой толкнул в ветку сайта, пока человек работал. */
+async function чужаяРаботаНаСервере(место) {
+  const чужой = path.join(место.корень, 'чужой');
+  await место.git.raw(['clone', место.сервер, чужой]);
+  const {simpleGit} = await import('simple-git');
+  const другой = simpleGit(чужой);
+  await другой.addConfig('user.name', 'Другой');
+  await другой.addConfig('user.email', 'drugoy@example.com');
+  await другой.addConfig('commit.gpgsign', 'false');
+  fs.writeFileSync(path.join(чужой, 'ЧУЖОЕ.md'), 'чужое\n', 'utf8');
+  await другой.raw(['add', '--', 'ЧУЖОЕ.md']);
+  await другой.raw(['commit', '-m', 'чужое']);
+  await другой.raw(['push', 'origin', 'main']);
 }
 
-/** Подставной сборщик: отвечает так же, как `execFile`, но мгновенно. */
-const сборщик = ({ошибка = null, stdout = '', stderr = ''} = {}) => (файл, аргументы, опции, готово) => {
-  setTimeout(() => готово(ошибка, stdout, stderr), 0);
-  return {on: () => {}, аргументы, файл, опции};
-};
-
-describe('ручка состава выпуска', () => {
-  it('состав называет все языковые версии статьи и причину включения каждой', async () => {
-    const {взято, status, payload} = await запрос(среда(), '/api/release', {path: RU});
+describe('план публикации', () => {
+  it('уезжает открытая версия, а соседние языки, давно лежащие на сайте, не трогаются', async () => {
+    const место = await среда();
+    const {взято, status, payload} = await ручка(место, '/api/release', {path: RU});
 
     expect(взято).toBe(true);
     expect(status).toBe(200);
-    expect(payload.файлы.map((файл) => файл.путь)).toEqual([EN, RU]);
-    expect(payload.файлы.every((файл) => файл.назначение === 'версия')).toBe(true);
+    expect(payload.файлы.map((файл) => файл.путь)).toEqual([RU]);
+    expect(payload.можно).toBe(true);
+    expect(payload.отказ).toBe(null);
+  });
+
+  it('открыт английский — уезжает английский', async () => {
+    const место = await среда();
+
+    expect((await ручка(место, '/api/release', {path: EN})).payload.файлы.map((файл) => файл.путь))
+      .toEqual([EN]);
+  });
+
+  it('языка нет на сайте — вместе с открытой версией уезжает созданная заглушка', async () => {
+    const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ}, {вКоммите: [RU, EN]});
+    const {payload} = await ручка(место, '/api/release', {path: RU});
+    const испанская = payload.файлы.find((файл) => файл.путь === ES);
+
+    expect(испанская).toMatchObject({источник: 'создано', локаль: 'es'});
     expect(payload.можно).toBe(true);
   });
 
-  it('картинка из папки статьи входит в состав, а чужой файл соседнего раздела — нет', async () => {
-    const repo = среда({
+  it('начатый человеком перевод соседа в план не входит: уезжает заглушка, а не его работа', async () => {
+    const место = await среда(
+      {[RU]: СТАТЬЯ, [EN]: СТАТЬЯ, [ES]: '---\ntitle: "Prueba"\n---\n\nTexto a la mitad.\n'},
+      {вКоммите: [RU, EN]},
+    );
+
+    const {payload} = await ручка(место, '/api/release', {path: RU});
+
+    expect(payload.файлы.find((файл) => файл.путь === ES).источник).toBe('создано');
+    // Файл человека на диске остался нетронутым.
+    expect(fs.readFileSync(path.join(место.repo, ES), 'utf8')).toContain('Texto a la mitad');
+  });
+
+  it('картинка из папки статьи входит в план, а чужой файл соседнего раздела — нет', async () => {
+    const обложка = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/cover.png';
+    const место = await среда({
       [RU]: СТАТЬЯ,
       [EN]: СТАТЬЯ,
-      'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/cover.png': 'картинка',
+      [ES]: СТАТЬЯ,
+      [обложка]: 'картинка',
       'i18n/ru/docusaurus-plugin-content-docs/current/lessons/other/index.mdx': СТАТЬЯ,
       'i18n/ru/docusaurus-plugin-content-docs/current/lessons/other/cover.png': 'чужая картинка',
     });
 
-    const {payload} = await запрос(repo, '/api/release', {path: RU});
-    const пути = payload.файлы.map((файл) => файл.путь);
+    const пути = (await ручка(место, '/api/release', {path: RU})).payload.файлы.map((файл) => файл.путь);
 
-    expect(пути).toContain('i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/cover.png');
+    expect(пути).toContain(обложка);
     expect(пути.some((путь) => путь.includes('lessons/other'))).toBe(false);
   });
 
-  it('в папке статьи лежит вторая статья — состав объявляется недоказанным, выпуск запрещён', async () => {
-    const repo = среда({
+  it('в папке статьи лежит вторая статья — план объявляется недоказанным, выпуск запрещён', async () => {
+    const место = await среда({
       [RU]: СТАТЬЯ,
       [EN]: СТАТЬЯ,
+      [ES]: СТАТЬЯ,
       'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/сосед.mdx': СТАТЬЯ,
     });
 
-    const {payload} = await запрос(repo, '/api/release', {path: RU});
+    const {payload} = await ручка(место, '/api/release', {path: RU});
 
     expect(payload.можно).toBe(false);
     expect(payload.разрывы[0]).toMatchObject({причина: 'папкаНеОдна'});
   });
 
-  it('путь вне репозитория состава не даёт', async () => {
-    const {status, payload} = await запрос(среда(), '/api/release', {path: '../чужое/index.mdx'});
-
-    expect(status).toBe(400);
-    expect(payload.файлы).toBeUndefined();
-  });
-
-  it('картинки во вложенной папке статьи входят в состав: молчаливая потеря хуже отказа', async () => {
-    const repo = среда({
+  it('картинки во вложенной папке статьи входят в план: молчаливая потеря хуже отказа', async () => {
+    const место = await среда({
       [RU]: СТАТЬЯ,
       [EN]: СТАТЬЯ,
+      [ES]: СТАТЬЯ,
       'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/img/один.jpg': 'картинка',
       'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/img/два.jpg': 'картинка',
     });
 
-    const {payload} = await запрос(repo, '/api/release', {path: RU});
-    const пути = payload.файлы.map((файл) => файл.путь);
+    const пути = (await ручка(место, '/api/release', {path: RU})).payload.файлы.map((файл) => файл.путь);
 
     expect(пути).toContain('i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/img/один.jpg');
     expect(пути).toContain('i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/img/два.jpg');
-    expect(payload.можно).toBe(true);
   });
 
-  it('вторая статья во вложенной папке — тоже неоднозначность: состав не доказан', async () => {
-    const repo = среда({
-      [RU]: СТАТЬЯ,
-      [EN]: СТАТЬЯ,
-      'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/внутри/сосед.mdx': СТАТЬЯ,
-    });
+  it('на сервере появилась чужая работа — план не считается вовсе', async () => {
+    const место = await среда();
+    await чужаяРаботаНаСервере(место);
 
-    const {payload} = await запрос(repo, '/api/release', {path: RU});
+    const {status, payload} = await ручка(место, '/api/release', {path: RU});
 
-    expect(payload.можно).toBe(false);
+    expect(status).toBe(409);
+    expect(payload.код).toBe('ветвиРазошлись');
+    expect(payload.файлы).toBeUndefined();
   });
 
-  // Перечень этой ручки станет источником `git add`, поэтому заслон стоит здесь, а не в окне.
+  it('свой коммит ещё не уехал — новый выпуск не начинается, предлагается доотправить', async () => {
+    const место = await среда();
+    fs.writeFileSync(path.join(место.repo, RU), `${СТАТЬЯ}Ещё строка.
+`, 'utf8');
+    await место.git.raw(['add', '--', RU]);
+    await место.git.raw(['commit', '-m', 'правка']);
+
+    const {status, payload} = await ручка(место, '/api/release', {path: RU});
+
+    expect(status).toBe(409);
+    expect(payload.код).toBe('естьНеотправленное');
+  });
+
+  // Перечень этой ручки станет источником записи в хранилище, поэтому заслон стоит здесь, а не в окне.
   const негодные = [
-    ['.git/config', 'служебный файл git'],
+    ['.github/workflows/deploy.yml', 'служебный файл сборки сайта'],
     ['docs/lessons', 'папка, а не статья'],
     ['docs/lessons/proba/cover.png', 'картинка, а не статья'],
     ['docs/../static/robots.txt', 'выход из корней контента через две точки'],
@@ -144,22 +156,22 @@ describe('ручка состава выпуска', () => {
   ];
   for (const [путь, чем] of негодные) {
     it(`выпуск не даётся на путь, который не файл статьи сайта: ${чем}`, async () => {
-      const repo = среда({
+      const место = await среда({
         [RU]: СТАТЬЯ,
         [EN]: СТАТЬЯ,
-        '.git/config': 'служебное',
+        [ES]: СТАТЬЯ,
+        '.github/workflows/deploy.yml': 'служебное',
         'docs/lessons/proba/cover.png': 'картинка',
         'static/img/logo.png': 'картинка',
         'static/robots.txt': 'служебное',
       });
 
-      const состав = await запрос(repo, '/api/release', {path: путь});
-      expect(состав.status).toBe(400);
-      expect(состав.payload.файлы).toBeUndefined();
+      const план = await ручка(место, '/api/release', {path: путь});
+      expect(план.status).toBe(400);
+      expect(план.payload.файлы).toBeUndefined();
 
-      // И сборку такой путь не запускает: сборщика не звали ни разу.
       let звали = false;
-      const сборка = await запрос(repo, '/api/release/build', {path: путь}, (...аргументы) => {
+      const сборка = await ручка(место, '/api/release/build', {path: путь}, (...аргументы) => {
         звали = true;
         return сборщик()(...аргументы);
       });
@@ -169,44 +181,51 @@ describe('ручка состава выпуска', () => {
   }
 });
 
-describe('ручка полной сборки', () => {
-  it('зелёная сборка разрешает переход к подтверждению публикации', async () => {
-    const {status, payload} = await запрос(среда(), '/api/release/build', {path: RU}, сборщик());
+describe('полная сборка плана', () => {
+  it('зелёная сборка разрешает переход к подтверждению публикации и запоминается вместе с деревом', async () => {
+    const место = await среда();
+    const {status, payload} = await ручка(место, '/api/release/build', {path: RU}, сборщик());
 
     expect(status).toBe(200);
     expect(payload.зелёная).toBe(true);
     expect(payload.причина).toBe('');
+    expect(зелёнаяСборка()).toMatchObject({путь: RU, основа: место.основа});
+    expect(зелёнаяСборка().дерево).toMatch(/^[0-9a-f]{40}$/);
   });
 
   it('упавшая сборка не пускает дальше, называет причину и сохраняет вывод сборщика целиком', async () => {
+    const место = await среда();
     const вывод = 'Docusaurus build\nошибка сборки: страница не собралась\nподробности где-то тут';
-    const {payload} = await запрос(
-      среда(), '/api/release/build', {path: RU},
+    const {payload} = await ручка(
+      место, '/api/release/build', {path: RU},
       сборщик({ошибка: Object.assign(new Error('провал'), {code: 1}), stdout: вывод}),
     );
 
     expect(payload.зелёная).toBe(false);
     expect(payload.вывод).toBe(вывод);
     expect(payload.причина).toContain('ошибка сборки');
+    expect(зелёнаяСборка()).toBe(null);
   });
 
   it('сборка, оборванная по пределу времени, называется своим ответом, а не тишиной', async () => {
+    const место = await среда();
     const убит = Object.assign(new Error('таймаут'), {killed: true, signal: 'SIGTERM'});
-    const {payload} = await запрос(среда(), '/api/release/build', {path: RU}, сборщик({ошибка: убит}));
+    const {payload} = await ручка(место, '/api/release/build', {path: RU}, сборщик({ошибка: убит}));
 
     expect(payload.зелёная).toBe(false);
     expect(payload.оборвана).toBe(true);
   });
 
-  it('состав не доказан — сборка не запускается вовсе', async () => {
-    const repo = среда({
+  it('план не доказан — сборка не запускается вовсе', async () => {
+    const место = await среда({
       [RU]: СТАТЬЯ,
       [EN]: СТАТЬЯ,
+      [ES]: СТАТЬЯ,
       'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/сосед.mdx': СТАТЬЯ,
     });
     let звали = false;
 
-    const {status, payload} = await запрос(repo, '/api/release/build', {path: RU}, (...аргументы) => {
+    const {status, payload} = await ручка(место, '/api/release/build', {path: RU}, (...аргументы) => {
       звали = true;
       return сборщик()(...аргументы);
     });
@@ -216,34 +235,40 @@ describe('ручка полной сборки', () => {
     expect(payload.error).toBe(НАСТРОЙКИ['ошибкиСервера']['составНеДоказан']);
   });
 
-  it('сборщик зовётся сам собой, без оболочки и прямым путём внутри репозитория', async () => {
-    const repo = среда();
+  it('сборщик зовётся сам собой, без оболочки, и НЕ в рабочей папке человека', async () => {
+    const место = await среда();
     let вызов = null;
 
-    await запрос(repo, '/api/release/build', {path: RU}, (файл, аргументы, опции, готово) => {
+    await ручка(место, '/api/release/build', {path: RU}, (файл, аргументы, опции, готово) => {
       вызов = {файл, аргументы, опции};
       setTimeout(() => готово(null, '', ''), 0);
       return {on: () => {}};
     });
 
     expect(вызов.файл).toBe(process.execPath);
-    expect(вызов.аргументы[0]).toBe(путьСборщика(repo));
     expect(вызов.аргументы).toContain('build');
     // Ключа языка нет намеренно: без него сборщик собирает все локали сайта.
     expect(вызов.аргументы.some((аргумент) => String(аргумент).includes('locale'))).toBe(false);
-    expect(вызов.опции.cwd).toBe(repo);
+    // Собирается точная копия будущего сайта, а не рабочая папка человека.
+    expect(вызов.опции.cwd).not.toBe(место.repo);
     expect(вызов.опции.timeout).toBe(НАСТРОЙКИ['сборка']['пределМинут'] * 60 * 1000);
   });
 
-  it('ни состав, ни сборка не меняют на диске ни одного байта', async () => {
-    const repo = среда();
-    const снимок = () => JSON.stringify(fs.readdirSync(path.join(repo, path.dirname(RU)))
-      .map((имя) => [имя, fs.readFileSync(path.join(repo, path.dirname(RU), имя), 'utf8')]));
-    const до = снимок();
+  it('ни план, ни сборка не меняют на диске ни одного байта работы человека', async () => {
+    const место = await среда(
+      {[RU]: СТАТЬЯ, [EN]: СТАТЬЯ, [ES]: '---\ntitle: "Prueba"\n---\n\nMi trabajo.\n'},
+      {вКоммите: [RU, EN]},
+    );
+    const снимок = () => ({
+      ru: fs.readFileSync(path.join(место.repo, RU), 'utf8'),
+      es: fs.readFileSync(path.join(место.repo, ES), 'utf8'),
+      статус: (fs.readdirSync(место.repo)).sort().join(','),
+    });
+    const было = снимок();
 
-    await запрос(repo, '/api/release', {path: RU});
-    await запрос(repo, '/api/release/build', {path: RU}, сборщик());
+    await ручка(место, '/api/release', {path: RU});
+    await ручка(место, '/api/release/build', {path: RU}, сборщик());
 
-    expect(снимок()).toBe(до);
+    expect(снимок()).toEqual(было);
   });
 });

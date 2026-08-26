@@ -8,7 +8,7 @@ import {readField, splitArticle} from '../core/articleFile.mjs';
 import {планЛокали} from '../core/localeVersion.mjs';
 import {адресаСайта} from './createArticle.mjs';
 import {articlePlace, normalizeSlug} from '../core/frontmatterRules.mjs';
-import {этоЗаглушка} from '../core/stubText.mjs';
+import {названиеБезПометки} from '../core/stubText.mjs';
 import {годныйПуть} from './releaseFacts.mjs';
 import {badFields} from './httpBody.mjs';
 import {saveSnapshot} from './draftStore.mjs';
@@ -107,27 +107,6 @@ export async function localeRoute({req, res, url, repo, editorDir, settings, git
 
   send(res, 200, {path: план.path, локаль: план.локаль});
   return true;
-}
-
-/**
- * Название статьи без пометки заглушки. Начинают версию и от исходной статьи, и от соседней
- * заглушки; во втором случае в заголовке уже стоит пометка, и без её снятия у новой версии
- * получилось бы «Заглушка перевода: Translation placeholder: Название».
- *
- * Пометка снимается ТОЛЬКО у настоящей заглушки — той, чьё тело программа сама и написала.
- * По одному заголовку судить нельзя: живая статья, названная «Translation placeholder: …»,
- * потеряла бы начало собственного названия.
- */
-function названиеБезПометки(title, исходный, settings) {
-  let имя = String(title ?? '').trim();
-  if (!этоЗаглушка(исходный, settings)) return имя;
-
-  for (const шаблон of Object.values(settings['заглушкиПеревода'] ?? {})) {
-    const пометка = String(шаблон?.['заголовок'] ?? '').trim();
-    if (пометка !== '' && имя.startsWith(пометка)) имя = имя.slice(пометка.length).trim();
-  }
-
-  return имя;
 }
 
 /**

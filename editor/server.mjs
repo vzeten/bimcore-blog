@@ -5,7 +5,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createServer as createVite} from 'vite';
-import {simpleGit} from 'simple-git';
 
 import {обложкаСайта} from './src/core/siteConfig.mjs';
 import {editTimes, listArticles, опубликованные} from './src/adapters/library.mjs';
@@ -25,6 +24,7 @@ import {releaseRoute} from './src/adapters/releaseRoute.mjs';
 import {publishRoute} from './src/adapters/publishRoute.mjs';
 import {pushRoute} from './src/adapters/pushRoute.mjs';
 import {detectPublishedRef} from './src/adapters/gitFile.mjs';
+import {дверьGit} from './src/adapters/gitEnv.mjs';
 import {фиксироватьВнешнюю} from './src/adapters/externalVersion.mjs';
 
 const EDITOR_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -32,7 +32,10 @@ const REPO = path.resolve(EDITOR_DIR, '..');
 // Настройки читаются заново на каждый запрос: поправили settings.json — обновили страницу, готово.
 const readSettings = () => JSON.parse(fs.readFileSync(path.join(EDITOR_DIR, 'settings.json'), 'utf8'));
 const PORT = readSettings()['сервер']['порт'];
-const git = simpleGit(REPO);
+// Дверь к git одна на всю программу, и среду ей чистит одно правило: переменные вроде
+// GIT_PAGER или GIT_CONFIG_GLOBAL либо роняют команду, либо молча меняют её ответ, а на этих
+// ответах держатся основа публикации, состав, происхождение коммита и решение об отправке.
+const git = дверьGit(REPO);
 
 /**
  * Общая картинка сайта из его конфига. Читается текстом, без исполнения: импорт конфига
@@ -135,20 +138,20 @@ async function api(req, res, url) {
     req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send, articles,
   })) return;
 
-  // Предварительный выпуск: состав файлов статьи и полная сборка сайта. Git только читается —
-  // ветка сайта нужна, чтобы сказать человеку, что в статье действительно изменится.
+  // Предварительный выпуск: план публикации и полная сборка его точной копии. Git только читается:
+  // ни индекс, ни объектная база до согласия человека не меняются.
   if (await releaseRoute({
-    req, res, url, repo: REPO, settings: readSettings(), git, publishedRef, тело, insideRepo, send,
+    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, insideRepo, send,
   })) return;
 
-  // Коммит статьи — единственная ручка, меняющая местный git. Отправки в ней нет.
+  // Запись статьи — единственная ручка, меняющая местный git. Отправки в ней нет.
   if (await publishRoute({
-    req, res, url, repo: REPO, settings: readSettings(), git, тело, insideRepo, send,
+    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, insideRepo, send,
   })) return;
 
   // Отправка на сайт: сначала показ того, что уедет, и только отдельным заходом сама отправка.
   if (await pushRoute({
-    req, res, url, repo: REPO, settings: readSettings(), git, тело, insideRepo, send,
+    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, insideRepo, send,
   })) return;
 
   // Автосохранение — отдельным модулем: сервер иначе выходит за лимит размера файла.
