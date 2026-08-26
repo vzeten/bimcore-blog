@@ -6,117 +6,92 @@ import { describe, expect, it } from 'vitest';
 
 const editorRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(editorRoot, '..');
+const read = (path) => readFileSync(resolve(repoRoot, path), 'utf8').replace(/\r\n/g, '\n');
 
-describe('контракт процесса работы', () => {
-  it('держит CURRENT_TASK короткой действующей карточкой, а не архивом', () => {
-    const text = readFileSync(resolve(editorRoot, 'CURRENT_TASK.md'), 'utf8');
-    const lines = text.replace(/\r\n/g, '\n').split('\n');
-    const headings = lines.filter((line) => /^#{1,6}\s/.test(line));
-
-    expect(lines.length).toBeLessThanOrEqual(150);
-    expect(headings.join('\n')).not.toMatch(/истори|сделано|отклон[её]нн/i);
-    expect(text).toContain('Новая операция переписывает её целиком');
+describe('короткий контракт процесса', () => {
+  it('держит CURRENT_TASK карточкой одной операции', () => {
+    const text = read('editor/CURRENT_TASK.md');
+    expect(text.split('\n').length).toBeLessThanOrEqual(60);
+    expect(text).toContain('## Результат');
+    expect(text).toContain('## Границы этой операции');
+    expect(text).toContain('## Приёмка');
+    expect(text).not.toMatch(/история кругов|ревизия|session_id|reviewer[.]json/i);
   });
 
-  it('не допускает файлы координации в git', () => {
-    const ignored = execFileSync(
-      'git',
-      ['check-ignore', 'editor/.coordination/handoff.md', 'editor/.coordination/reviewer.json'],
-      { cwd: repoRoot, encoding: 'utf8' },
-    );
+  it('не возвращает постоянные сессии и ревизионный автомат', () => {
+    const rules = [
+      read('CLAUDE.md'),
+      read('AGENTS.md'),
+      read('editor/TASKS.md'),
+      read('.claude/skills/codex-gate/SKILL.md'),
+      read('.claude/skills/editor-change/SKILL.md'),
+      read('.claude/skills/model-council/SKILL.md'),
+    ].join('\n');
 
-    expect(ignored.replace(/\\/g, '/')).toContain('editor/.coordination/handoff.md');
-    expect(ignored.replace(/\\/g, '/')).toContain('editor/.coordination/reviewer.json');
+    expect(rules).toContain('codex exec --ephemeral --sandbox read-only');
+    expect(rules).toContain('Постоянной сессии');
+    expect(rules).toContain('нет');
+    expect(rules).not.toMatch(/exec resume <|codex_response_revision|точный ID хранится|одна постоянная read-only сессия/i);
+    expect(read('editor/DECISIONS.md')).toContain('Процесс разработки v1 заменяет прежние правила');
+    expect(read('editor/TASKS.md')).not.toMatch(/Класс [АБВ]|класса [АБВ]|класс [АБВ]|44–70|совет собирается сам/);
   });
 
-  it('не возвращает старую передачу в CURRENT_TASK и требует точный resume', () => {
-    const tasks = readFileSync(resolve(editorRoot, 'TASKS.md'), 'utf8');
-    const report = readFileSync(resolve(editorRoot, 'REPORT.md'), 'utf8');
-    const gate = readFileSync(resolve(repoRoot, '.claude/skills/codex-gate/SKILL.md'), 'utf8');
+  it('разделяет три риска и ограничивает вопросы владельцу', () => {
+    const tasks = read('editor/TASKS.md');
+    const claude = read('CLAUDE.md');
+    const gate = read('.claude/skills/codex-gate/SKILL.md');
 
-    expect(tasks).toContain('Жёсткий предел — 150 строк');
-    expect(tasks).not.toContain('положив туда девять вещей');
-    expect(report).toContain('точно тот же текст');
-    expect(report).toContain('editor/.coordination/handoff.md');
-    expect(gate).toContain('exec resume <ТОЧНЫЙ_SESSION_ID>');
-    expect(gate).toContain('`--last` запрещён');
-    expect(gate).toContain('"type":"thread.started"');
+    for (const marker of [
+      '1. Видимое и обратимое',
+      '2. Данные статьи',
+      '3. Публикация и необратимость',
+      'RESOLVE_WITHOUT_OWNER',
+      'REFRAME_REQUIRED',
+      'OWNER_REQUIRED',
+    ]) {
+      expect(tasks).toContain(marker);
+    }
+    expect(tasks).toContain('максимум один собранный пакет');
+    expect(claude).toContain('Технических вопросов владельцу быть не может');
+    expect(gate).toMatch(/Блокеры: <до трёх/i);
+    expect(gate).toMatch(/Убрать: <до трёх/i);
   });
 
-  it('проверяет живые файлы обмена, когда операция выполняется локально', () => {
+  it('ставит живую пробу владельца перед допуском Codex к коммиту', () => {
+    const claude = read('CLAUDE.md');
+    const tasks = read('editor/TASKS.md');
+    const report = read('editor/REPORT.md');
+
+    expect(claude).toContain('Живая проба владельца идёт перед окончательной сверкой');
+    expect(tasks).toContain('APPROVED_TO_COMMIT head=<sha> tree=<hash>');
+    expect(tasks).toContain('git diff --cached');
+    expect(tasks).toContain('git write-tree');
+    expect(tasks).toContain('git add .` запрещён');
+    expect(tasks).toMatch(/функционального файла аннулирует пробу/i);
+    expect(report).toMatch(/Владелец отвечает верхнеуровневому Codex свободным текстом/i);
+    expect(report.split('\n').length).toBeLessThanOrEqual(30);
+  });
+
+  it('держит handoff коротким и игнорируемым', () => {
     const handoffPath = resolve(editorRoot, '.coordination/handoff.md');
-    const reviewerPath = resolve(editorRoot, '.coordination/reviewer.json');
-    const handoffExists = existsSync(handoffPath);
-    const reviewerExists = existsSync(reviewerPath);
+    const ignored = execFileSync('git', ['check-ignore', 'editor/.coordination/handoff.md'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    expect(ignored.replace(/\\/g, '/')).toContain('editor/.coordination/handoff.md');
 
-    if (!handoffExists && !reviewerExists) return;
-
-    expect(handoffExists).toBe(true);
-    expect(reviewerExists).toBe(true);
-
+    expect(read('editor/TASKS.md')).toContain('Claude создаёт его до кода');
+    if (!existsSync(handoffPath)) return;
     const handoff = readFileSync(handoffPath, 'utf8').replace(/\r\n/g, '\n');
-    const reviewer = JSON.parse(readFileSync(reviewerPath, 'utf8'));
-    const field = (name) => handoff.match(new RegExp(`^${name}: (.+)$`, 'm'))?.[1];
-    const report = handoff.match(
-      /## Отчёт исполнителя владельцу\n\n([\s\S]*?)\n\n## Технические доказательства/,
-    )?.[1];
-
-    expect(handoff.split('\n').length).toBeLessThanOrEqual(120);
-    expect(handoff.match(/^## .+$/gm)).toEqual([
-      '## Отчёт исполнителя владельцу',
-      '## Технические доказательства',
+    expect(handoff.split('\n').length).toBeLessThanOrEqual(50);
+    expect(handoff).not.toMatch(/session_id|revision|reviewer/i);
+    for (const heading of [
+      '## Результат Claude',
+      '## Доказательства',
+      '## Наблюдения владельца',
       '## Ответ верхнеуровневого Codex',
-    ]);
-    const status = field('status');
-    const reportReady = status !== 'claude-working';
-
-    if (reportReady) {
-      expect(report).toBeTruthy();
-      expect(report.split('\n').length).toBeLessThanOrEqual(20);
-      for (const part of [
-        'Было',
-        'Стало',
-        'Что для этого сделано',
-        'Что нужно от вас',
-        'Сколько пройдено',
-        'Как начать новую сессию',
-      ]) {
-        expect(report).toContain(`**${part}.**`);
-      }
-      expect(report).not.toMatch(/CURRENT_TASK|handoff|reviewer|[.]md|[.]json/);
-      expect(report).toMatch(/[0-9]/);
-      expect(report).toContain('машинных проверок');
-      expect(report).toContain('окно не проверялось');
-      expect(report).toContain('До первой живой статьи');
-      expect(report).toContain('до законченной программы');
-    }
-
-    expect(reviewer.operation_id).toBe(field('operation_id'));
-    expect(reviewer.root.replace(/\\\\/g, '\\')).toBe(field('root').replace(/\\\\/g, '\\'));
-    expect(reviewer.head_at_start).toBe(field('head'));
-    if (reviewer.session_id === null) {
-      expect(status).toBe('claude-working');
-      expect(reviewer.resume_marker).toBeNull();
-    } else {
-      expect(reviewer.session_id).toMatch(/^[0-9a-f-]+$/i);
-      expect(handoff).toContain(reviewer.session_id);
-      expect(reviewer.resume_marker).toBeTruthy();
-      expect(handoff).toContain(reviewer.resume_marker);
-    }
-
-    const revision = Number(field('revision'));
-    const responseRevision = Number(field('codex_response_revision'));
-    expect(reviewer.last_revision_seen).toBe(responseRevision);
-    expect(responseRevision).toBeLessThanOrEqual(revision);
-    if (status === 'awaiting-codex') {
-      expect(responseRevision).toBeLessThan(revision);
-    }
-    if (['codex-answered', 'awaiting-owner-test', 'closed'].includes(status)) {
-      expect(responseRevision).toBe(revision);
-    }
-    if (['awaiting-owner-test', 'closed'].includes(status)) {
-      expect(reviewer.cold_final_session_id).toMatch(/^[0-9a-f-]+$/i);
-      expect(handoff).toContain(reviewer.cold_final_session_id);
+    ]) {
+      expect(handoff).toContain(heading);
     }
   });
 });
