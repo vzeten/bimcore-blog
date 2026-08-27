@@ -6,6 +6,24 @@ export interface Selection {
   to: number;
 }
 
+/**
+ * Кнопка панели вставки и форматирования, как она записана в настройках: `команда` решает, что
+ * сделать с выделением, остальные поля — её мера. Описание живёт рядом с самими командами.
+ */
+export interface Button {
+  группа: string;
+  подпись: string;
+  команда: string;
+  уровень?: number;
+  знак?: string;
+  вид?: 'точки' | 'числа';
+  столбцов?: number;
+  строк?: number;
+  текст?: string;
+  /** Имя блока из реестра `блоки`: что вставляет команда «блок». */
+  блок?: string;
+}
+
 export interface Edit {
   /** Что вставить вместо выделенного куска. */
   insert: string;
@@ -18,7 +36,8 @@ export interface Edit {
   select?: Selection;
 }
 
-function lineBounds(text: string, at: Selection): Selection {
+/** Границы строк, задетых выделением. Одно правило на все построчные команды и вставку блока. */
+export function lineBounds(text: string, at: Selection): Selection {
   const from = text.lastIndexOf('\n', at.from - 1) + 1;
   const found = text.indexOf('\n', at.to);
   return {from, to: found === -1 ? text.length : found};

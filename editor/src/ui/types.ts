@@ -1,4 +1,10 @@
 import type {Layer, LayerKind} from '../core/colorize';
+import type {Button} from '../core/commands';
+import type {ОписаниеБлока} from '../core/jsxBlocks';
+
+// Понятия, объявленные правилами ядра, здесь только пересказываются зонам окна: второго
+// определения того же понятия быть не должно. Кнопка панели описана рядом со своими командами.
+export type {Button, ОписаниеБлока};
 
 // Понятия, общие для всех зон окна.
 
@@ -126,18 +132,6 @@ export interface ПросмотрВерсии {
 /** Состояние автосохранения для шапки. */
 export type SaveState = 'сохранено' | 'естьНесохранённые' | 'сохраняем' | 'автосохранено' | 'неУдалосьАвтосохранить';
 
-export interface Button {
-  группа: string;
-  подпись: string;
-  команда: string;
-  уровень?: number;
-  знак?: string;
-  вид?: 'точки' | 'числа';
-  столбцов?: number;
-  строк?: number;
-  текст?: string;
-}
-
 export interface Column {
   ключ: string;
   подпись: string;
@@ -159,6 +153,8 @@ export interface Settings {
   обязательныйЯзык: string;
   категорияСлужебной: string;
   вставки: Button[];
+  /** Известные блоки статьи по имени тега. Тега нет в реестре — программа его не трогает. */
+  блоки: Record<string, ОписаниеБлока>;
   призывПоРазделу: Record<string, string>;
   статусы: string[];
   подписи: Record<string, string>;

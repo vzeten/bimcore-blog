@@ -40,7 +40,7 @@ export function VersionView(props: {
       parent: host.current,
       state: EditorState.create({
         doc: props.версия.body,
-        extensions: толькоЧтение(() => props.path),
+        extensions: толькоЧтение(() => props.path, props.settings.блоки),
       }),
     });
 

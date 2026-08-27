@@ -5,10 +5,13 @@ import {типыТелаСтатьи} from '../../core/imageType.mjs';
 import {выбратьФайл, type ВставленнаяКартинка} from '../editor/images';
 import type {Deletion} from '../../core/colorize';
 import {ImagePanel} from '../editor/ImagePanel';
+import {BlockPanel} from '../editor/BlockPanel';
 import {перенестиВыбор} from '../editor/imagePanelPlace';
+import {уУзла} from '../editor/widgetPlace';
 import {SelectionToolbar, decideEdit} from '../editor/SelectionToolbar';
 import {useEditor, type Spot} from '../editor/useEditor';
 import type {КартинкаВОкне} from '../livePreview/inline';
+import type {БлокВОкне} from '../livePreview/blocks';
 import {Properties} from './Properties';
 import type {Field} from '../headFields';
 import type {Article, Settings} from '../types';
@@ -46,6 +49,9 @@ export function ArticlePane(props: {
   const [spot, setSpot] = useState<Spot | null>(null);
   const [menu, setMenu] = useState(false);
   const [картинка, setКартинка] = useState<КартинкаВОкне | null>(null);
+  // Блок, чьи свойства открыты. Панель держит границы узла на момент нажатия, поэтому любая
+  // правка текста её закрывает — как и панель картинки.
+  const [блок, setБлок] = useState<БлокВОкне | null>(null);
   // Номер выбора картинки. Он и есть ключ панели: нажали другую картинку — панель создаётся
   // заново и поля в ней чистые; сменился адрес той же выбранной — панель остаётся, иначе
   // с ней пропали бы и набранный alt, и показанный итог операции.
@@ -73,12 +79,15 @@ export function ArticlePane(props: {
       setВыбор(выборРеф.current);
       setКартинка(картинка);
     },
+    блоки: props.settings.блоки,
+    onБлок: (блок) => setБлок(блок),
     // Панель свойств картинки держит позицию узла на момент открытия: любая правка текста
     // (своя, чужая, подстановка версии) сдвигает позиции, и панель закрывается, а не правит
     // наугад. Кроме времени файловой операции: диск уже меняется, и итог обязан дойти
     // до человека (находка ворот 2026-08-17); применять устаревшую позицию панель не станет —
     // она сверяет текст сама.
     onDocChanged: () => {
+      setБлок(null);
       if (!файловаяОперация.current) setКартинка(null);
     },
     толькоЧтение: выборНеСделан,
@@ -87,7 +96,9 @@ export function ArticlePane(props: {
   // Просмотр старой версии прячет рабочий редактор — панель картинки уходит вместе с ним:
   // её правки относятся к рабочему тексту, а на экране в это время другой.
   useEffect(() => {
-    if (props.скрыт === true) setКартинка(null);
+    if (props.скрыт !== true) return;
+    setКартинка(null);
+    setБлок(null);
   }, [props.скрыт]);
 
   // Возврат кладёт текст ТРАНЗАКЦИЕЙ в живой редактор, а не пересозданием зоны: пересоздание
@@ -165,6 +176,15 @@ export function ArticlePane(props: {
         articlePath={props.article.path}
       />
 
+      {блок !== null && !выборНеСделан && view.current !== null && (
+        <BlockPanel
+          settings={props.settings}
+          блок={блок}
+          view={view.current}
+          onClose={() => setБлок(null)}
+        />
+      )}
+
       {картинка !== null && !выборНеСделан && view.current !== null && (
         <ImagePanel
           /* Ключ перемонтирует панель при выборе другой картинки: без него поле alt-текста
@@ -210,11 +230,29 @@ export function ArticlePane(props: {
     });
     if (!edit) return;
 
-    editor.dispatch({
-      changes: {from: edit.from, to: edit.to, insert: edit.insert},
-      selection: {anchor: edit.from + (edit.caret ?? edit.insert.length)},
-    });
+    const конец = edit.from + (edit.caret ?? edit.insert.length);
+    editor.dispatch({changes: {from: edit.from, to: edit.to, insert: edit.insert}, selection: {anchor: конец}});
     editor.focus();
+
+    if (button.команда === 'блок' && button.блок !== undefined) открытьБлок(editor, button.блок, конец);
+  }
+
+  /**
+   * Сразу после вставки блока — его свойства, чтобы предложенное разделом можно было сменить,
+   * не разыскивая блок нажатием. Блоку без полей панель не нужна: выбирать в нём нечего.
+   * Тег кончается на позиции курсора, а знака `<` внутри него не бывает — отсюда его начало.
+   */
+  function открытьБлок(editor: EditorView, имя: string, конец: number): void {
+    if ((props.settings.блоки[имя]?.поля.length ?? 0) === 0) return;
+
+    const начало = editor.state.doc.toString().lastIndexOf('<', конец);
+    const место = начало === -1 ? null : уУзла(editor, начало, '.md-block');
+    if (место === null) return;
+
+    setБлок({
+      имя, текст: editor.state.sliceDoc(начало, конец), from: начало, to: конец,
+      left: место.left, top: место.bottom,
+    });
   }
 
   /** Выбор файла картинки. Предлагается ровно то, что примет сервер: PNG, JPG и GIF. */
@@ -233,29 +271,14 @@ export function ArticlePane(props: {
     // Координаты берутся сразу: редактор строит виджет картинки в той же правке, что и текст,
     // поэтому ждать отрисовки нечего. Ожидание кадра здесь было бы хуже — в неактивной вкладке
     // браузер такие кадры не выдаёт вовсе, и панель не появилась бы никогда.
-    const место = уКартинки(editor, готово.узелОт);
+    const место = уУзла(editor, готово.узелОт, '.md-image');
     if (место === null) return;
 
     выборРеф.current += 1;
     setВыбор(выборРеф.current);
-    setКартинка({src: готово.src, alt: '', from: готово.узелОт, to: готово.узелДо, ...место});
+    setКартинка({
+      src: готово.src, alt: '', from: готово.узелОт, to: готово.узелДо,
+      left: место.left, top: место.top,
+    });
   }
-}
-
-/**
- * Где на экране картинка в этой позиции. Сначала спрашивается сам её виджет — он знает свои
- * настоящие края; если виджет ещё не построен, берётся место позиции в тексте.
- * `null` — показать панель не у чего: строка вне видимой части.
- */
-function уКартинки(editor: EditorView, позиция: number): {left: number; top: number} | null {
-  const узел = editor.domAtPos(позиция).node;
-  const элемент = узел instanceof HTMLElement ? узел : узел.parentElement;
-  const картинка = элемент?.closest('.md-image') ?? элемент?.querySelector('.md-image');
-  if (картинка instanceof HTMLElement) {
-    const место = картинка.getBoundingClientRect();
-    return {left: место.left, top: место.top};
-  }
-
-  const место = editor.coordsAtPos(позиция);
-  return место === null ? null : {left: место.left, top: место.top};
 }

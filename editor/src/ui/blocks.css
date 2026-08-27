@@ -1,0 +1,77 @@
+/* Блоки статьи в окне: человек видит сам блок, а не JSX-тег. Вид намеренно скромный — это
+   отметка места и выбранной заготовки, а не попытка изобразить настоящий призыв с сайта:
+   его заголовок, текст и кнопка живут в компоненте сайта и переводятся им же. */
+
+.md-block {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--bg-soft);
+  cursor: pointer;
+  user-select: none;
+}
+
+.md-block-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-quiet);
+}
+
+.md-block-choice {
+  font-size: 13px;
+  color: var(--ink-quiet);
+  border-left: 1px solid var(--line);
+  padding-left: 8px;
+}
+
+/* Панель свойств блока: у самого блока, как панель картинки. */
+.block-panel {
+  position: fixed;
+  z-index: 40;
+  min-width: 260px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.block-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.block-panel-name { font-weight: 600; }
+
+.block-panel-close {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--ink-quiet);
+}
+
+.block-panel-empty {
+  font-size: 13px;
+  color: var(--ink-quiet);
+}
+
+.block-panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink-quiet);
+}
+
+.block-panel-field select {
+  padding: 5px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}

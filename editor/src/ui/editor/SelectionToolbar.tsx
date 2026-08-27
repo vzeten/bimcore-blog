@@ -1,6 +1,8 @@
 import {useState} from 'react';
 import type {EditorView} from '@codemirror/view';
 import * as act from '../../core/commands';
+import {sectionOf} from '../../core/articles.mjs';
+import {вставкаБлока, значениеПоРазделу, новыйТег} from '../../core/jsxBlocks';
 import type {Button, Settings} from '../types';
 import type {Spot} from './useEditor';
 
@@ -88,13 +90,15 @@ function decide(
     return act.table(doc, at, button.столбцов ?? 3, button.строк ?? 2, props.settings.подписи.столбецШаблон);
   }
 
-  if (button.команда === 'призыв') {
-    // Тип призыва — по разделу статьи. Запасное значение берётся из настроек («умолчание»),
-    // своего в коде нет: второй источник правды тихо перебивал бы настройку.
-    const карта = props.settings.призывПоРазделу;
-    const section = Object.keys(карта).find((key) => props.articlePath.includes(`/${key}/`));
-    const type = карта[section ?? 'умолчание'] ?? карта['умолчание'];
-    return {from: at.from, to: at.to, insert: `<CTA type="${type}" />`};
+  if (button.команда === 'блок' && button.блок !== undefined) {
+    // Блок вставляется отдельной строкой и со свойством, которое предлагает раздел статьи.
+    // Список известных блоков и их поля живут в настройках: своего перечня в коде нет.
+    const описание = props.settings.блоки[button.блок];
+    if (описание === undefined) return null;
+
+    const тег = новыйТег(button.блок, описание, () =>
+      значениеПоРазделу(props.settings.призывПоРазделу, sectionOf(props.articlePath, props.settings)));
+    return вставкаБлока(doc, at, тег);
   }
 
   if (button.команда === 'вставить' && button.текст) {
