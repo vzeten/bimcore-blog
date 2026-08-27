@@ -57,19 +57,35 @@ describe('короткий контракт процесса', () => {
     expect(gate).toMatch(/Убрать: <до трёх/i);
   });
 
-  it('ставит живую пробу владельца перед допуском Codex к коммиту', () => {
+  it('ставит живую пробу владельца перед допуском Codex к переносу ветки', () => {
     const claude = read('CLAUDE.md');
     const tasks = read('editor/TASKS.md');
     const report = read('editor/REPORT.md');
 
     expect(claude).toContain('Живая проба владельца идёт перед окончательной сверкой');
-    expect(tasks).toContain('APPROVED_TO_COMMIT head=<sha> tree=<hash>');
-    expect(tasks).toContain('git diff --cached');
-    expect(tasks).toContain('git write-tree');
+    expect(tasks).toContain('APPROVED_TO_MERGE branch=<name> head=<sha> base=<sha>');
+    expect(tasks).toContain('git diff <base>..<head>');
+    expect(tasks).toContain('git merge --ff-only');
     expect(tasks).toContain('git add .` запрещён');
-    expect(tasks).toMatch(/функционального файла аннулирует пробу/i);
+    expect(tasks).toMatch(/функциональный коммит аннулирует пробу/i);
     expect(report).toMatch(/Владелец отвечает верхнеуровневому Codex свободным текстом/i);
     expect(report.split('\n').length).toBeLessThanOrEqual(30);
+  });
+
+  it('ведёт функциональные операции в локальных ветках с контрольными коммитами', () => {
+    const claude = read('CLAUDE.md');
+    const tasks = read('editor/TASKS.md');
+    const claudeSkill = read('.claude/skills/editor-change/SKILL.md');
+    const codexSkill = read('.agents/skills/editor-change/SKILL.md');
+
+    for (const rules of [claude, tasks, claudeSkill, codexSkill]) {
+      expect(rules).toContain('feature/editor-<суть>');
+      expect(rules).toContain('fix/editor-<суть>');
+    }
+    expect(tasks).toContain('git merge --ff-only');
+    expect(tasks).toMatch(/push рабочей ветки запрещён/i);
+    expect(claudeSkill).toMatch(/контрольный коммит/i);
+    expect(codexSkill).toMatch(/контрольные локальные коммиты обязательны/i);
   });
 
   it('держит handoff коротким и игнорируемым', () => {
