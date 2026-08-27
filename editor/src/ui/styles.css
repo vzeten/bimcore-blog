@@ -222,6 +222,10 @@ button { font: inherit; cursor: pointer; }
 .md-h3 { font-size: 1.18em; }
 .md-h4, .md-h5, .md-h6 { font-size: 1.04em; }
 .md-blank { line-height: 0.75; }
+/* Пробел на месте спрятанного мягкого переноса. Собственный `pre-wrap` нужен затем, чтобы
+   пробел не схлопнулся между словами, но и не повис лишним знаком там, где строка переносится
+   сама, — ровно как на собранной странице. */
+.md-soft-break { white-space: pre-wrap; }
 .md-bullet { color: var(--ink-quiet); }
 .md-strong { font-weight: 700; }
 .md-em { font-style: italic; }
