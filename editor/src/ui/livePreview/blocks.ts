@@ -23,6 +23,8 @@ export interface ВидБлока {
   название?: string;
   /** Адрес картинки-обложки. Она украшение: не загрузилась — блок остаётся блоком. */
   обложка?: string;
+  /** Блок занимает строку целиком и повторяет пропорции сайта — так устроено видео. */
+  воВсюСтроку?: boolean;
 }
 
 export function видБлока(
@@ -61,6 +63,9 @@ export function видБлока(
     выбор,
     ...(название !== undefined && название !== '' ? {название} : {}),
     ...(обложка !== null ? {обложка} : {}),
+    // Блок со ссылкой на видео человек и на сайте видит целой полосой: показывать его строчной
+    // плашкой значит обещать одно, а выпустить другое.
+    ...(ссылка !== undefined ? {воВсюСтроку: true} : {}),
   };
 }
 
@@ -82,40 +87,7 @@ class BlockWidget extends WidgetType {
   }
 
   toDOM(): HTMLElement {
-    const блок = document.createElement('span');
-    блок.className = 'md-block';
-
-    // Обложка — украшение, а не содержание блока: её грузят из сети, и сети может не быть.
-    // Не загрузилась — картинка убирается, и остаётся тот же блок с подписью и названием.
-    if (this.вид.обложка !== undefined) {
-      const обложка = document.createElement('img');
-      обложка.className = 'md-block-cover';
-      обложка.src = this.вид.обложка;
-      обложка.alt = '';
-      // Отдельная ленивость обложке не нужна: виджеты строятся только для видимой части текста,
-      // и картинка заводится ровно тогда, когда её место и так на экране.
-      обложка.addEventListener('error', () => обложка.remove());
-      блок.append(обложка);
-    }
-
-    const подпись = document.createElement('span');
-    подпись.className = 'md-block-name';
-    подпись.textContent = this.вид.подпись;
-    блок.append(подпись);
-
-    if (this.вид.название !== undefined) {
-      const название = document.createElement('span');
-      название.className = 'md-block-title';
-      название.textContent = this.вид.название;
-      блок.append(название);
-    }
-
-    for (const слово of this.вид.выбор) {
-      const выбор = document.createElement('span');
-      выбор.className = 'md-block-choice';
-      выбор.textContent = слово;
-      блок.append(выбор);
-    }
+    const блок = this.вид.воВсюСтроку === true ? this.полоса() : this.плашка();
 
     блок.addEventListener('mousedown', (event) => {
       event.preventDefault();
@@ -125,6 +97,69 @@ class BlockWidget extends WidgetType {
         left: место.left, top: место.bottom,
       });
     });
+
+    return блок;
+  }
+
+  /** Обычный блок: подпись и выбранная заготовка одной строкой. Так показан призыв к действию. */
+  private плашка(): HTMLElement {
+    const блок = document.createElement('span');
+    блок.className = 'md-block';
+
+    const подпись = document.createElement('span');
+    подпись.className = 'md-block-name';
+    подпись.textContent = this.вид.подпись;
+    блок.append(подпись);
+
+    for (const слово of this.вид.выбор) {
+      const выбор = document.createElement('span');
+      выбор.className = 'md-block-choice';
+      выбор.textContent = слово;
+      блок.append(выбор);
+    }
+
+    return блок;
+  }
+
+  /**
+   * Видео так, как его увидит читатель: полоса во всю ширину текста, пропорции 16:9, обложка и
+   * знак воспроизведения. Само видео здесь не играет — окно показывает место, а не проигрыватель.
+   */
+  private полоса(): HTMLElement {
+    const блок = document.createElement('div');
+    блок.className = 'md-video';
+
+    // Обложка — украшение, а не содержание блока: её грузят из сети, и сети может не быть.
+    // Не загрузилась — картинка убирается, и остаётся та же полоса с подписью и названием.
+    if (this.вид.обложка !== undefined) {
+      const обложка = document.createElement('img');
+      обложка.className = 'md-video-cover';
+      обложка.src = this.вид.обложка;
+      обложка.alt = '';
+      обложка.addEventListener('error', () => обложка.remove());
+      блок.append(обложка);
+    }
+
+    const знак = document.createElement('span');
+    знак.className = 'md-video-play';
+    блок.append(знак);
+
+    const низ = document.createElement('span');
+    низ.className = 'md-video-caption';
+
+    const подпись = document.createElement('span');
+    подпись.className = 'md-block-name';
+    подпись.textContent = this.вид.подпись;
+    низ.append(подпись);
+
+    if (this.вид.название !== undefined) {
+      const название = document.createElement('span');
+      название.className = 'md-video-title';
+      название.textContent = this.вид.название;
+      низ.append(название);
+    }
+
+    блок.append(низ);
 
     return блок;
   }
@@ -172,8 +207,21 @@ function build(
         const вид = видБлока(текст, блоки, (значение) => label('блокНеизвестен', {значение}));
         if (вид === null) return;
 
+        // Видео занимает свою строку целиком — значит и заменяется целой строкой: рядом с полосой
+        // не остаётся текста, куда встал бы курсор посреди JSX. Тег, делящий строку с текстом,
+        // такой заменой разорвал бы абзац, и ему достаётся ровно его собственный кусок.
+        //
+        // Блочной декорацией (`block: true`) это делать нельзя: CodeMirror принимает такие только
+        // от поля состояния, а слой показа живёт плагином, и программа падала бы прямо при
+        // открытии статьи. Полосу во всю ширину даёт сам виджет — его корень блочный.
+        const строка = view.state.doc.lineAt(node.from);
+        const целаяСтрока = вид.воВсюСтроку === true
+          && строка.from === node.from && строка.to === node.to;
+        const от = целаяСтрока ? строка.from : node.from;
+        const до = целаяСтрока ? строка.to : node.to;
+
         const widget = new BlockWidget(текст, вид, node.from, node.to, onБлок);
-        list.push(Decoration.replace({widget}).range(node.from, node.to));
+        list.push(Decoration.replace({widget}).range(от, до));
       },
     });
   }
