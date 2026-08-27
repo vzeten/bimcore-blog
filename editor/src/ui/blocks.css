@@ -70,3 +70,49 @@
   border-radius: 6px;
   font: inherit;
 }
+
+.md-block-cover {
+  width: 96px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.md-block-title {
+  font-size: 13px;
+  color: var(--ink);
+  border-left: 1px solid var(--line);
+  padding-left: 8px;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.block-panel-field input {
+  padding: 5px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.block-panel-field + .block-panel-field { margin-top: 8px; }
+
+.block-panel-duration {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.block-panel-pair {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.block-panel-pair input { width: 64px; }
+
+.block-panel-bad {
+  color: #8a1f1f;
+  line-height: 1.35;
+}

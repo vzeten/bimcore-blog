@@ -78,7 +78,7 @@ function decide(
   button: Button,
   doc: string,
   at: act.Selection,
-  props: {settings: Settings; articlePath: string},
+  props: {settings: Settings; articlePath: string; шапка?: Record<string, string>},
 ): act.Edit | null {
   if (button.команда === 'заголовок') return act.heading(doc, at, button.уровень ?? 2);
   if (button.команда === 'список') return act.list(doc, at, button.вид ?? 'точки');
@@ -94,8 +94,12 @@ function decide(
     const описание = props.settings.блоки[button.блок];
     if (описание === undefined) return null;
 
-    const тег = новыйТег(button.блок, описание, () =>
-      значениеПоРазделу(props.settings.призывПоРазделу, sectionOf(props.articlePath, props.settings)));
+    // Поле раздела берёт предложение у дерева разделов, поле шапки — у самой статьи: название
+    // видео человек чаще всего пишет то же, что стоит в заголовке. Это предложение, а не решение.
+    const тег = новыйТег(button.блок, описание, (поле) => {
+      if (поле.изШапки !== undefined) return props.шапка?.[поле.изШапки] ?? null;
+      return значениеПоРазделу(props.settings.призывПоРазделу, sectionOf(props.articlePath, props.settings));
+    });
     return вставкаБлока(doc, at, тег);
   }
 

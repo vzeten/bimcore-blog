@@ -14,6 +14,7 @@ import {файлСтатьи} from './articles.mjs';
 import {
   БЛОКЕР, ЭТАПЫ, адресаВерсий, находка, настройки, поляПоиска, составСтатьи, шапкиВерсий,
 } from './prepareRules.mjs';
+import {блокиТела} from './blockRules.mjs';
 import {значенияПолей} from './prepareValueRules.mjs';
 
 export {БЛОКЕР, ПРЕДУПРЕЖДЕНИЕ, ЭТАПЫ} from './prepareRules.mjs';
@@ -32,6 +33,7 @@ const ПРАВИЛА = {
   поляПоиска,
   значенияПолей,
   адресаВерсий,
+  блокиТела,
 };
 
 /** Прошла ли подготовка. Одно место правила: его же спрашивает публикация перед коммитом. */
@@ -85,13 +87,15 @@ export function проверитьМестные(снимок, категори�
 function разобрать({путь, содержимое}, settings) {
   // Записи без содержимого быть не должно, но падать на ней ядру нельзя: пустой файл — это статья
   // без шапки, и правила скажут о ней своё, а не свалятся стеком (SPEC 4.12).
-  const {frontmatterRaw} = splitArticle(содержимое ?? '');
+  // Тело нужно правилу блоков: свойства видео живут в тексте статьи, а не в шапке.
+  const {frontmatterRaw, body} = splitArticle(содержимое ?? '');
   const roots = settings['контент'];
   const место = articlePlace(путь, roots);
 
   return {
     путь,
     frontmatterRaw,
+    тело: body,
     поля: readFields(frontmatterRaw, путь, roots),
     группы: headGroups(frontmatterRaw),
     локаль: место.locale,
