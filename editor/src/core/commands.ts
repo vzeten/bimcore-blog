@@ -6,6 +6,19 @@ export interface Selection {
   to: number;
 }
 
+export interface Button {
+  группа: string;
+  подпись: string;
+  команда: string;
+  уровень?: number;
+  знак?: string;
+  вид?: 'точки' | 'числа';
+  столбцов?: number;
+  строк?: number;
+  текст?: string;
+  блок?: string;
+}
+
 export interface Edit {
   /** Что вставить вместо выделенного куска. */
   insert: string;
@@ -18,7 +31,7 @@ export interface Edit {
   select?: Selection;
 }
 
-function lineBounds(text: string, at: Selection): Selection {
+export function lineBounds(text: string, at: Selection): Selection {
   const from = text.lastIndexOf('\n', at.from - 1) + 1;
   const found = text.indexOf('\n', at.to);
   return {from, to: found === -1 ? text.length : found};

@@ -7,7 +7,8 @@ import {клавишиСписка} from './listKeys';
 import {layerColors, слоиОкна} from '../layerColors';
 import type {Deletion} from '../../core/colorize';
 import {правкаПанелиКартинки, type КартинкаВОкне} from '../livePreview/inline';
-import type {Article} from '../types';
+import type {БлокВОкне} from '../livePreview/blocks';
+import type {Article, ОписаниеБлока} from '../types';
 
 export interface Spot {
   left: number;
@@ -25,6 +26,8 @@ export function useEditor(options: {
   onPaste: (file: File, view: EditorView) => void;
   /** Нажатие по картинке в тексте: открыть панель её свойств. */
   onImage?: (картинка: КартинкаВОкне) => void;
+  блоки: Record<string, ОписаниеБлока>;
+  onБлок?: (блок: БлокВОкне) => void;
   /**
    * Любое изменение документа, включая подстановку версии: панель свойств картинки держит
    * позицию узла и после чужой правки обязана закрыться, а не править сдвинувшийся текст.
@@ -64,7 +67,9 @@ export function useEditor(options: {
           keymap.of([...defaultKeymap, ...historyKeymap]),
           ...чтениеСтатьи(
             () => свежие.current.article.path,
+            options.блоки,
             (картинка) => свежие.current.onImage?.(картинка),
+            (блок) => свежие.current.onБлок?.(блок),
           ),
           ...(options.толькоЧтение === true ? запретПравки() : []),
           // Цепочка слоёв читается свежей на каждый пересчёт, а не запоминается при создании
