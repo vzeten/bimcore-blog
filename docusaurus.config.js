@@ -1,82 +1,45 @@
 // @ts-check
-import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {themes as prismThemes} from 'prism-react-renderer';
 import {config as loadEnv} from 'dotenv';
+import {
+  buildTranslationMap,
+  llmsExcludeRoutePatterns,
+} from './plugins/translation-map/map.mjs';
+import {defaultLocale, locales} from './plugins/translation-map/locales.mjs';
 
 // Локально читаем токены из .env.local (в git не коммитится).
 // На GitHub Actions переменные приходят из секретов репозитория (process.env).
 loadEnv({path: '.env.local'});
 
+const siteDir = path.dirname(fileURLToPath(import.meta.url));
+
+// Языки берём из общего модуля: тот же список читают карта переводов и
+// проверка сборки. Здесь остаётся только вычисление префикса адреса.
+const localePrefix = (locale) => (locale === defaultLocale ? '' : `/${locale}`);
+
 // Служебные страницы, которым не место в sitemap и llms.txt (все локали).
-const serviceRoutePatterns = ['', '/ru', '/es'].flatMap((l) =>
+const serviceRoutePatterns = locales.flatMap((locale) =>
   ['blog/tags', 'blog/archive', 'blog/authors', 'search'].flatMap((p) => [
-    `${l}/${p}`,
-    `${l}/${p}/`,
-    `${l}/${p}/**`,
+    `${localePrefix(locale)}/${p}`,
+    `${localePrefix(locale)}/${p}/`,
+    `${localePrefix(locale)}/${p}/**`,
   ]),
 );
 
-// llms.txt: unlisted-заглушки («coming soon») ИИ-агентам не показываем.
-// Список строится САМ при каждой сборке: сканируем шапки docs-статей.
-// Снятие unlisted (в том числе через CMS) попадает в следующий деплой
-// без правки конфига. Локаль без своего файла наследует шапку EN-файла
-// (fallback-логика самого Docusaurus).
-const siteDir = path.dirname(fileURLToPath(import.meta.url));
+// Карта доступности переводов — общий источник для страницы (через globalData
+// плагина translation-map), для llms.txt и для проверки готовой сборки.
+// Строится по файлам при каждой сборке: новый перевод или снятие unlisted
+// учитываются сами, без правки конфига.
+const translationMap = buildTranslationMap({siteDir, locales, defaultLocale});
 
-function readDocFrontmatter(file) {
-  let text;
-  try {
-    text = fs.readFileSync(file, 'utf8').slice(0, 4096);
-  } catch {
-    return null;
-  }
-  const m = text.match(/^﻿?---\r?\n([\s\S]*?)\r?\n---/);
-  if (!m) return null;
-  const fm = m[1];
-  const slug = fm.match(/^slug:\s*["']?([^"'\r\n]+?)["']?\s*$/m);
-  return {
-    unlisted: /^unlisted:\s*true\s*$/m.test(fm),
-    slug: slug ? slug[1].trim() : null,
-  };
-}
+// llms.txt не показывает ИИ-агентам ни заглушки («coming soon»), ни адреса,
+// где лежит текст чужой локали. Исключение убирает и строку индекса, и
+// markdown-копию страницы. Sitemap фильтруется сам — по noindex, который
+// ставит src/theme/SiteMetadata; аудит после сборки это подтверждает.
+const llmsExcludePatterns = llmsExcludeRoutePatterns(translationMap);
 
-function listMdxFiles(root) {
-  if (!fs.existsSync(root)) return [];
-  return fs.readdirSync(root, {withFileTypes: true}).flatMap((e) => {
-    const p = path.join(root, e.name);
-    if (e.isDirectory()) return listMdxFiles(p);
-    return e.name.endsWith('.mdx') ? [p] : [];
-  });
-}
-
-function collectUnlistedRoutePatterns() {
-  const enRoot = path.join(siteDir, 'docs');
-  const i18nRoot = (l) =>
-    path.join(siteDir, 'i18n', l, 'docusaurus-plugin-content-docs', 'current');
-  // Относительные пути всех docs-файлов (EN — полный набор: перевод без
-  // EN-двойника в сборку не попадает, инвариант F.15).
-  const relPaths = listMdxFiles(enRoot).map((p) =>
-    path.relative(enRoot, p).split(path.sep).join('/'),
-  );
-  const patterns = [];
-  for (const rel of relPaths) {
-    for (const [locale, prefix] of [['', ''], ['ru', '/ru'], ['es', '/es']]) {
-      const localFile = locale
-        ? path.join(i18nRoot(locale), ...rel.split('/'))
-        : path.join(enRoot, ...rel.split('/'));
-      const fm = readDocFrontmatter(localFile) ?? readDocFrontmatter(path.join(enRoot, ...rel.split('/')));
-      if (!fm?.unlisted) continue;
-      const route =
-        fm.slug ?? `/${rel.replace(/\.mdx$/, '').replace(/\/index$/, '')}`;
-      patterns.push(`${prefix}${route}/`, `${prefix}${route}/**`);
-    }
-  }
-  return patterns;
-}
-
-const unlistedRoutePatterns = collectUnlistedRoutePatterns();
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -104,8 +67,8 @@ const config = {
     },
   },
   i18n: {
-    defaultLocale: 'en',
-    locales: ['en', 'ru', 'es'],
+    defaultLocale,
+    locales,
     // EN — основной язык сайта (без префикса в URL). RU — перевод (под /ru/...).
     // Структура файлов перевода: i18n/ru/docusaurus-plugin-content-{docs|blog}/current/...
     // (см. decisions.md «Дефолтный язык сайта — EN»).
@@ -145,6 +108,10 @@ const config = {
     ],
   ],
   plugins: [
+    // Кладёт карту доступности переводов в globalData: по ней
+    // src/theme/SiteMetadata решает, ставить ли noindex и какие языковые
+    // ссылки (hreflang, og:locale:alternate) обещать поиску.
+    './plugins/translation-map/index.mjs',
     // Тянет цены товаров из Ecwid при СБОРКЕ и кладёт в globalData, чтобы
     // ProductCard впечатал schema.org price/priceCurrency/availability в
     // статический HTML (иначе микроразметка появлялась только после fetch
@@ -200,7 +167,7 @@ const config = {
           // false → полные URL: иначе ссылки в /ru/llms.txt теряют /ru/
           // и ведут на EN-копии (у RU-only статей это 404). Аудит #63.
           relativePaths: false,
-          excludeRoutes: [...serviceRoutePatterns, ...unlistedRoutePatterns],
+          excludeRoutes: [...serviceRoutePatterns, ...llmsExcludePatterns],
         },
       },
     ],
