@@ -2,6 +2,7 @@ import {useEffect, useRef} from 'react';
 import {EditorState} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
 import {толькоЧтение} from '../editor/reading';
+import {названиеСоветаСтатьи} from '../livePreview/tip';
 import {Properties} from './Properties';
 import {parseFrontmatter} from '../headFields';
 import {время} from './VersionStrip';
@@ -40,7 +41,11 @@ export function VersionView(props: {
       parent: host.current,
       state: EditorState.create({
         doc: props.версия.body,
-        extensions: толькоЧтение(() => props.path, props.settings.блоки),
+        extensions: толькоЧтение(
+          () => props.path,
+          props.settings.блоки,
+          названиеСоветаСтатьи(props.settings, props.path),
+        ),
       }),
     });
 

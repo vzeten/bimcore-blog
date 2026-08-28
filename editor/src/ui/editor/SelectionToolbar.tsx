@@ -2,6 +2,8 @@ import {useState} from 'react';
 import type {EditorView} from '@codemirror/view';
 import * as act from '../../core/commands';
 import {sectionOf} from '../../core/articles.mjs';
+import {вставкаСовета} from '../../core/tipBlock';
+import {названиеСоветаСтатьи} from '../livePreview/tip';
 import {вставкаБлока, значениеПоРазделу, новыйТег} from '../../core/jsxBlocks';
 import type {Button, Settings} from '../types';
 import type {Spot} from './useEditor';
@@ -101,6 +103,12 @@ function decide(
       return значениеПоРазделу(props.settings.призывПоРазделу, sectionOf(props.articlePath, props.settings));
     });
     return вставкаБлока(doc, at, тег);
+  }
+
+  // Совет — не тег, а директива Docusaurus: у него нет полей, и текст человек пишет прямо
+  // в блоке. Заголовок берётся по языку статьи, чтобы на сайте блок не назвался чужим словом.
+  if (button.команда === 'совет') {
+    return вставкаСовета(doc, at, названиеСоветаСтатьи(props.settings, props.articlePath));
   }
 
   if (button.команда === 'вставить' && button.текст) {

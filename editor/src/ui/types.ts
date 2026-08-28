@@ -152,6 +152,8 @@ export interface Settings {
   категорияСлужебной: string;
   вставки: Button[];
   блоки: Record<string, ОписаниеБлока>;
+  /** Как называется блок «Совет» на каждом языке сайта. Ключ — язык из «локали». */
+  названиеСовета: Record<string, string>;
   призывПоРазделу: Record<string, string>;
   статусы: string[];
   подписи: Record<string, string>;

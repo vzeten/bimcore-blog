@@ -166,3 +166,30 @@
   color: #8a1f1f;
   line-height: 1.35;
 }
+
+/* Совет статьи (`:::tip`): тот же смысловой блок, каким его покажет сайт. Служебные строки
+   закрыты показом, поэтому рамку рисуют сами строки текста. Отступы только внутренние:
+   по внешним CodeMirror промахивается при нажатии (SPEC 3.4). */
+.md-tip {
+  background: var(--bg-soft);
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.md-tip-head {
+  padding-top: 6px;
+  border-radius: 8px 8px 0 0;
+}
+
+.md-tip-foot {
+  padding-bottom: 6px;
+  border-radius: 0 0 8px 8px;
+}
+
+.md-tip-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  user-select: none;
+}

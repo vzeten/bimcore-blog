@@ -12,6 +12,7 @@ import {SelectionToolbar, decideEdit} from '../editor/SelectionToolbar';
 import {useEditor, type Spot} from '../editor/useEditor';
 import type {КартинкаВОкне} from '../livePreview/inline';
 import type {БлокВОкне} from '../livePreview/blocks';
+import {названиеСоветаСтатьи} from '../livePreview/tip';
 import {Properties} from './Properties';
 import type {Field} from '../headFields';
 import type {Article, Settings} from '../types';
@@ -85,6 +86,7 @@ export function ArticlePane(props: {
       setКартинка(картинка);
     },
     блоки: props.settings.блоки,
+    названиеСовета: названиеСоветаСтатьи(props.settings, props.article.path),
     onБлок: (блок) => {
       setВставкой(false);
       setБлок(блок);
