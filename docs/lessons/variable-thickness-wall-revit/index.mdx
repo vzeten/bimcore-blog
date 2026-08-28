@@ -1,0 +1,44 @@
+---
+title: "How to Create a Wall with Variable Thickness in Revit"
+slug: /lessons/variable-thickness-wall-revit
+sidebar_label: "How to Create a Wall with Variable Thickness?"
+sidebar_position: 3
+description: "Model an as-built wall with different thicknesses at each end in Revit by joining two non-parallel walls and controlling their location lines."
+image: ./cover.png
+---
+
+When an as-built wall differs from the design dimensions, you may need to record its exact measured width at both ends. Revit can represent this variable thickness by joining two non-parallel walls.
+
+![Creating a wall with variable thickness in Revit](/img/lessons/variable-thickness-wall-revit.gif)
+
+## 1. Join two non-parallel walls
+
+This is the simplest and most practical method for this task.
+
+1. Create the first wall with a constant thickness.
+2. Start the **Wall** tool for the second wall.
+3. Set **Location Line** to **Finish Face: Exterior** or **Finish Face: Interior**. Choose the face that must remain fixed.
+4. Place the first point exactly at the corner where the original thickness must be preserved.
+5. Draw the second wall toward the end where the combined wall needs to become thicker.
+
+The first point must snap to the corner. Otherwise, the specified thickness at that end will change. Press **Spacebar** while drawing if the second wall appears on the wrong side of the location line.
+
+:::tip
+The **Location Line** controls which face stays on the path you draw. Autodesk explains the available options in [About the Wall Location Line](https://help.autodesk.com/cloudhelp/2022/ENU/Revit-ArchDesign/files/GUID-F26DB6DA-A0EC-424D-B656-3BDF47607F4F.htm).
+:::
+
+After both walls are in place:
+
+1. Open the **Modify** tab.
+2. Choose **Join Geometry**.
+3. Join the intersecting walls until no separating line remains.
+
+The two walls now read as one wall with a different thickness at each end.
+
+If the joint line remains visible, see [how to remove the joint line between walls](../walls-different-materials/).
+
+## 2. Create a wall as a Model In-Place element
+
+You can also create the required shape with **Model In-Place**, but this is a poor choice for a wall. The element is not created with Revit's native Wall tool, so many standard wall properties and behaviors are missing. This makes the element harder to edit and use later in the project.
+
+<CTA type="lesson" />
