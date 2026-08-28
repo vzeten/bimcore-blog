@@ -18,6 +18,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,6 +44,9 @@ jobs:
       # переводом через hreflang. Обратный перекос (noindex у настоящего
       # перевода) ловится тем же прогоном.
       - run: npm run seo:audit
+      - name: Add IndexNow verification key
+        if: ${{ env.INDEXNOW_KEY != '' }}
+        run: printf '%s' "$INDEXNOW_KEY" > "build/$INDEXNOW_KEY.txt"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./build
@@ -52,6 +57,15 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    env:
+      INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Notify IndexNow
+        if: ${{ env.INDEXNOW_KEY != '' }}
+        run: node scripts/indexnow-submit.mjs

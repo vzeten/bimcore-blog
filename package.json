@@ -12,7 +12,7 @@
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "test": "node --test scripts/translation-map.test.mjs",
+    "test": "node --test scripts/*.test.mjs",
     "content:check": "node scripts/content-check.js",
     "seo:audit": "node scripts/seo-audit.mjs",
     "review": "node scripts/review-page.js",
