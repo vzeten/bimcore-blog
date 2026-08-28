@@ -4,6 +4,7 @@ import {EditorView, keymap, drawSelection, highlightActiveLine} from '@codemirro
 import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
 import {запретПравки, чтениеСтатьи} from './reading';
 import {клавишиСписка} from './listKeys';
+import {абзацныеКлавиши} from './paragraphKeys';
 import {layerColors, слоиОкна} from '../layerColors';
 import type {Deletion} from '../../core/colorize';
 import {правкаПанелиКартинки, type КартинкаВОкне} from '../livePreview/inline';
@@ -64,6 +65,10 @@ export function useEditor(options: {
           // Уровень пункта списка стоит выше общей раскладки: в ней `Tab` не занят вовсе и
           // уводил фокус из текста, а продолжение и конец списка по `Enter` уже даёт markdown.
           клавишиСписка(),
+          // Обычный абзац: `Enter` — новый абзац, `Shift+Enter` — жёсткий перенос. Ниже раскладки
+          // markdown (`Prec.high` — списки и цитаты продолжает она), выше общей, где `Enter`
+          // вставляет мягкий перенос и набранное зрительно уходит в предыдущий абзац.
+          абзацныеКлавиши(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           ...чтениеСтатьи(
             () => свежие.current.article.path,
