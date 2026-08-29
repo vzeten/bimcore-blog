@@ -1,8 +1,14 @@
-import {Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate} from '@codemirror/view';
-import {syntaxTree} from '@codemirror/language';
-import type {Range} from '@codemirror/state';
+// Блоки статьи показываются видом вместо служебного JSX.
+//
+// Слой живёт состоянием редактора, а не плагином: карточка товара записана столбиком, замена
+// накрывает переносы строк, и такую замену CodeMirror принимает только от состояния (SPEC 3.3).
+// Плагин ронял бы программу прямо при открытии статьи с карточкой.
+import {Decoration, EditorView, WidgetType, type DecorationSet} from '@codemirror/view';
+import {StateField, type EditorState, type Range} from '@codemirror/state';
 import {разборТега} from '../../core/jsxBlocks';
+import {тегиТекста} from '../../core/jsxTag.mjs';
 import {обложкаВидео} from '../../core/videoLink.mjs';
+import {внутриОграды} from './softBreak';
 import {label} from '../labels';
 import type {ОписаниеБлока} from '../types';
 
@@ -111,6 +117,15 @@ class BlockWidget extends WidgetType {
     подпись.textContent = this.вид.подпись;
     блок.append(подпись);
 
+    // Название нужно там, где выбирать нечего: у карточки товара все свойства — свой текст, и
+    // без названия товара плашки соседних карточек в статье ничем не отличались бы друг от друга.
+    if (this.вид.название !== undefined) {
+      const название = document.createElement('span');
+      название.className = 'md-block-choice';
+      название.textContent = this.вид.название;
+      блок.append(название);
+    }
+
     for (const слово of this.вид.выбор) {
       const выбор = document.createElement('span');
       выбор.className = 'md-block-choice';
@@ -172,58 +187,49 @@ function тотЖеВыбор(один: ВидБлока, другой: ВидБ
     && один.обложка === другой.обложка;
 }
 
-export function blockPreview(блоки: Record<string, ОписаниеБлока>, onБлок?: (блок: БлокВОкне) => void) {
-  return ViewPlugin.fromClass(
-    class {
-      decorations: DecorationSet;
-
-      constructor(view: EditorView) {
-        this.decorations = build(view, блоки, onБлок);
-      }
-
-      update(update: ViewUpdate): void {
-        if (update.docChanged || update.viewportChanged) this.decorations = build(update.view, блоки, onБлок);
-      }
-    },
-    {decorations: (plugin) => plugin.decorations},
-  );
+export function blockLayer(блоки: Record<string, ОписаниеБлока>, onБлок?: (блок: БлокВОкне) => void) {
+  return StateField.define<DecorationSet>({
+    create: (state) => построить(state, блоки, onБлок),
+    update: (значение, tr) => (tr.docChanged ? построить(tr.state, блоки, onБлок) : значение),
+    provide: (поле) => EditorView.decorations.from(поле),
+  });
 }
 
-function build(
-  view: EditorView,
+/**
+ * Теги ищутся по самому тексту, а не по разбору markdown: разбор редактора доходит только до
+ * показанного куска статьи, и карточка ниже по тексту осталась бы служебными строками до тех пор,
+ * пока человек не доберётся до неё. Внутри огороженного кода тег остаётся примером, а не блоком.
+ */
+function построить(
+  state: EditorState,
   блоки: Record<string, ОписаниеБлока>,
   onБлок?: (блок: БлокВОкне) => void,
 ): DecorationSet {
+  const текст = state.doc.toString();
+  const строки: string[] = [];
+  for (let номер = 1; номер <= state.doc.lines; номер += 1) строки.push(state.doc.line(номер).text);
+  const код = внутриОграды(строки);
+
   const list: Range<Decoration>[] = [];
 
-  for (const {from, to} of view.visibleRanges) {
-    syntaxTree(view.state).iterate({
-      from,
-      to,
-      enter: (node) => {
-        if (node.name !== 'HTMLTag') return;
+  for (const тег of тегиТекста(текст) as {имя: string; от: number; до: number}[]) {
+    if (код[state.doc.lineAt(тег.от).number - 1]) continue;
 
-        const текст = view.state.doc.sliceString(node.from, node.to);
-        const вид = видБлока(текст, блоки, (значение) => label('блокНеизвестен', {значение}));
-        if (вид === null) return;
+    const кусок = текст.slice(тег.от, тег.до);
+    const вид = видБлока(кусок, блоки, (значение) => label('блокНеизвестен', {значение}));
+    if (вид === null) continue;
 
-        // Видео занимает свою строку целиком — значит и заменяется целой строкой: рядом с полосой
-        // не остаётся текста, куда встал бы курсор посреди JSX. Тег, делящий строку с текстом,
-        // такой заменой разорвал бы абзац, и ему достаётся ровно его собственный кусок.
-        //
-        // Блочной декорацией (`block: true`) это делать нельзя: CodeMirror принимает такие только
-        // от поля состояния, а слой показа живёт плагином, и программа падала бы прямо при
-        // открытии статьи. Полосу во всю ширину даёт сам виджет — его корень блочный.
-        const строка = view.state.doc.lineAt(node.from);
-        const целаяСтрока = вид.воВсюСтроку === true
-          && строка.from === node.from && строка.to === node.to;
-        const от = целаяСтрока ? строка.from : node.from;
-        const до = целаяСтрока ? строка.to : node.to;
+    // Видео занимает свою строку целиком — значит и заменяется целой строкой: рядом с полосой
+    // не остаётся текста, куда встал бы курсор посреди JSX. Тег, делящий строку с текстом,
+    // такой заменой разорвал бы абзац, и ему достаётся ровно его собственный кусок.
+    const строка = state.doc.lineAt(тег.от);
+    const целаяСтрока = вид.воВсюСтроку === true
+      && строка.from === тег.от && строка.to === тег.до;
+    const от = целаяСтрока ? строка.from : тег.от;
+    const до = целаяСтрока ? строка.to : тег.до;
 
-        const widget = new BlockWidget(текст, вид, node.from, node.to, onБлок);
-        list.push(Decoration.replace({widget}).range(от, до));
-      },
-    });
+    const widget = new BlockWidget(кусок, вид, тег.от, тег.до, onБлок);
+    list.push(Decoration.replace({widget}).range(от, до));
   }
 
   return Decoration.set(list, true);

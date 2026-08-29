@@ -24,14 +24,26 @@ const РЕЕСТР: Record<string, ОписаниеБлока> = {
 
 describe('разбор и обратная сборка тега', () => {
   it('простой самозакрывающийся тег разбирается в имя и свойства', () => {
-    expect(разборТега('<CTA type="guide" />')).toEqual({
+    expect(разборТега('<CTA type="guide" />')).toMatchObject({
       имя: 'CTA',
-      свойства: [{имя: 'type', значение: 'guide'}],
+      свойства: [{имя: 'type', значение: 'guide', выражение: false}],
     });
   });
 
   it('тег без свойств разбирается: у границы анонса свойств нет вовсе', () => {
-    expect(разборТега('<truncate />')).toEqual({имя: 'truncate', свойства: []});
+    expect(разборТега('<truncate />')).toMatchObject({имя: 'truncate', свойства: []});
+  });
+
+  it('тег записан столбиком — разбирается так же: карточки товара записаны им', () => {
+    const текст = '<ProductCard\n  name="Двери"\n  image={productPreview}\n/>';
+
+    expect(разборТега(текст)).toMatchObject({
+      имя: 'ProductCard',
+      свойства: [
+        {имя: 'name', значение: 'Двери', выражение: false},
+        {имя: 'image', значение: 'productPreview', выражение: true},
+      ],
+    });
   });
 
   it('разбор и сборка — пара: собранный обратно тег совпадает с исходным', () => {
@@ -47,9 +59,14 @@ describe('неизвестный и неполный JSX сохраняется 
   const чужие = [
     '<truncate',
     '<CTA type="guide">',
-    '<CTA type={тип} />',
     "<CTA type='guide' />",
+    '<CTA\n\n  type="guide"\n/>',
+    '<CTA type="a"\n  b="c"\n/>',
+    '<CTA\n  a="1"\n    b="2"\n/>',
     '<CTA\n  type="guide"\n/>',
+    '<CTA image={productPreview} />',
+    '<ProductCard image={otherPreview} />',
+    '<ProductCard\r\n  a="1"\n  b="2"\n/>',
     '</CTA>',
     'просто текст',
   ];
@@ -84,6 +101,25 @@ describe('смена свойства правит только его', () => {
   it('значение свойства читается, а отсутствующее не выдумывается', () => {
     expect(значениеСвойства('<CTA type="guide" />', 'type')).toBe('guide');
     expect(значениеСвойства('<CTA />', 'type')).toBeNull();
+  });
+
+  it('правится ровно значение: остальные знаки тега столбиком остаются теми же', () => {
+    const текст = '<ProductCard\r\n  name="Двери"\r\n  eyebrow="Набор"\r\n/>';
+
+    expect(сменаСвойства(текст, 'name', 'Окна'))
+      .toBe('<ProductCard\r\n  name="Окна"\r\n  eyebrow="Набор"\r\n/>');
+  });
+
+  it('новое свойство встаёт так же, как записаны соседние: столбиком — своей строкой', () => {
+    expect(сменаСвойства('<ProductCard\n  name="Двери"\n/>', 'buyLabel', 'Купить'))
+      .toBe('<ProductCard\n  name="Двери"\n  buyLabel="Купить"\n/>');
+  });
+
+  it('выражение JSX не переписывается и человеку строкой не показывается', () => {
+    const текст = '<ProductCard\n  image={productPreview}\n/>';
+
+    expect(значениеСвойства(текст, 'image')).toBeNull();
+    expect(сменаСвойства(текст, 'image', './product.png')).toBeNull();
   });
 });
 

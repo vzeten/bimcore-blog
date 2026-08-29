@@ -4,7 +4,7 @@ import {tableLayer} from './tables';
 import {softBreakLayer} from './softBreak';
 import {tipLayer} from './tip';
 import {inlinePreview, type КартинкаВОкне} from './inline';
-import {blockPreview, type БлокВОкне} from './blocks';
+import {blockLayer, type БлокВОкне} from './blocks';
 import {каретМимоКартинок} from './imageCaret';
 import type {ОписаниеБлока} from '../types';
 
@@ -20,7 +20,7 @@ export function livePreview(
     softBreakLayer(),
     tipLayer(названиеСовета),
     inlinePreview(article, onImage),
-    blockPreview(блоки, onБлок),
+    blockLayer(блоки, onБлок),
     каретМимоКартинок(),
   ];
 }
