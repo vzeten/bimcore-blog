@@ -175,3 +175,70 @@
 .md-tip-head { padding-top: 6px; border-radius: 8px 8px 0 0; }
 .md-tip-foot { padding-bottom: 6px; border-radius: 0 0 8px 8px; }
 .md-tip-name { font-size: 13px; font-weight: 600; color: var(--tip); user-select: none; }
+
+/* Карточка товара в тексте статьи: тот же вид, каким её увидит читатель, — картинка,
+   надзаголовок, название, описание и две кнопки. Цены здесь нет: её ставит сборка сайта. */
+.md-card {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-soft);
+  cursor: pointer;
+  user-select: none;
+}
+
+.md-card-media {
+  flex: 0 0 132px;
+  height: 132px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.md-card-media img { width: 100%; height: 100%; object-fit: contain; }
+
+.md-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.md-card-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-quiet);
+}
+
+.md-card-title { font-size: 16px; font-weight: 600; color: var(--ink); }
+
+.md-card-desc { font-size: 13px; color: var(--ink-quiet); }
+
+.md-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+/* Надпись кнопки бывает пустой: её ставит сам сайт. Место кнопки от этого не пропадает. */
+.md-card-btn {
+  min-width: 104px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 13px;
+  text-align: center;
+  color: var(--ink);
+}
+
+.md-card-btn-main {
+  border-color: transparent;
+  background: var(--accent);
+  color: #ffffff;
+}

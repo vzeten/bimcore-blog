@@ -9,6 +9,7 @@ import {разборТега} from '../../core/jsxBlocks';
 import {тегиТекста} from '../../core/jsxTag.mjs';
 import {обложкаВидео} from '../../core/videoLink.mjs';
 import {внутриОграды} from './softBreak';
+import {видКарточки, картинкаКарточки, карточкаТовара, type КарточкаТовара} from './productCard';
 import {label} from '../labels';
 import type {ОписаниеБлока} from '../types';
 
@@ -31,6 +32,8 @@ export interface ВидБлока {
   обложка?: string;
   /** Блок занимает строку целиком и повторяет пропорции сайта — так устроено видео. */
   воВсюСтроку?: boolean;
+  /** Карточка товара показывается видом сайта, а не строчной плашкой (`productCard.ts`). */
+  карточка?: КарточкаТовара;
 }
 
 export function видБлока(
@@ -57,6 +60,7 @@ export function видБлока(
     выбор.push(поле.значения?.[записано] ?? незнакомое(записано));
   }
 
+  const карточка = карточкаТовара(разобран.свойства);
   const название = значение(описание.названиеПоля)?.trim();
   // Обложку показывает то же поле, которым человек задаёт ссылку: второй настройки про то же
   // самое заводить незачем. Номер непонятен — обложки просто нет, блок от этого не ломается.
@@ -69,6 +73,7 @@ export function видБлока(
     выбор,
     ...(название !== undefined && название !== '' ? {название} : {}),
     ...(обложка !== null ? {обложка} : {}),
+    ...(карточка !== null ? {карточка} : {}),
     // Блок со ссылкой на видео человек и на сайте видит целой полосой: показывать его строчной
     // плашкой значит обещать одно, а выпустить другое.
     ...(ссылка !== undefined ? {воВсюСтроку: true} : {}),
@@ -81,6 +86,8 @@ class BlockWidget extends WidgetType {
     private readonly вид: ВидБлока,
     private readonly from: number,
     private readonly to: number,
+    /** Адрес картинки карточки: он берётся из импорта статьи, а не из самого тега. */
+    private readonly картинка: string | null,
     private readonly onOpen: ((блок: БлокВОкне) => void) | undefined,
   ) {
     super();
@@ -89,11 +96,14 @@ class BlockWidget extends WidgetType {
   // Позиция входит в сравнение наравне с текстом: одинаковый тег в другом месте статьи — другой
   // блок, и переиспользованный CodeMirror DOM открыл бы панель с чужими границами узла.
   eq(другой: BlockWidget): boolean {
-    return другой.текст === this.текст && другой.from === this.from && тотЖеВыбор(другой.вид, this.вид);
+    return другой.текст === this.текст && другой.from === this.from
+      && другой.картинка === this.картинка && тотЖеВыбор(другой.вид, this.вид);
   }
 
   toDOM(): HTMLElement {
-    const блок = this.вид.воВсюСтроку === true ? this.полоса() : this.плашка();
+    const блок = this.вид.карточка !== undefined
+      ? видКарточки(this.вид.карточка, this.картинка)
+      : (this.вид.воВсюСтроку === true ? this.полоса() : this.плашка());
 
     блок.addEventListener('mousedown', (event) => {
       event.preventDefault();
@@ -187,10 +197,14 @@ function тотЖеВыбор(один: ВидБлока, другой: ВидБ
     && один.обложка === другой.обложка;
 }
 
-export function blockLayer(блоки: Record<string, ОписаниеБлока>, onБлок?: (блок: БлокВОкне) => void) {
+export function blockLayer(
+  блоки: Record<string, ОписаниеБлока>,
+  article: () => string,
+  onБлок?: (блок: БлокВОкне) => void,
+) {
   return StateField.define<DecorationSet>({
-    create: (state) => построить(state, блоки, onБлок),
-    update: (значение, tr) => (tr.docChanged ? построить(tr.state, блоки, onБлок) : значение),
+    create: (state) => построить(state, блоки, article(), onБлок),
+    update: (значение, tr) => (tr.docChanged ? построить(tr.state, блоки, article(), onБлок) : значение),
     provide: (поле) => EditorView.decorations.from(поле),
   });
 }
@@ -203,6 +217,7 @@ export function blockLayer(блоки: Record<string, ОписаниеБлока
 function построить(
   state: EditorState,
   блоки: Record<string, ОписаниеБлока>,
+  article: string,
   onБлок?: (блок: БлокВОкне) => void,
 ): DecorationSet {
   const текст = state.doc.toString();
@@ -228,7 +243,11 @@ function построить(
     const от = целаяСтрока ? строка.from : тег.от;
     const до = целаяСтрока ? строка.to : тег.до;
 
-    const widget = new BlockWidget(кусок, вид, тег.от, тег.до, onБлок);
+    const картинка = вид.карточка === undefined
+      ? null
+      : картинкаКарточки(текст, article, вид.карточка.переменнаяКартинки);
+
+    const widget = new BlockWidget(кусок, вид, тег.от, тег.до, картинка, onБлок);
     list.push(Decoration.replace({widget}).range(от, до));
   }
 

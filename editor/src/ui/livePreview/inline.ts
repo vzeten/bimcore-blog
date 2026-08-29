@@ -5,6 +5,7 @@ import {Annotation, StateEffect, StateField, type Range} from '@codemirror/state
 import {РАЗБОР_КАРТИНКИ, shownAlt} from '../../core/commands';
 import {строкаТолькоКартинка} from './imageCaret';
 import {знакМаркера, уровеньСписка} from './listMarker';
+import {адресКартинки} from './assetSrc';
 
 /** Картинка, по которой человек нажал: всё, что нужно панели её свойств. */
 export interface КартинкаВОкне {
@@ -118,8 +119,7 @@ class ImageWidget extends WidgetType {
     // Просим редактор пересчитать координаты, как только высота стала настоящей.
     // Слушатель вешаем ДО назначения src, иначе для картинки из кэша load успевает пройти мимо.
     img.addEventListener('load', this.onReady);
-    const метка = this.версия === '' ? '' : `&v=${encodeURIComponent(this.версия)}`;
-    img.src = `/api/asset?article=${encodeURIComponent(this.article)}&src=${encodeURIComponent(this.src)}${метка}`;
+    img.src = адресКартинки(this.article, this.src, this.версия);
     // Картинка уже в кэше — load не сработает, а высота сразу настоящая: пересчитываем сами.
     if (img.complete) this.onReady();
     wrap.append(img);

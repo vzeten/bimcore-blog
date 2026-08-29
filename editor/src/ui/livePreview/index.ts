@@ -20,7 +20,7 @@ export function livePreview(
     softBreakLayer(),
     tipLayer(названиеСовета),
     inlinePreview(article, onImage),
-    blockLayer(блоки, onБлок),
+    blockLayer(блоки, article, onБлок),
     каретМимоКартинок(),
   ];
 }
