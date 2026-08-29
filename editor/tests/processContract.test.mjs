@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -36,7 +37,7 @@ describe('короткий контракт процесса', () => {
     expect(read('editor/TASKS.md')).not.toMatch(/Класс [АБВ]|класса [АБВ]|класс [АБВ]|44–70|совет собирается сам/);
   });
 
-  it('разделяет три риска и ограничивает вопросы владельцу', () => {
+  it('разделяет три риска и не передаёт технические решения владельцу', () => {
     const tasks = read('editor/TASKS.md');
     const claude = read('CLAUDE.md');
     const gate = read('.claude/skills/codex-gate/SKILL.md');
@@ -53,23 +54,93 @@ describe('короткий контракт процесса', () => {
     }
     expect(tasks).toContain('максимум один собранный пакет');
     expect(claude).toContain('Технических вопросов владельцу быть не может');
-    expect(gate).toMatch(/Блокеры: <до трёх/i);
-    expect(gate).toMatch(/Убрать: <до трёх/i);
+    expect(tasks).toMatch(/Верхнеуровневый Codex самостоятельно восстанавливает цель/i);
+    expect(gate).toMatch(/Блокеры:[\s\S]{0,30}<до трёх/i);
+    expect(gate).toMatch(/Убрать:[\s\S]{0,30}<до трёх/i);
   });
 
-  it('ставит живую пробу владельца перед допуском Codex к переносу ветки', () => {
+  it('ставит контрольный коммит и технический итог перед живой пробой', () => {
     const claude = read('CLAUDE.md');
     const tasks = read('editor/TASKS.md');
     const report = read('editor/REPORT.md');
+    const liveCheck = read('.claude/skills/editor-live-check/SKILL.md');
 
-    expect(claude).toContain('Живая проба владельца идёт перед окончательной сверкой');
+    expect(claude).toContain('Точный порядок завершения');
     expect(tasks).toContain('APPROVED_TO_MERGE branch=<name> head=<sha> base=<sha>');
     expect(tasks).toContain('git diff <base>..<head>');
     expect(tasks).toContain('git merge --ff-only');
     expect(tasks).toContain('git add .` запрещён');
     expect(tasks).toMatch(/функциональный коммит аннулирует пробу/i);
+    expect(tasks).toMatch(/один `wait_agent`/i);
+    expect(liveCheck).toMatch(/После `GO` итогового контролёра/i);
     expect(report).toMatch(/Владелец отвечает верхнеуровневому Codex свободным текстом/i);
+    expect(report).not.toContain('APPROVED_TO_COMMIT');
     expect(report.split('\n').length).toBeLessThanOrEqual(30);
+  });
+
+  it('не разрешает контролёру молча уменьшить продуктовый контракт', () => {
+    const rules = [
+      read('AGENTS.md'),
+      read('CLAUDE.md'),
+      read('editor/TASKS.md'),
+      read('.claude/skills/codex-gate/SKILL.md'),
+      read('.claude/skills/editor-change/SKILL.md'),
+    ].join('\n');
+
+    expect(rules).toMatch(/SHRINK[\s\S]{0,180}(останавливает|остановку)/i);
+    expect(rules).toMatch(/нов(ый|ое) узк(ий|ое)[\s\S]{0,100}(Codex|верхнеуровневый)/i);
+    expect(rules).not.toMatch(/при `SHRINK`[^\n]*(Claude )?(уменьшает|убирает|продолжает)/i);
+  });
+
+  it('держит машинный статус отдельно от handoff', () => {
+    const tasks = read('editor/TASKS.md');
+    const change = read('.claude/skills/editor-change/SKILL.md');
+
+    for (const state of ['running', 'ready_for_review', 'owner_required', 'failed']) {
+      expect(tasks).toContain(state);
+    }
+    expect(tasks).toMatch(/свободный текст handoff не\s+являются сигналом/i);
+    expect(change).toContain('run-status.json');
+    expect(change).toContain('ready_for_review');
+  });
+
+  it('завершает забытый running отказом, а не вечным ожиданием', () => {
+    const root = mkdtempSync(resolve(tmpdir(), 'editor-process-'));
+    const coordination = resolve(root, 'editor/.coordination');
+    const statusPath = resolve(coordination, 'run-status.json');
+    mkdirSync(coordination, { recursive: true });
+    writeFileSync(statusPath, JSON.stringify({ state: 'running', head: 'abc' }));
+
+    try {
+      execFileSync(process.execPath, [resolve(repoRoot, '.claude/hooks/leftovers.mjs')], {
+        cwd: repoRoot,
+        env: { ...process.env, CLAUDE_PROJECT_DIR: root },
+      });
+      const status = JSON.parse(readFileSync(statusPath, 'utf8'));
+      expect(status.state).toBe('failed');
+      expect(status.reason).toBe('claude_stopped_without_terminal_status');
+
+      for (const state of ['ready_for_review', 'owner_required', 'failed']) {
+        writeFileSync(statusPath, JSON.stringify({ state, head: 'abc' }));
+        execFileSync(process.execPath, [resolve(repoRoot, '.claude/hooks/leftovers.mjs')], {
+          cwd: repoRoot,
+          env: { ...process.env, CLAUDE_PROJECT_DIR: root },
+        });
+        expect(JSON.parse(readFileSync(statusPath, 'utf8'))).toEqual({ state, head: 'abc' });
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('задаёт контролёру короткий технический ответ', () => {
+    const gate = read('.claude/skills/codex-gate/SKILL.md');
+
+    for (const field of ['Снимок:', 'Вердикт:', 'Размер:', 'Блокеры:', 'Убрать:', 'Остаточный риск:']) {
+      expect(gate).toContain(field);
+    }
+    expect(gate).toContain('до трёх');
+    expect(gate).toContain('BLOCK_REAL_RISK');
   });
 
   it('ведёт функциональные операции в локальных ветках с контрольными коммитами', () => {
