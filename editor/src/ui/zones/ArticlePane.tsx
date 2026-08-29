@@ -6,6 +6,7 @@ import {выбратьФайл, type ВставленнаяКартинка} fro
 import type {Deletion} from '../../core/colorize';
 import {ImagePanel} from '../editor/ImagePanel';
 import {BlockPanel} from '../editor/BlockPanel';
+import {ProductPicker} from '../editor/ProductPicker';
 import {перенестиВыбор} from '../editor/imagePanelPlace';
 import {уУзла} from '../editor/widgetPlace';
 import {SelectionToolbar, decideEdit} from '../editor/SelectionToolbar';
@@ -49,6 +50,7 @@ export function ArticlePane(props: {
 }) {
   const [spot, setSpot] = useState<Spot | null>(null);
   const [menu, setMenu] = useState(false);
+  const [товар, setТовар] = useState(false);
   const [картинка, setКартинка] = useState<КартинкаВОкне | null>(null);
   const [блок, setБлок] = useState<БлокВОкне | null>(null);
   // Панель открыта вставкой, а не нажатием на готовый блок: тогда она спрашивает одно поле
@@ -203,6 +205,10 @@ export function ArticlePane(props: {
         />
       )}
 
+      {товар && view.current !== null && (
+        <ProductPicker settings={props.settings} article={props.article.path} view={view.current} onClose={() => setТовар(false)} />
+      )}
+
       {картинка !== null && !выборНеСделан && view.current !== null && (
         <ImagePanel
           /* Ключ перемонтирует панель при выборе другой картинки: без него поле alt-текста
@@ -234,12 +240,10 @@ export function ArticlePane(props: {
     const button = blocks.find((item) => item.подпись === подпись);
     if (!editor || !button) return;
 
-    // Картинка — не текстовая вставка: сначала человек выбирает файл, потом сервер кладёт его
-    // рядом со статьёй, и только затем в текст дописывается ссылка.
-    if (button.команда === 'картинка') {
-      выбратьКартинку(editor);
-      return;
-    }
+    // Картинка и товар — не текстовые вставки: сначала человек выбирает файл (ровно тех родов,
+    // что примет сервер) или товар, сервер кладёт картинку рядом со статьёй, потом правится текст.
+    if (button.команда === 'картинка') return выбратьФайл(типыТелаСтатьи(), (file) => void вставить(file, editor));
+    if (button.команда === 'товар') return setТовар(true);
 
     const at = {from: editor.state.selection.main.from, to: editor.state.selection.main.to};
     const edit = decideEdit(button, editor.state.doc.toString(), at, {
@@ -269,11 +273,6 @@ export function ArticlePane(props: {
       имя, текст: editor.state.sliceDoc(начало, конец), from: начало, to: конец,
       left: место.left, top: место.bottom,
     });
-  }
-
-  /** Выбор файла картинки. Предлагается ровно то, что примет сервер: PNG, JPG и GIF. */
-  function выбратьКартинку(editor: EditorView): void {
-    выбратьФайл(типыТелаСтатьи(), (file) => void вставить(file, editor));
   }
 
   /**

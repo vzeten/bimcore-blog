@@ -13,6 +13,7 @@ import {draftRoute} from './src/adapters/draftRoute.mjs';
 import {assetRoute} from './src/adapters/assets.mjs';
 import {assetReformatRoute} from './src/adapters/assetReformat.mjs';
 import {assetIntakeRoute} from './src/adapters/assetIntake.mjs';
+import {productsRoute} from './src/adapters/productsRoute.mjs';
 import {versionsRoute} from './src/adapters/versionsRoute.mjs';
 import {deleteRoute} from './src/adapters/deleteRoute.mjs';
 import {articleRoute} from './src/adapters/articleRoute.mjs';
@@ -168,6 +169,10 @@ async function api(req, res, url) {
 
   // Приём новой картинки в статью: карантин, а затем укладка рядом со статьёй под свободным именем.
   if (await assetIntakeRoute({req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send})) return;
+
+  // Каталог товаров и картинка выбранного товара. Ecwid спрашивает только сервер: токен в окно
+  // не уезжает, а скачанная картинка идёт в статью той же дорогой, что и файл человека.
+  if (await productsRoute({req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send})) return;
 
   return send(res, 404, {error: readSettings()['ошибкиСервера']['неизвестныйЗапрос']});
 }

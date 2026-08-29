@@ -192,7 +192,7 @@ export async function вставитьКартинку(
  * показывается: разговор о картинке, которой он на экране не видел (он уже в другой статье),
  * отправил бы его искать несуществующую беду. В журнал окна она при этом попадает.
  */
-async function забратьОбратно(article: string, src: string): Promise<void> {
+export async function забратьОбратно(article: string, src: string): Promise<void> {
   try {
     await requestJson('/api/asset/withdraw', {
       method: 'POST',

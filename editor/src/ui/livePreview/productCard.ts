@@ -16,7 +16,7 @@ import {импортСтатьи} from '../../core/jsxTag.mjs';
 import {адресКартинки} from './assetSrc';
 import type {Свойство} from '../../core/jsxBlocks';
 
-const СВОЙСТВА = {
+export const СВОЙСТВА = {
   название: 'name',
   надзаголовок: 'eyebrow',
   описание: 'description',
@@ -24,6 +24,9 @@ const СВОЙСТВА = {
   подписьКартинки: 'imageAlt',
   кнопкаПокупки: 'buyLabel',
   кнопкаМагазина: 'shopLabel',
+  адресТовара: 'buyUrl',
+  кодТовара: 'ecwidProductId',
+  артикул: 'sku',
 };
 
 /**
