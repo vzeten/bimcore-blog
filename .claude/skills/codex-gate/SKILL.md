@@ -46,7 +46,7 @@ codex exec --ephemeral --sandbox read-only
 
 ```text
 Снимок: <branch base head, чистота>
-Вердикт: GO | SHRINK | BLOCK
+Вердикт: GO | SHRINK | BLOCK_REAL_RISK
 Размер: <рабочий код +/- строк; тесты +/- строк; новые файлы>
 Блокеры:
 - <до трёх или «нет»>

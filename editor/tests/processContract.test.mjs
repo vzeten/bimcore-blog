@@ -119,6 +119,15 @@ describe('короткий контракт процесса', () => {
       const status = JSON.parse(readFileSync(statusPath, 'utf8'));
       expect(status.state).toBe('failed');
       expect(status.reason).toBe('claude_stopped_without_terminal_status');
+
+      for (const state of ['ready_for_review', 'owner_required', 'failed']) {
+        writeFileSync(statusPath, JSON.stringify({ state, head: 'abc' }));
+        execFileSync(process.execPath, [resolve(repoRoot, '.claude/hooks/leftovers.mjs')], {
+          cwd: repoRoot,
+          env: { ...process.env, CLAUDE_PROJECT_DIR: root },
+        });
+        expect(JSON.parse(readFileSync(statusPath, 'utf8'))).toEqual({ state, head: 'abc' });
+      }
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -131,6 +140,7 @@ describe('короткий контракт процесса', () => {
       expect(gate).toContain(field);
     }
     expect(gate).toContain('до трёх');
+    expect(gate).toContain('BLOCK_REAL_RISK');
   });
 
   it('ведёт функциональные операции в локальных ветках с контрольными коммитами', () => {
