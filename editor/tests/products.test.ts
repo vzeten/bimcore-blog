@@ -96,3 +96,22 @@ describe('вставка карточки товара', () => {
     expect(названиеТовара(ТОВАР, null)).toBe('');
   });
 });
+
+describe('отмена вставки товара', () => {
+  // Предохранитель от найденного дефекта (P1): окно выбора закрывали во время запроса, а признак
+  // актуальности смотрел только на `view.dom.isConnected` — зона статьи остаётся смонтированной,
+  // признак оставался верным, и поздний ответ вписывал карточку в статью уже после отмены.
+  // Проверяется строкой, а не поведением: отрисовать окно в тесте нечем — рендерера в зависимостях
+  // нет и добавлять его запрещено (SPEC 4.10), правило же живёт в React-хуке (SPEC 5.2.1).
+  it('закрытие окна выбора делает начатую вставку неактуальной', async () => {
+    const fs = await import('node:fs');
+    const url = await import('node:url');
+    const path = await import('node:path');
+    const корень = path.dirname(url.fileURLToPath(import.meta.url));
+    const окно = fs.readFileSync(path.join(корень, '../src/ui/editor/ProductPicker.tsx'), 'utf8');
+
+    expect(окно).toContain('актуально: () => живо.current && статья.current === props.article');
+    expect(окно).toContain('живо.current = false;');
+    expect(окно).not.toContain('актуально: () => props.view.dom.isConnected');
+  });
+});

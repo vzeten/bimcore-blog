@@ -2,7 +2,7 @@
 // чего в магазине нет: название на языке статьи и, по желанию, короткое описание. Всё остальное —
 // адрес, код товара, надзаголовок, подпись картинки, артикул и подписи кнопок — заполняет
 // программа, а цену по коду товара подставляет сборка сайта.
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import type {EditorView} from '@codemirror/view';
 import {articlePlace} from '../../core/frontmatterRules.mjs';
 import {каталогТоваров, вставитьТовар, значениеГодно, карточкаУжеЕсть, названиеТовара, type Товар} from './products';
@@ -26,6 +26,17 @@ export function ProductPicker(props: {
   // оборвала бы связь первой со своим файлом. Спрашивается один раз, при открытии окна.
   const [ошибка, setОшибка] = useState(карточкаУжеЕсть(props.view.state.doc.toString()) ? слова.ужеЕсть : '');
   const занято = ошибка === слова.ужеЕсть;
+
+  // Живо ли ещё это окно выбора и та же ли статья под ним. Одного `view.dom.isConnected` мало:
+  // зона статьи остаётся смонтированной и после закрытия окна, поэтому признак был бы верен даже
+  // тогда, когда человек уже отменил вставку, — поздний ответ вписал бы карточку в статью после
+  // отмены. Признак живёт в ref, а не в состоянии: его читает ответ, созданный до отмены.
+  const живо = useRef(true);
+  const статья = useRef(props.article);
+  статья.current = props.article;
+  useEffect(() => () => {
+    живо.current = false;
+  }, []);
 
   useEffect(() => {
     if (занято) return;
@@ -117,14 +128,16 @@ export function ProductPicker(props: {
         описание,
         локаль,
         кнопки: props.settings.товары.кнопки[локаль ?? ''] ?? {},
-        актуально: () => props.view.dom.isConnected,
+        актуально: () => живо.current && статья.current === props.article && props.view.dom.isConnected,
       });
+      // Окно уже закрыто: показывать нечего и не на чем — карточка не вставлена, картинка забрана.
+      if (!живо.current) return;
       if (вышло) props.onClose();
       else setОшибка(слова.окноСменилось);
     } catch (беда) {
-      setОшибка((беда as Error).message);
+      if (живо.current) setОшибка((беда as Error).message);
     } finally {
-      setИдёт(false);
+      if (живо.current) setИдёт(false);
     }
   }
 }
