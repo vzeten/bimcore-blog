@@ -6,7 +6,7 @@
 import {Decoration, EditorView, WidgetType, type DecorationSet} from '@codemirror/view';
 import {StateField, type EditorState, type Range} from '@codemirror/state';
 import {разборТега} from '../../core/jsxBlocks';
-import {тегиТекста} from '../../core/jsxTag.mjs';
+import {импортСтатьи, тегиТекста} from '../../core/jsxTag.mjs';
 import {обложкаВидео} from '../../core/videoLink.mjs';
 import {внутриОграды} from './softBreak';
 import {видКарточки, картинкаКарточки, карточкаТовара, type КарточкаТовара} from './productCard';
@@ -190,6 +190,28 @@ class BlockWidget extends WidgetType {
   }
 }
 
+/**
+ * Служебная строка `import productPreview from '…'` человеку не показывается: рядом с карточкой
+ * она выглядит куском кода посреди статьи, а нужна она только сайту. В файле строка остаётся на
+ * месте — прячется вместе со своим переводом строки, иначе от неё осталась бы пустая строка.
+ * Внутри огороженного кода она остаётся примером, как и сам тег.
+ */
+function спрятатьИмпорт(
+  state: EditorState,
+  текст: string,
+  код: boolean[],
+  переменная: string,
+  импорты: Map<number, number>,
+): void {
+  const импорт = импортСтатьи(текст, переменная) as {от: number} | null;
+  if (импорт === null) return;
+
+  const строка = state.doc.lineAt(импорт.от);
+  if (код[строка.number - 1]) return;
+
+  импорты.set(строка.from, Math.min(строка.to + 1, state.doc.length));
+}
+
 function тотЖеВыбор(один: ВидБлока, другой: ВидБлока): boolean {
   return один.выбор.length === другой.выбор.length
     && один.выбор.every((слово, номер) => слово === другой.выбор[номер])
@@ -226,6 +248,9 @@ function построить(
   const код = внутриОграды(строки);
 
   const list: Range<Decoration>[] = [];
+  // Строки импорта показанных карточек: прячутся по одному разу, даже если карточек с одной
+  // картинкой в статье две.
+  const импорты = new Map<number, number>();
 
   for (const тег of тегиТекста(текст) as {имя: string; от: number; до: number}[]) {
     if (код[state.doc.lineAt(тег.от).number - 1]) continue;
@@ -247,9 +272,13 @@ function построить(
       ? null
       : картинкаКарточки(текст, article, вид.карточка.переменнаяКартинки);
 
+    if (вид.карточка !== undefined) спрятатьИмпорт(state, текст, код, вид.карточка.переменнаяКартинки, импорты);
+
     const widget = new BlockWidget(кусок, вид, тег.от, тег.до, картинка, onБлок);
     list.push(Decoration.replace({widget}).range(от, до));
   }
+
+  for (const [от, до] of импорты) list.push(Decoration.replace({}).range(от, до));
 
   return Decoration.set(list, true);
 }

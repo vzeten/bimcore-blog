@@ -8,6 +8,7 @@ import {EditorState} from '@codemirror/state';
 import {сменаСвойства, значениеСвойства, type ОписаниеБлока, type ПолеБлока} from '../src/core/jsxBlocks';
 import {blockLayer, видБлока} from '../src/ui/livePreview/blocks';
 import {картинкаКарточки} from '../src/ui/livePreview/productCard';
+import {файлКартинки} from '../src/adapters/assets.mjs';
 import {чтоЗаписать} from '../src/ui/editor/blockFields';
 
 const КОРЕНЬ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -21,6 +22,17 @@ const ТЕКСТ_СТАТЬИ = fs.readFileSync(СТАТЬЯ, 'utf8');
 const АДРЕС_СТАТЬИ = 'docs/guides/families/doors-for-revit/index.mdx';
 const ПОДПИСИ = НАСТРОЙКИ['подписи'] as Record<string, string>;
 const КАРТОЧКА = /<ProductCard[\s\S]*?\/>/.exec(ТЕКСТ_СТАТЬИ)?.[0] ?? '';
+
+/**
+ * Живая статья перевода: её карточка берёт картинку импортом от корня репозитория (`@site/…`),
+ * из папки английской версии. Правило проверяется на том, что лежит на диске, а не на выдумке.
+ */
+const СТАТЬЯ_RU = path.join(
+  КОРЕНЬ, 'i18n', 'ru', 'docusaurus-plugin-content-docs', 'current',
+  'guides', 'families', 'wardrobe-for-revit', 'index.mdx',
+);
+const ТЕКСТ_RU = fs.readFileSync(СТАТЬЯ_RU, 'utf8');
+const АДРЕС_RU = 'i18n/ru/docusaurus-plugin-content-docs/current/guides/families/wardrobe-for-revit/index.mdx';
 
 /** Компонент сайта: его умолчания — единственный источник правды о штатных подписях кнопок. */
 const КОМПОНЕНТ = fs.readFileSync(path.join(КОРЕНЬ, 'src', 'components', 'ProductCard.jsx'), 'utf8');
@@ -160,5 +172,38 @@ describe('штатные подписи кнопок карточки', () => {
 
     expect(видБлока(свои, БЛОКИ, () => '')?.карточка?.кнопки)
       .toEqual(['Купить набор', умолчаниеСайта('shopLabel')]);
+  });
+});
+
+describe('картинка карточки из импорта статьи', () => {
+  it('импорт от корня репозитория ведёт к настоящему файлу, а не к папке статьи', () => {
+    const записан = /from '([^']+)'/.exec(ТЕКСТ_RU)?.[1] ?? '';
+
+    expect(записан.startsWith('@site/')).toBe(true);
+    expect(fs.existsSync(файлКартинки(КОРЕНЬ, АДРЕС_RU, записан))).toBe(true);
+  });
+
+  it('путь рядом со статьёй и файл общей папки сайта читаются по-прежнему', () => {
+    expect(файлКартинки(КОРЕНЬ, АДРЕС_СТАТЬИ, './product.png'))
+      .toBe(path.join(КОРЕНЬ, 'docs', 'guides', 'families', 'doors-for-revit', 'product.png'));
+    expect(файлКартинки(КОРЕНЬ, АДРЕС_СТАТЬИ, '/img/logo.png'))
+      .toBe(path.join(КОРЕНЬ, 'static', 'img', 'logo.png'));
+  });
+
+  it('карточка живой статьи перевода доходит до своего файла на диске', () => {
+    const карточка = /<ProductCard[\s\S]*?\/>/.exec(ТЕКСТ_RU)?.[0] ?? '';
+    const переменная = видБлока(карточка, БЛОКИ, () => '')?.карточка?.переменнаяКартинки ?? '';
+    const адрес = картинкаКарточки(ТЕКСТ_RU, АДРЕС_RU, переменная) ?? '';
+    const src = new URLSearchParams(адрес.slice(адрес.indexOf('?'))).get('src') ?? '';
+
+    expect(fs.existsSync(файлКартинки(КОРЕНЬ, АДРЕС_RU, src))).toBe(true);
+  });
+
+  it('строка импорта карточки человеку не показывается, а из файла не исчезает', () => {
+    const строка = /^import .*$/m.exec(ТЕКСТ_RU.split('\r\n').join('\n'))?.[0] ?? '';
+
+    expect(строка).toContain('@site/');
+    expect(блокиОкна(ТЕКСТ_RU).join('\n')).toContain(строка);
+    expect(fs.readFileSync(СТАТЬЯ_RU, 'utf8')).toContain(строка);
   });
 });

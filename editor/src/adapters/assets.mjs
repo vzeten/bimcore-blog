@@ -20,6 +20,23 @@ const ТИПЫ = {
   webp: 'image/webp',
 };
 
+/** Как статьи Docusaurus называют корень репозитория в импортах. Чужой формат, а не настройка. */
+const КОРЕНЬ_САЙТА = '@site/';
+
+/**
+ * Где на диске лежит картинка, о которой просит окно. Записей адреса три, и все три задали не мы:
+ * `/…` — файл общей папки `static` сайта, `@site/…` — путь от корня репозитория (так статьи
+ * записывают импорт картинки карточки, в том числе на чужую папку соседнего перевода), всё прочее
+ * — путь рядом со статьёй. Одно место на все три: разойдись они, окно просило бы у сервера файл,
+ * которого он по этому адресу не ищет, и человек видел бы пустое место при целой картинке.
+ */
+export function файлКартинки(repo, article, src) {
+  if (src.startsWith('/')) return path.join(repo, 'static', src);
+  if (src.startsWith(КОРЕНЬ_САЙТА)) return path.join(repo, src.slice(КОРЕНЬ_САЙТА.length));
+
+  return path.join(repo, path.dirname(article), src);
+}
+
 /**
  * Обрабатывает запросы `/api/asset*`. Возвращает true, если запрос её.
  * Зависимости приходят снаружи: сервер знает про репозиторий и настройки, модуль — нет.
@@ -114,9 +131,7 @@ export async function assetRoute({req, res, url, repo, settings, тело, insid
   if (url.pathname === '/api/asset') {
     const article = url.searchParams.get('article') || '';
     const src = url.searchParams.get('src') || '';
-    const base = src.startsWith('/')
-      ? path.join(repo, 'static', src)
-      : path.join(repo, path.dirname(article), src);
+    const base = файлКартинки(repo, article, src);
 
     if (!insideRepo(base) || !fs.existsSync(base)) {
       send(res, 404, {error: settings['ошибкиСервера']['нетФайла']});
