@@ -71,6 +71,28 @@ describe('каталог товаров и картинка товара', () =>
     expect(ответ.data.товары).toEqual([ТОВАР]);
   });
 
+  it('название из карточки русской статьи дополняет каталог по коду товара', async () => {
+    const repo = репозиторий();
+    каталог(repo);
+    const русская = path.join(repo, 'i18n', 'ru', 'docusaurus-plugin-content-docs', 'current', 'a');
+    fs.mkdirSync(русская, {recursive: true});
+    fs.writeFileSync(
+      path.join(русская, 'index.mdx'),
+      '---\ntitle: A\n---\n\n<ProductCard\n  name="Кресла для Revit"\n'
+        + '  description="Кресла разных форм."\n  ecwidProductId="100"\n/>\n',
+      'utf8',
+    );
+
+    const ответ = await запрос(repo, 'GET', '/api/products');
+
+    expect(ответ.code).toBe(200);
+    expect(ответ.data.товары[0].названия).toEqual({en: ТОВАР.названия.en, ru: 'Кресла для Revit'});
+    // Описание из статьи в общий список не уезжает: оно свойство своей карточки.
+    expect(JSON.stringify(ответ.data.товары)).not.toContain('разных форм');
+    // Статью при этом никто не переписывал.
+    expect(fs.readFileSync(path.join(русская, 'index.mdx'), 'utf8')).toContain('name="Кресла для Revit"');
+  });
+
   it('каталога нет — понятный отказ, статья не меняется', async () => {
     const repo = репозиторий();
     const ответ = await запрос(repo, 'POST', '/api/product/image', {article: REL, id: '100'});

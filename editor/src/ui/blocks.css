@@ -278,5 +278,8 @@
 .product-pick-name { display: block; font-size: 14px; font-weight: 600; color: var(--ink); }
 .product-pick-buttons { display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; }
 .product-pick-buttons button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; }
-.product-pick-go { border-color: transparent; background: var(--accent); color: #ffffff; }
+/* Вид главной кнопки записан вместе с соседкой по ряду: у правила рядом (`.product-pick-buttons
+   button`) сила выше, и в одиночку `.product-pick-go` проигрывало ему фон — белое слово вставало
+   на белую кнопку и пропадало. */
+.product-pick-buttons .product-pick-go { border-color: transparent; background: var(--accent); color: #ffffff; }
 .product-pick-buttons button:disabled { opacity: 0.5; cursor: default; }
