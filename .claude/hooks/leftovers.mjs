@@ -15,6 +15,24 @@ import path from 'node:path';
 
 const корень = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 
+// Машинный статус не доказывает успех сам. Он только не даёт наблюдателю ждать бесконечно: если
+// рабочая сессия закончилась, не записав итог, это отказ процесса, а не повод угадывать по отчёту.
+const файлСтатуса = path.join(корень, 'editor', '.coordination', 'run-status.json');
+
+try {
+  const статус = JSON.parse(fs.readFileSync(файлСтатуса, 'utf8').replace(/^\uFEFF/, ''));
+  if (статус.state === 'running') {
+    fs.writeFileSync(файлСтатуса, `${JSON.stringify({
+      state: 'failed',
+      head: статус.head ?? null,
+      updated: new Date().toISOString(),
+      reason: 'claude_stopped_without_terminal_status',
+    })}\n`, 'utf8');
+  }
+} catch {
+  // Не операция редактора либо статус ещё не заведён — hook занимается прежней проверкой следов.
+}
+
 // Свежесть, по которой незакоммиченная статья в контенте считается следом текущей работы.
 // Техническая величина крючка: старые статьи владельца лежат в дереве неделями, и ругаться на них
 // при каждом ходе — значит приучить не читать предупреждения вовсе.
@@ -40,6 +58,7 @@ try {
   строки = execFileSync('git', ['status', '--porcelain', '--', 'editor', 'docs', 'blog', 'i18n'], {
     cwd: корень,
     encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
   }).split('\n').filter(Boolean);
 } catch {
   // Не репозиторий или git недоступен — крючок молчит, это не его дело.
