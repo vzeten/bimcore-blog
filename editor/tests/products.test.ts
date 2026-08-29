@@ -1,6 +1,6 @@
 // Что программа дописывает в статью при вставке карточки товара: тег и строка импорта картинки.
 import {describe, expect, it} from 'vitest';
-import {вставкаКарточки, карточкаУжеЕсть, названиеТовара, type Товар} from '../src/ui/editor/productInsert';
+import {вставкаКарточки, карточкаУжеЕсть, названиеТовара, type Товар} from '../src/ui/editor/products';
 
 const ТОВАР: Товар = {
   id: '577113367',

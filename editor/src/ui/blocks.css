@@ -243,8 +243,9 @@
   color: #ffffff;
 }
 
-/* Окно выбора товара. Оно перекрывает статью целиком, а не встаёт у курсора, как панель блока:
-   список магазина в узкую панель не помещается, а выбор товара — отдельный шаг, а не правка. */
+/* Окно выбора товара. Оно перекрывает статью, а не встаёт у курсора, как панель блока: список
+   магазина в узкую панель не помещается. Голова, поля и отказ берутся у панели блока — свои были
+   бы вторым видом того же самого. */
 .product-pick-back {
   position: fixed;
   inset: 0;
@@ -256,23 +257,15 @@
 }
 
 .product-pick {
+  position: static;
   width: 460px;
-  max-width: calc(100vw - 32px);
   max-height: calc(100vh - 64px);
   overflow: auto;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--bg);
-  box-shadow: 0 12px 32px rgba(17, 20, 24, 0.18);
 }
 
-.product-pick-list { display: flex; flex-direction: column; gap: 2px; }
-
 .product-pick-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: block;
+  width: 100%;
   padding: 8px;
   border: 0;
   border-radius: 8px;
@@ -282,18 +275,8 @@
 }
 
 .product-pick-row:hover { background: var(--bg-soft); }
-.product-pick-name { font-size: 14px; font-weight: 600; color: var(--ink); }
-.product-pick-form { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
-
-.product-pick-buttons { display: flex; gap: 8px; justify-content: flex-end; padding-top: 4px; }
-
-.product-pick-buttons button {
-  padding: 6px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--bg);
-  cursor: pointer;
-}
-
+.product-pick-name { display: block; font-size: 14px; font-weight: 600; color: var(--ink); }
+.product-pick-buttons { display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; }
+.product-pick-buttons button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; }
 .product-pick-go { border-color: transparent; background: var(--accent); color: #ffffff; }
 .product-pick-buttons button:disabled { opacity: 0.5; cursor: default; }

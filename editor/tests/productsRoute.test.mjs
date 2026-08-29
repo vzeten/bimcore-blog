@@ -1,53 +1,45 @@
-// Ручка каталога товаров: магазин спрашивает только сервер, а картинка товара идёт в статью
+// Ручка товаров: каталог берётся готовым из собранного сайта, а картинка товара идёт в статью
 // той же защищённой дорогой, что и файл человека.
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
+import fs from 'node:fs';
 import path from 'node:path';
 
 import {productsRoute} from '../src/adapters/productsRoute.mjs';
-import {ПЕРЕМЕННАЯ_ТОКЕНА} from '../../plugins/ecwid-prices/catalog.mjs';
 import {НАСТРОЙКИ, PNG, REL, карантин, репозиторий, уложить, файлы} from './intakeHarness.mjs';
-
-const ТОКЕН = 'public_проверочный';
 
 const SETTINGS = {
   ...НАСТРОЙКИ,
   сервер: {порт: 4780, пределТелаМБ: 25},
   ошибкиСервера: {
     ...НАСТРОЙКИ.ошибкиСервера,
-    нетТокенаКаталога: 'каталог магазина недоступен',
-    каталогНеОтвечает: 'магазин не ответил',
+    нетКаталогаТоваров: 'каталога товаров нет',
     товарИсчез: 'этого товара в магазине больше нет',
     картинкаТовараНеДоехала: 'картинку товара скачать не удалось',
   },
 };
 
-const ОТВЕТЫ = {
-  profile: {languages: {defaultLanguage: 'en'}},
-  categories: {items: [{id: 1, name: 'Revit Families', nameTranslated: {ru: 'Семейства Revit'}}]},
-  products: {
-    items: [{
-      id: 100, sku: 'BC-1', name: 'Armchair Revit Families',
-      url: 'https://bimcore.one/products/armchair', imageUrl: 'https://cdn/armchair.png',
-      defaultCategoryId: 1, price: 11, defaultDisplayedPriceFormatted: '£11.00',
-    }],
-  },
+const ТОВАР = {
+  id: '100',
+  названия: {en: 'Armchair Revit Families'},
+  адрес: 'https://bimcore.one/products/armchair',
+  картинка: 'https://cdn/armchair.png',
+  категория: {en: 'Revit Families', ru: 'Семейства Revit'},
+  sku: 'BC-1',
 };
 
-/** Магазин и его картинка понарошку. `картинкаОтвечает: false` — обрыв скачивания. */
-function магазин({картинкаОтвечает = true} = {}) {
-  const адреса = [];
-  vi.stubGlobal('fetch', async (адрес) => {
-    адреса.push(адрес);
-    if (адрес === 'https://cdn/armchair.png') {
-      return картинкаОтвечает
-        ? {ok: true, arrayBuffer: async () => PNG}
-        : {ok: false, status: 404};
-    }
-    const ключ = Object.keys(ОТВЕТЫ).find((имя) => адрес.includes(`/${имя}?`));
-    return {ok: true, json: async () => ОТВЕТЫ[ключ]};
-  });
-  return адреса;
+/** Каталог, каким его кладёт в собранный сайт сборка. `текст` — испорченный файл вместо каталога. */
+function каталог(repo, {текст} = {}) {
+  fs.mkdirSync(path.join(repo, 'build'), {recursive: true});
+  fs.writeFileSync(
+    path.join(repo, 'build', 'product-catalog.json'),
+    текст ?? JSON.stringify({язык: 'en', товары: [ТОВАР]}),
+    'utf8',
+  );
 }
+
+const картинкаОтвечает = (ok = true) => vi.stubGlobal('fetch', async () => (ok
+  ? {ok: true, arrayBuffer: async () => PNG}
+  : {ok: false, status: 404}));
 
 async function запрос(repo, method, pathname, payload) {
   const ответ = {};
@@ -67,50 +59,39 @@ async function запрос(repo, method, pathname, payload) {
   return {принято, ...ответ};
 }
 
-beforeEach(() => {
-  process.env[ПЕРЕМЕННАЯ_ТОКЕНА] = ТОКЕН;
-});
-
-afterEach(() => {
-  delete process.env[ПЕРЕМЕННАЯ_ТОКЕНА];
-  vi.unstubAllGlobals();
-});
+afterEach(() => vi.unstubAllGlobals());
 
 describe('каталог товаров и картинка товара', () => {
-  it('каталог доходит до окна без токена и без цен', async () => {
-    магазин();
-    const ответ = await запрос(репозиторий(), 'GET', '/api/products');
+  it('каталог доходит до окна таким, как его записала сборка', async () => {
+    const repo = репозиторий();
+    каталог(repo);
+    const ответ = await запрос(repo, 'GET', '/api/products');
 
     expect(ответ.code).toBe(200);
-    expect(ответ.data.товары[0]).toMatchObject({id: '100', адрес: 'https://bimcore.one/products/armchair'});
-    expect(JSON.stringify(ответ.data)).not.toContain(ТОКЕН);
-    expect(JSON.stringify(ответ.data)).not.toContain('11.00');
+    expect(ответ.data.товары).toEqual([ТОВАР]);
   });
 
-  it('без токена каталога нет, и статья не меняется', async () => {
-    delete process.env[ПЕРЕМЕННАЯ_ТОКЕНА];
-    магазин();
+  it('каталога нет — понятный отказ, статья не меняется', async () => {
     const repo = репозиторий();
     const ответ = await запрос(repo, 'POST', '/api/product/image', {article: REL, id: '100'});
 
     expect(ответ.code).toBe(503);
-    expect(ответ.data.error).toBe(SETTINGS.ошибкиСервера.нетТокенаКаталога);
+    expect(ответ.data.error).toBe(SETTINGS.ошибкиСервера.нетКаталогаТоваров);
     expect(файлы(repo)).toEqual(['index.mdx']);
   });
 
-  it('магазин не ответил — отказ словами, папка статьи прежняя', async () => {
-    vi.stubGlobal('fetch', async () => ({ok: false, status: 500}));
+  it('испорченный каталог — тот же отказ, а не догадка', async () => {
     const repo = репозиторий();
-    const ответ = await запрос(repo, 'POST', '/api/product/image', {article: REL, id: '100'});
+    каталог(repo, {текст: '{не json'});
+    const ответ = await запрос(repo, 'GET', '/api/products');
 
-    expect(ответ.code).toBe(502);
-    expect(ответ.data.error).toBe(SETTINGS.ошибкиСервера.каталогНеОтвечает);
-    expect(файлы(repo)).toEqual(['index.mdx']);
+    expect(ответ.code).toBe(503);
+    expect(ответ.data.error).toBe(SETTINGS.ошибкиСервера.нетКаталогаТоваров);
   });
 
-  it('товар исчез из магазина — отказ, а не чужая картинка', async () => {
-    магазин();
+  it('товар исчез из каталога — отказ, а не чужая картинка', async () => {
     const repo = репозиторий();
+    каталог(repo);
     const ответ = await запрос(repo, 'POST', '/api/product/image', {article: REL, id: '999'});
 
     expect(ответ.code).toBe(404);
@@ -120,8 +101,9 @@ describe('каталог товаров и картинка товара', () =>
   });
 
   it('обрыв скачивания не оставляет ни файла в статье, ни следа в карантине', async () => {
-    магазин({картинкаОтвечает: false});
     const repo = репозиторий();
+    каталог(repo);
+    картинкаОтвечает(false);
     const ответ = await запрос(repo, 'POST', '/api/product/image', {article: REL, id: '100'});
 
     expect(ответ.code).toBe(502);
@@ -130,9 +112,10 @@ describe('каталог товаров и картинка товара', () =>
     expect(карантин(repo)).toEqual([]);
   });
 
-  it('картинка товара едет в карантин, а рядом со статьёй её кладёт существующая ручка', async () => {
-    магазин();
+  it('картинка едет в карантин, а рядом со статьёй её кладёт существующая ручка', async () => {
     const repo = репозиторий();
+    каталог(repo);
+    картинкаОтвечает();
     const готово = await запрос(repo, 'POST', '/api/product/image', {article: REL, id: '100'});
 
     expect(готово.code).toBe(200);
@@ -147,8 +130,8 @@ describe('каталог товаров и картинка товара', () =>
   });
 
   it('чужой путь картинку товара не получает', async () => {
-    магазин();
     const repo = репозиторий();
+    каталог(repo);
     const ответ = await запрос(repo, 'POST', '/api/product/image', {article: 'package.json', id: '100'});
 
     expect(ответ.code).toBe(400);

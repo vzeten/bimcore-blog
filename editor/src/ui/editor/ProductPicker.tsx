@@ -5,8 +5,7 @@
 import {useEffect, useState} from 'react';
 import type {EditorView} from '@codemirror/view';
 import {articlePlace} from '../../core/frontmatterRules.mjs';
-import {каталогТоваров, вставитьТовар, type Товар} from './products';
-import {значениеГодно, карточкаУжеЕсть, названиеТовара} from './productInsert';
+import {каталогТоваров, вставитьТовар, значениеГодно, карточкаУжеЕсть, названиеТовара, type Товар} from './products';
 import type {Settings} from '../types';
 
 export function ProductPicker(props: {
@@ -41,7 +40,7 @@ export function ProductPicker(props: {
 
   return (
     <div className="product-pick-back" onMouseDown={props.onClose}>
-      <div className="product-pick" onMouseDown={(событие) => событие.stopPropagation()}>
+      <div className="block-panel product-pick" onMouseDown={(событие) => событие.stopPropagation()}>
         <div className="block-panel-head">
           <div className="block-panel-name">{слова.заголовок}</div>
           <button className="block-panel-close" onClick={props.onClose}>✕</button>
@@ -52,7 +51,7 @@ export function ProductPicker(props: {
         {товары !== null && товары.length === 0 && <div className="block-panel-empty">{слова.пусто}</div>}
 
         {выбран === null ? (
-          <div className="product-pick-list">
+          <div>
             {(товары ?? []).map((товар) => (
               <button key={товар.id} className="product-pick-row" onClick={() => взять(товар)}>
                 <span className="product-pick-name">{подпись(товар)}</span>
@@ -61,7 +60,7 @@ export function ProductPicker(props: {
             ))}
           </div>
         ) : (
-          <div className="product-pick-form">
+          <div>
             <div className="product-pick-name">{подпись(выбран)}</div>
 
             <label className="block-panel-field">
