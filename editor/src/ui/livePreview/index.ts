@@ -11,7 +11,7 @@ import type {ОписаниеБлока} from '../types';
 export function livePreview(
   article: () => string,
   блоки: Record<string, ОписаниеБлока>,
-  названиеСовета: string,
+  названиеСовета: Record<string, string>,
   onImage?: (картинка: КартинкаВОкне) => void,
   onБлок?: (блок: БлокВОкне) => void,
 ) {

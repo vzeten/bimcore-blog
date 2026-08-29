@@ -107,8 +107,8 @@ function decide(
 
   // Совет — не тег, а директива Docusaurus: у него нет полей, и текст человек пишет прямо
   // в блоке. Заголовок берётся по языку статьи, чтобы на сайте блок не назвался чужим словом.
-  if (button.команда === 'совет') {
-    return вставкаСовета(doc, at, названиеСоветаСтатьи(props.settings, props.articlePath));
+  if (button.команда === 'совет' && button.блок !== undefined) {
+    return вставкаСовета(doc, at, button.блок, названиеСоветаСтатьи(props.settings, props.articlePath)[button.блок] ?? '');
   }
 
   if (button.команда === 'вставить' && button.текст) {
