@@ -111,7 +111,14 @@ describe('отмена вставки товара', () => {
     const окно = fs.readFileSync(path.join(корень, '../src/ui/editor/ProductPicker.tsx'), 'utf8');
 
     expect(окно).toContain('актуально: () => живо.current && статья.current === props.article');
-    expect(окно).toContain('живо.current = false;');
     expect(окно).not.toContain('актуально: () => props.view.dom.isConnected');
+
+    // Признак взводится в самом эффекте и снимается его уборкой — тот же шаблон, что у панели
+    // картинки. Начального значения ref мало: StrictMode в разработке монтирует эффект дважды,
+    // и после первой пробной размонтировки признак остался бы снятым навсегда, то есть вставка
+    // отменялась бы ВСЕГДА. Поэтому проверяется и порядок: сначала взвели, потом вернули уборку.
+    expect(окно).toContain('живо.current = true;');
+    expect(окно.indexOf('живо.current = true;')).toBeLessThan(окно.indexOf('живо.current = false;'));
+    expect(окно).not.toContain('useEffect(() => () => {');
   });
 });
