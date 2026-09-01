@@ -1,0 +1,44 @@
+---
+title: "Cómo crear un muro de grosor variable en Revit"
+slug: /lessons/variable-thickness-wall-revit
+sidebar_label: "¿Cómo crear un muro de grosor variable?"
+sidebar_position: 3
+description: "Modela en Revit un muro construido con distinto grosor en cada extremo mediante dos muros no paralelos y sus líneas de ubicación."
+image: ./cover.png
+---
+
+Cuando el muro construido no coincide con las cotas del proyecto, puede ser necesario registrar sus medidas reales exactas en ambos extremos. En Revit puedes representar este grosor variable mediante dos muros no paralelos unidos.
+
+![Creación de un muro de grosor variable en Revit](/img/lessons/variable-thickness-wall-revit.gif)
+
+## 1. Une dos muros no paralelos
+
+Este es el método más sencillo y práctico para esta tarea.
+
+1. Crea el primer muro con un grosor constante.
+2. Activa la herramienta **Muro** para dibujar el segundo muro.
+3. En **Línea de ubicación**, elige **Cara de acabado: Exterior** o **Cara de acabado: Interior**. Selecciona la cara cuya posición debe mantenerse.
+4. Coloca el primer punto exactamente en la esquina donde debe conservarse el grosor original.
+5. Dibuja el segundo muro hacia el extremo donde el grosor debe aumentar.
+
+El primer punto debe ajustarse a la esquina. De lo contrario, cambiará el grosor especificado en ese extremo. Pulsa la **barra espaciadora** mientras dibujas si el segundo muro queda al lado incorrecto de la línea de ubicación.
+
+:::tip[Consejo]
+La **Línea de ubicación** determina qué cara del muro permanece sobre el recorrido dibujado. Autodesk describe todas las opciones en [Acerca de la línea de ubicación del muro](https://help.autodesk.com/cloudhelp/2024/ESP/Revit-ArchDesign/files/GUID-F26DB6DA-A0EC-424D-B656-3BDF47607F4F.htm).
+:::
+
+Después de dibujar ambos muros:
+
+1. Abre la ficha **Modificar**.
+2. Elige **Unir geometría**.
+3. Une los muros que se intersectan hasta que no quede ninguna línea de separación.
+
+En planta, los dos muros se leen como uno solo con distinto grosor en cada extremo.
+
+Si la línea de unión sigue visible, consulta [cómo quitar la línea de unión entre muros](../walls-different-materials/).
+
+## 2. Crea el muro como un Modelo in situ
+
+También puedes crear la forma necesaria mediante **Modelo in situ**, pero es una mala opción para un muro. El elemento no se crea con la herramienta Muro nativa de Revit, por lo que pierde muchas propiedades y funciones de un muro normal. Esto dificulta el trabajo posterior con el elemento dentro del proyecto.
+
+<CTA type="lesson" />
