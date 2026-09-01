@@ -104,7 +104,7 @@ describe('короткий контракт процесса', () => {
     expect(change).toContain('ready_for_review');
   });
 
-  it('завершает забытый running отказом, а не вечным ожиданием', () => {
+  it('stop-hook не путает конец хода с концом сессии', () => {
     const root = mkdtempSync(resolve(tmpdir(), 'editor-process-'));
     const coordination = resolve(root, 'editor/.coordination');
     const statusPath = resolve(coordination, 'run-status.json');
@@ -117,8 +117,7 @@ describe('короткий контракт процесса', () => {
         env: { ...process.env, CLAUDE_PROJECT_DIR: root },
       });
       const status = JSON.parse(readFileSync(statusPath, 'utf8'));
-      expect(status.state).toBe('failed');
-      expect(status.reason).toBe('claude_stopped_without_terminal_status');
+      expect(status).toEqual({ state: 'running', head: 'abc' });
 
       for (const state of ['ready_for_review', 'owner_required', 'failed']) {
         writeFileSync(statusPath, JSON.stringify({ state, head: 'abc' }));
@@ -131,6 +130,16 @@ describe('короткий контракт процесса', () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it('не завершает ход, пока жив точный процесс Claude', () => {
+    const rules = [read('AGENTS.md'), read('editor/TASKS.md')].join('\n');
+
+    expect(rules).toMatch(/operation, branch[\s\S]{0,120}PID/i);
+    expect(rules).toMatch(/перезаписывает[\s\S]{0,180}running/i);
+    expect(rules).toMatch(/не отправляет[\s\S]{0,40}финальный ответ[\s\S]{0,40}пока PID жив/i);
+    expect(rules).toMatch(/после ответа Codex[\s\S]{0,100}снова ждёт/i);
+    expect(rules).toMatch(/исчезновение PID[\s\S]{0,100}running[\s\S]{0,80}сбоем/i);
   });
 
   it('задаёт контролёру короткий технический ответ', () => {
