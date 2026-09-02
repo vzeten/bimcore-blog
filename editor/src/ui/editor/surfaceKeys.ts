@@ -1,7 +1,6 @@
-// Клавиши поверхности: между раскладкой markdown (`Prec.high`: списки и цитаты продолжает она) и
-// общей; где правило молчит, работают штатные команды — разделитель атом, удаление склеивает абзацы.
+// Клавиши поверхности: между раскладкой markdown (списки и цитаты продолжает она) и общей.
 
-import {keymap, type Command, type KeyBinding} from '@codemirror/view';
+import type {Command, KeyBinding} from '@codemirror/view';
 import {syntaxTree} from '@codemirror/language';
 import {EditorSelection, type EditorState, type TransactionSpec} from '@codemirror/state';
 import {тегиТекста} from '../../core/jsxTag.mjs';
@@ -9,8 +8,7 @@ import type {Блок} from '../../core/jsxBlocks';
 import {строкаАбзаца} from '../livePreview/softBreak';
 import {блокВ, контейнерКурсора, поверхность, целойСтрокой, type Диапазон, type Область} from './structureGuard';
 
-/** Курсор в абзаце (или заголовке) прямо в документе по дереву markdown; чего commonmark не
- * знает — таблицу, MDX, строку-картинку — у абзаца отсекает строковое правило показа. */
+/** Курсор в абзаце (или заголовке) прямо в документе; чего commonmark не знает, отсекает `строкаАбзаца`. */
 export function точкаВОбычномАбзаце(state: EditorState, иЗаголовок = false): number | null {
   const главное = state.selection.main;
   if (!главное.empty) return null;
@@ -25,8 +23,7 @@ export function точкаВОбычномАбзаце(state: EditorState, иЗ�
   return главное.from;
 }
 
-/** Два перевода строки (перед последней пустой строкой документа — один); пустую строку у заголовка
- * или блока дополнит разделителем карта. Строка того же абзаца вплотную — абзац делится. */
+/** Перед последней пустой строкой документа хватает одного перевода; строка того же абзаца вплотную — абзац делится. */
 function разделитель(state: EditorState, где: number, заголовок: boolean): {insert: string; anchor: number} {
   const строка = state.doc.lineAt(где);
   const следующая = строка.number < state.doc.lines ? state.doc.line(строка.number + 1) : null;
@@ -36,8 +33,7 @@ function разделитель(state: EditorState, где: number, заголо
   return {insert: '\n\n', anchor: !граница && !заголовок && строкаАбзаца(следующая.text) ? где + 3 : где + 2};
 }
 
-/** Выход из контейнера из последнего пустого абзаца тела: пустые строки после текста уходят, после
- * закрывающей границы появляется место для абзаца; контейнер без текста пустую строку сохраняет. */
+/** Выход из последнего пустого абзаца контейнера; контейнер без текста свою пустую строку сохраняет. */
 export function выходИзКонтейнера(state: EditorState): TransactionSpec | null {
   const pos = state.selection.main.head;
   const контейнер = контейнерКурсора(state, pos);
@@ -92,7 +88,6 @@ const жёсткийПеренос: Command = (view) => {
   return true;
 };
 
-/** Строчный блок уходит с разделителем, блок в строке — своим узлом; единственная карточка — с импортом. */
 export function удалениеБлока(state: EditorState, блок: Область): Диапазон[] {
   const doc = state.doc;
   const первая = doc.lineAt(блок.from);
@@ -111,8 +106,7 @@ export function удалениеБлока(state: EditorState, блок: Обл�
   return правки;
 }
 
-/** За непроходимой областью у курсора: блок (его выберет удаление), служебное (удаление молчит),
- * разделитель (за ним текст) или null — удаляет штатная команда. */
+/** За непроходимой областью у курсора: блок, служебное, разделитель или null — удаляет штатная команда. */
 function уКрая(state: EditorState, pos: number, вперёд: boolean): Область | 'служебное' | 'разделитель' | null {
   const {карта, области} = state.field(поверхность);
   const область = области.find((о) => (вперёд ? о.from === pos : о.to === pos));
@@ -159,7 +153,3 @@ export const клавишиПоверхности: KeyBinding[] = [
   {key: 'Backspace', run: удаление(false)},
   {key: 'Delete', run: удаление(true)},
 ];
-
-export function раскладкаПоверхности() {
-  return keymap.of(клавишиПоверхности);
-}

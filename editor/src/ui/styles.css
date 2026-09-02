@@ -243,7 +243,6 @@ button { font: inherit; cursor: pointer; }
 .md-table-wrap th { background: var(--bg-soft); font-weight: 600; }
 .md-table-raw { font-family: ui-monospace, Consolas, monospace; font-size: 0.82em; line-height: 1.5; }
 
-/* Строка цельного блока: высота строки и кегль обнуляются — иначе вокруг блока полосы ростом со строку. */
 .paper .cm-line.md-block-line { line-height: 0; font-size: 0; padding: 0 2px; }
 .paper .cm-selectionLayer { z-index: 1; } /* выделение поверх непрозрачной картинки */
 .paper .cm-editor .cm-selectionBackground,

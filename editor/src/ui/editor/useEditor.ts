@@ -4,7 +4,7 @@ import {EditorView, keymap, drawSelection, highlightActiveLine} from '@codemirro
 import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
 import {запретПравки, чтениеСтатьи} from './reading';
 import {клавишиСписка} from './listKeys';
-import {раскладкаПоверхности} from './surfaceKeys';
+import {клавишиПоверхности} from './surfaceKeys';
 import {блокВ} from './structureGuard';
 import {layerColors, слоиОкна} from '../layerColors';
 import type {Deletion} from '../../core/colorize';
@@ -53,7 +53,6 @@ export function useEditor(options: {
   const свежие = useRef(options);
   свежие.current = options;
 
-  // Нажатие на картинку или блок сначала выбирает его целиком по карте поверхности.
   const сВыбором = <Т extends {from: number}>(далее: (что: Т) => void) => (что: Т): void => {
     const блок = view.current === null ? null : блокВ(view.current.state, что.from);
     if (блок !== null) view.current?.dispatch({selection: EditorSelection.range(блок.from, блок.to)});
@@ -74,8 +73,7 @@ export function useEditor(options: {
           // Уровень пункта списка стоит выше общей раскладки: в ней `Tab` не занят вовсе и
           // уводил фокус из текста, а продолжение и конец списка по `Enter` уже даёт markdown.
           клавишиСписка(),
-          // Ниже раскладки markdown (`Prec.high` — списки и цитаты продолжает она), выше общей.
-          раскладкаПоверхности(),
+          keymap.of(клавишиПоверхности),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           ...чтениеСтатьи(
             () => свежие.current.article.path,
