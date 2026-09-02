@@ -109,6 +109,17 @@ describe('курсор на служебной строке переставля
     expect(курсор('А\n\n\n\nБ', 3)).toBe(3);
   });
 
+  it('программный курсор внутри картинки или тега в строке выталкивается целиком, и ввод блок не портит', () => {
+    const строка = 'Текст ![b](./b.png) и <CTA type="guide" /> дальше.';
+    for (const [узел, вперёд] of [['![b](./b.png)', true], ['<CTA type="guide" />', false]] as [string, boolean][]) {
+      const от = строка.indexOf(узел);
+      const внутри = состояние(строка, вперёд ? 0 : строка.length).update({selection: {anchor: от + 3}}).state;
+      expect(внутри.selection.main.head).toBe(вперёд ? от + узел.length : от);
+      const ввод = внутри.update({changes: {from: внутри.selection.main.head, insert: 'X'}, selection: {anchor: внутри.selection.main.head + 1}, userEvent: 'input.type'});
+      expect(ввод.newDoc.toString()).toContain(узел);
+    }
+  });
+
   it('пустой абзац между разделителем и границей совета курсору доступен', () => {
     expect(курсор('До.\n\n\n:::tip\nТекст\n:::', 5)).toBe(5);
   });

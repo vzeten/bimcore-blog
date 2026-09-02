@@ -1,5 +1,4 @@
-// Карта поверхности: обычный текст — состояние по умолчанию, карта хранит только исключения;
-// собирается из существующих разборов и отвечает лишь о границах, не о содержимом.
+// Карта поверхности: обычный текст — состояние по умолчанию, в карте только исключения; отвечает лишь о границах.
 
 import {Decoration, EditorView, type DecorationSet} from '@codemirror/view';
 import {EditorState, Facet, RangeSet, RangeValue, StateField, type Extension, type Line, type Range, type Text} from '@codemirror/state';
@@ -99,7 +98,10 @@ function служебная(doc: Text, карта: Область[], строк�
   });
 }
 
-function допустимаяПозиция(doc: Text, карта: Область[], pos: number, вперёд: boolean): number {
+function допустимаяПозиция(doc: Text, карта: Область[], области: Диапазон[], pos: number, вперёд: boolean): number {
+  const внутри = области.find((о) => о.from < pos && pos < о.to);
+  if (внутри !== undefined) pos = вперёд ? внутри.to : внутри.from;
+
   const строка = doc.lineAt(pos);
   if (!служебная(doc, карта, строка)) return pos;
   for (const шаг of вперёд ? [1, -1] : [-1, 1]) {
@@ -137,7 +139,8 @@ function построить(doc: Text, имена: ReadonlySet<string>) {
     if (о.вид === 'разделитель') декорации.push(РАЗДЕЛИТЕЛЬ.range(о.from));
     else if (о.вид === 'блок' && целойСтрокой(doc, о)) декорации.push(СТРОКА_БЛОКА.range(о.from));
   }
-  return {карта, области, атомы: RangeSet.of(области.map((о) => АТОМ.range(о.from, о.to)), true), декорации: Decoration.set(декорации, true)};
+  const атомы = RangeSet.of(области.map((о) => АТОМ.range(о.from, о.to)), true);
+  return {карта, области, атомы, декорации: Decoration.set(декорации, true)};
 }
 
 const имена = Facet.define<ReadonlySet<string>, ReadonlySet<string>>({combine: (значения) => значения[0] ?? new Set()});
@@ -176,7 +179,7 @@ export function поверхностьРедактирования(блоки: R
         if (портит) return [];
       }
       if (tr.selection === undefined || !tr.newSelection.main.empty) return tr;
-      const {карта} = tr.docChanged ? построить(tr.newDoc, известные) : tr.startState.field(поверхность);
+      const {карта, области} = tr.docChanged ? построить(tr.newDoc, известные) : tr.startState.field(поверхность);
       const head = tr.newSelection.main.head;
       // Пустая строка, куда правка поставила курсор (конец списка, `Enter` после таблицы, вставка блока), становится абзацем.
       const строка = tr.newDoc.lineAt(head);
@@ -186,7 +189,7 @@ export function поверхностьРедактирования(блоки: R
         const после = сосед(строка.number + 1) ? '\n' : '';
         return [tr, {changes: [{from: строка.from, insert: до}, {from: строка.to, insert: после}], selection: {anchor: строка.from + до.length}, sequential: true}];
       }
-      const куда = допустимаяПозиция(tr.newDoc, карта, head, head >= tr.startState.selection.main.head);
+      const куда = допустимаяПозиция(tr.newDoc, карта, области, head, head >= tr.startState.selection.main.head);
       return куда === head ? tr : [tr, {selection: {anchor: куда}, sequential: true}];
     }),
   ];
