@@ -221,7 +221,7 @@ button { font: inherit; cursor: pointer; }
 .md-h2 { font-size: 1.4em; }
 .md-h3 { font-size: 1.18em; }
 .md-h4, .md-h5, .md-h6 { font-size: 1.04em; }
-.md-blank { line-height: 0.75; }
+.md-sep { line-height: 0.6; } /* разделитель абзацев — отступ, а не строка: курсор туда не встаёт */
 /* Пробел на месте спрятанного мягкого переноса. Собственный `pre-wrap` нужен затем, чтобы
    пробел не схлопнулся между словами, но и не повис лишним знаком там, где строка переносится
    сама, — ровно как на собранной странице. */
@@ -243,11 +243,11 @@ button { font: inherit; cursor: pointer; }
 .md-table-wrap th { background: var(--bg-soft); font-weight: 600; }
 .md-table-raw { font-family: ui-monospace, Consolas, monospace; font-size: 0.82em; line-height: 1.5; }
 
-/* Отступы как у картинки на сайте. У строки, в которой нет ничего кроме картинки, обнуляются
-   и высота строки, и её кегль: пустой строчный бокс вокруг блока держится на них обоих, и без
-   этого над картинкой и под ней остаются две пустые полосы ростом со строку текста. Текст в
-   такой строке не живёт по построению — правило включается только для одинокой картинки. */
-.paper .cm-line.md-image-line { line-height: 0; font-size: 0; padding: 0 2px; }
+/* Строка цельного блока: высота строки и кегль обнуляются — иначе вокруг блока полосы ростом со строку. */
+.paper .cm-line.md-block-line { line-height: 0; font-size: 0; padding: 0 2px; }
+.paper .cm-selectionLayer { z-index: 1; } /* выделение поверх непрозрачной картинки */
+.paper .cm-editor .cm-selectionBackground,
+.paper .cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground { background: rgba(18, 87, 214, 0.16); }
 .md-image { display: block; margin: 10px 0; }
 .md-image img { display: block; max-width: 100%; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; }
 

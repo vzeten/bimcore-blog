@@ -3,7 +3,6 @@ import {Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type
 import {syntaxTree} from '@codemirror/language';
 import {Annotation, StateEffect, StateField, type Range} from '@codemirror/state';
 import {РАЗБОР_КАРТИНКИ, shownAlt} from '../../core/commands';
-import {строкаТолькоКартинка} from './imageCaret';
 import {знакМаркера, уровеньСписка} from './listMarker';
 import {адресКартинки} from './assetSrc';
 
@@ -184,7 +183,6 @@ function build(view: EditorView, article: string, onImage?: (картинка: �
       const line = doc.line(number);
       const text = line.text.trim();
       if (text.startsWith('|')) replaced.push([line.from, line.to]);
-      else if (text === '') list.push(Decoration.line({class: 'md-blank'}).range(line.from));
     }
   }
 
@@ -214,14 +212,6 @@ function build(view: EditorView, article: string, onImage?: (картинка: �
           );
           replaced.push([node.from, node.to]);
           list.push(Decoration.replace({widget}).range(node.from, node.to));
-
-          // У строки, где нет ничего кроме картинки, схлопывается высота строчного бокса:
-          // иначе над и под картинкой остаются две пустые полосы высотой в строку текста,
-          // которых на сайте нет (наблюдение владельца 2026-08-17).
-          const строка = doc.lineAt(node.from);
-          if (строкаТолькоКартинка(строка.text)) {
-            list.push(Decoration.line({class: 'md-image-line'}).range(строка.from));
-          }
           return false;
         }
 

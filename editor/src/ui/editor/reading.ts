@@ -5,12 +5,14 @@ import {EditorState, type Extension} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
 import {markdown} from '@codemirror/lang-markdown';
 import {livePreview} from '../livePreview';
+import {поверхностьРедактирования} from './structureGuard';
 import type {КартинкаВОкне} from '../livePreview/inline';
 import type {БлокВОкне} from '../livePreview/blocks';
 import type {ОписаниеБлока} from '../types';
 
 /**
- * Общий показ: разметка, перенос строк, живой вид блоков. Путь нужен живому показу картинок,
+ * Общий показ: разметка, перенос строк, живой вид блоков, карта поверхности (разделители и блоки
+ * не становятся строками окна и в просмотре версии). Путь нужен живому показу картинок,
  * `onImage` и `onБлок` — нажатие по картинке и по блоку статьи; просмотр версии их не передаёт,
  * и там нажатие молчит: панели свойств правят текст, а в просмотре разрешено только чтение.
  */
@@ -25,6 +27,7 @@ export function чтениеСтатьи(
     markdown(),
     EditorView.lineWrapping,
     livePreview(path, блоки, названиеСовета, onImage, onБлок),
+    поверхностьРедактирования(блоки),
   ];
 }
 
