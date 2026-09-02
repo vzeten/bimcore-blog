@@ -5,6 +5,7 @@ import {describe, expect, it} from 'vitest';
 import {EditorSelection, EditorState, Text} from '@codemirror/state';
 import {markdown} from '@codemirror/lang-markdown';
 import {блокВ, картаПоверхности, контейнерКурсора, поверхностьРедактирования, портитСлужебное} from '../src/ui/editor/structureGuard';
+import {вставкаБлока} from '../src/core/jsxBlocks';
 import type {ОписаниеБлока} from '../src/ui/types';
 
 const БЛОКИ: Record<string, ОписаниеБлока> = {
@@ -124,6 +125,33 @@ describe('курсор на служебной строке переставля
   });
 });
 
+describe('пустая строка, куда правка поставила курсор, становится абзацем между разделителями', () => {
+  /** Правка окна: перевод строки в конце строки и курсор на новой строке — как `Enter` штатной команды. */
+  function перевод(текст: string, где: number) {
+    const итог = состояние(текст, где).update({changes: {from: где, insert: '\n'}, selection: {anchor: где + 1}, userEvent: 'input'}).state;
+    return {текст: итог.doc.toString(), курсор: итог.selection.main.head};
+  }
+
+  it('после таблицы, огороженного кода и завершённого списка появляется место для абзаца', () => {
+    expect(перевод('| а | б |\n|---|---|\n## Заголовок', 19)).toEqual({текст: '| а | б |\n|---|---|\n\n\n\n## Заголовок', курсор: 21});
+    expect(перевод('```\nкод\n```\nДальше.', 11)).toEqual({текст: '```\nкод\n```\n\n\n\nДальше.', курсор: 13});
+    expect(перевод('- пункт\n\nДальше.', 8)).toEqual({текст: '- пункт\n\n\n\nДальше.', курсор: 9});
+  });
+
+  it('вставка блока оставляет курсор на своей строке под ним', () => {
+    const текст = 'Абзац.\n\nЕщё.';
+    const правка = вставкаБлока(текст, {from: 6, to: 6}, '<YouTube id="x" />');
+    const итог = состояние(текст, 6).update({changes: {from: правка.from, insert: правка.insert}, selection: {anchor: правка.from + правка.caret!}}).state;
+    expect(итог.doc.toString()).toBe('Абзац.\n\n<YouTube id="x" />\n\n\n\nЕщё.');
+    expect(итог.selection.main.head).toBe(итог.doc.toString().indexOf('\n\n\n\nЕщё.') + 2);
+  });
+
+  it('отмена возвращает прежний текст без добавленных разделителей', () => {
+    const было = состояние('Абзац.', 6).update({changes: {from: 6, insert: '\n\n'}, selection: {anchor: 8}, userEvent: 'input'}).state;
+    expect(было.update({changes: {from: 6, to: 8}, selection: {anchor: 6}, userEvent: 'undo'}).state.doc.toString()).toBe('Абзац.');
+  });
+});
+
 describe('последняя защита: частичная порча служебного синтаксиса не проходит', () => {
   const совет = 'До.\n\n:::tip\nТекст\n:::\n\nПосле.';
 
@@ -131,7 +159,7 @@ describe('последняя защита: частичная порча слу�
     const закрытие = совет.indexOf('\n:::');
     expect(состояние(совет).update({changes: {from: закрытие, to: закрытие + 4}}).docChanged).toBe(false);
     expect(состояние(совет).update({changes: {from: 5, to: совет.indexOf('\n\nПосле')}}).docChanged).toBe(true);
-    expect(портитСлужебное(карта(совет), 0, совет.length)).toBe(false);
+    expect(портитСлужебное(Text.of(совет.split('\n')), карта(совет), 0, совет.length)).toBe(false);
   });
 
   it('набор внутри тела совета и рядом с ним проходит', () => {
@@ -140,8 +168,9 @@ describe('последняя защита: частичная порча слу�
     expect(состояние(совет).update({changes: {from: 3, insert: '!'}}).docChanged).toBe(true);
   });
 
-  it('вставка знака внутрь скрытого импорта не проходит, его удаление целиком — проходит', () => {
+  it('вставка знака внутрь и в начало скрытого импорта не проходит, его удаление целиком — проходит', () => {
     expect(состояние(КАРТОЧКА).update({changes: {from: 3, insert: 'x'}}).docChanged).toBe(false);
+    expect(состояние(КАРТОЧКА).update({changes: {from: 0, insert: 'x'}}).docChanged).toBe(false);
     expect(состояние(КАРТОЧКА).update({changes: {from: 0, to: КАРТОЧКА.indexOf('/>') + 2}}).docChanged).toBe(true);
   });
 });

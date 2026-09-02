@@ -8,7 +8,7 @@ import {tipLayer} from '../src/ui/livePreview/tip';
 import {ensureSyntaxTree} from '@codemirror/language';
 import {markdown} from '@codemirror/lang-markdown';
 import {переносыАбзацев, внутриОграды} from '../src/ui/livePreview/softBreak';
-import {точкаВОбычномАбзаце} from '../src/ui/editor/paragraphKeys';
+import {точкаВОбычномАбзаце} from '../src/ui/editor/surfaceKeys';
 
 /** Текст статьи строками, как он лежит в файле. */
 function строки(текст: string): string[] {

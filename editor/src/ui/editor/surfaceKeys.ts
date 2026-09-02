@@ -1,0 +1,165 @@
+// Клавиши поверхности: между раскладкой markdown (`Prec.high`: списки и цитаты продолжает она) и
+// общей; где правило молчит, работают штатные команды — разделитель атом, удаление склеивает абзацы.
+
+import {keymap, type Command, type KeyBinding} from '@codemirror/view';
+import {syntaxTree} from '@codemirror/language';
+import {EditorSelection, type EditorState, type TransactionSpec} from '@codemirror/state';
+import {тегиТекста} from '../../core/jsxTag.mjs';
+import type {Блок} from '../../core/jsxBlocks';
+import {строкаАбзаца} from '../livePreview/softBreak';
+import {блокВ, контейнерКурсора, поверхность, целойСтрокой, type Диапазон, type Область} from './structureGuard';
+
+/** Курсор в абзаце (или заголовке) прямо в документе по дереву markdown; чего commonmark не
+ * знает — таблицу, MDX, строку-картинку — у абзаца отсекает строковое правило показа. */
+export function точкаВОбычномАбзаце(state: EditorState, иЗаголовок = false): number | null {
+  const главное = state.selection.main;
+  if (!главное.empty) return null;
+
+  const исходный = syntaxTree(state).resolveInner(главное.from, -1);
+  let узел: typeof исходный | null = исходный;
+  while (узел !== null && узел.name !== 'Paragraph' && !(иЗаголовок && /^ATXHeading[1-6]$/.test(узел.name))) узел = узел.parent;
+  if (узел === null || узел.parent?.name !== 'Document') return null;
+  if (узел.name === 'Paragraph' && !(строкаАбзаца(state.doc.lineAt(узел.from).text) && строкаАбзаца(state.doc.lineAt(главное.from).text))) {
+    return null;
+  }
+  return главное.from;
+}
+
+/** Два перевода строки (перед последней пустой строкой документа — один); пустую строку у заголовка
+ * или блока дополнит разделителем карта. Строка того же абзаца вплотную — абзац делится. */
+function разделитель(state: EditorState, где: number, заголовок: boolean): {insert: string; anchor: number} {
+  const строка = state.doc.lineAt(где);
+  const следующая = строка.number < state.doc.lines ? state.doc.line(строка.number + 1) : null;
+  if (где !== строка.to || следующая === null) return {insert: '\n\n', anchor: где + 2};
+  if (следующая.text.trim() === '') return {insert: следующая.number === state.doc.lines ? '\n' : '\n\n', anchor: где + 2};
+  const граница = state.field(поверхность).карта.some((о) => о.вид === 'контейнер' && (о.from === следующая.from || о.to === следующая.to));
+  return {insert: '\n\n', anchor: !граница && !заголовок && строкаАбзаца(следующая.text) ? где + 3 : где + 2};
+}
+
+/** Выход из контейнера из последнего пустого абзаца тела: пустые строки после текста уходят, после
+ * закрывающей границы появляется место для абзаца; контейнер без текста пустую строку сохраняет. */
+export function выходИзКонтейнера(state: EditorState): TransactionSpec | null {
+  const pos = state.selection.main.head;
+  const контейнер = контейнерКурсора(state, pos);
+  if (контейнер === null || контейнер.тело === undefined || !state.selection.main.empty) return null;
+
+  const doc = state.doc;
+  let текст = 0;
+  for (let n = doc.lineAt(контейнер.тело.from).number; n <= doc.lineAt(контейнер.тело.to).number; n += 1) {
+    if (doc.line(n).text.trim() !== '') текст = n;
+  }
+  if (текст >= doc.lineAt(pos).number) return null;
+
+  const хвост = {from: текст === 0 ? контейнер.тело.to : doc.line(текст).to, to: контейнер.тело.to};
+  const дальше = doc.lineAt(контейнер.to).number < doc.lines ? doc.line(doc.lineAt(контейнер.to).number + 1) : null;
+  return {
+    changes: [хвост, {from: контейнер.to, insert: дальше === null || дальше.text.trim() === '' ? '\n' : '\n\n'}],
+    selection: {anchor: контейнер.to - (хвост.to - хвост.from) + 1},
+    scrollIntoView: true,
+    userEvent: 'input',
+  };
+}
+
+const новыйАбзац: Command = (view) => {
+  const state = view.state;
+  if (state.readOnly) return false;
+
+  const выход = выходИзКонтейнера(state);
+  if (выход !== null) {
+    view.dispatch(выход);
+    return true;
+  }
+
+  // Пустая строка сразу после жёсткого переноса: перенос уступает место абзацу, иначе косая осталась бы на сайте.
+  const pos = state.selection.main.head;
+  if (state.selection.main.empty && state.doc.lineAt(pos).text === '' && state.doc.sliceString(pos - 2, pos) === '\\\n') {
+    view.dispatch({changes: {from: pos - 2, to: pos, insert: '\n\n'}, selection: {anchor: pos}, scrollIntoView: true, userEvent: 'input'});
+    return true;
+  }
+
+  const абзац = точкаВОбычномАбзаце(state);
+  const где = абзац ?? точкаВОбычномАбзаце(state, true);
+  if (где === null) return false;
+  const {insert, anchor} = разделитель(state, где, абзац === null);
+  view.dispatch({changes: {from: где, insert}, selection: {anchor}, scrollIntoView: true, userEvent: 'input'});
+  return true;
+};
+
+const жёсткийПеренос: Command = (view) => {
+  const где = view.state.readOnly ? null : точкаВОбычномАбзаце(view.state);
+  if (где === null) return false;
+  view.dispatch({changes: {from: где, insert: '\\\n'}, selection: {anchor: где + 2}, scrollIntoView: true, userEvent: 'input'});
+  return true;
+};
+
+/** Строчный блок уходит с разделителем, блок в строке — своим узлом; единственная карточка — с импортом. */
+export function удалениеБлока(state: EditorState, блок: Область): Диапазон[] {
+  const doc = state.doc;
+  const первая = doc.lineAt(блок.from);
+  const последняя = doc.lineAt(блок.to);
+  const пустая = (n: number): boolean => n >= 1 && n <= doc.lines && doc.line(n).text.trim() === '';
+  const правки: Диапазон[] = !целойСтрокой(doc, блок) ? [{from: блок.from, to: блок.to}]
+    : пустая(последняя.number + 1) ? [{from: первая.from, to: Math.min(doc.length, doc.line(последняя.number + 1).to + 1)}]
+      : [{from: пустая(первая.number - 1) ? doc.line(первая.number - 1).from : первая.from, to: последняя.to}];
+
+  const карточки = (тегиТекста(doc.toString()) as (Блок & {от: number; до: number})[]).filter((тег) => тег.свойства.some((с) => с.выражение));
+  if (карточки.length === 1 && карточки[0].от === блок.from && карточки[0].до === блок.to) {
+    for (const о of state.field(поверхность).карта) {
+      if (о.вид === 'скрытый' && целойСтрокой(doc, о)) правки.push({from: о.from, to: Math.min(doc.length, о.to + 1)});
+    }
+  }
+  return правки;
+}
+
+/** За непроходимой областью у курсора: блок (его выберет удаление), служебное (удаление молчит),
+ * разделитель (за ним текст) или null — удаляет штатная команда. */
+function уКрая(state: EditorState, pos: number, вперёд: boolean): Область | 'служебное' | 'разделитель' | null {
+  const {карта, области} = state.field(поверхность);
+  const область = области.find((о) => (вперёд ? о.from === pos : о.to === pos));
+  if (область === undefined) return null;
+
+  const внутри = карта.filter((о) => о.from < область.to && о.to > область.from);
+  const блоки = внутри.filter((о) => о.вид === 'блок');
+  if (блоки.length > 0) return вперёд ? блоки[0] : блоки[блоки.length - 1];
+  if (внутри.some((о) => о.вид === 'контейнер' || (о.вид === 'скрытый' && целойСтрокой(state.doc, о)))) return 'служебное';
+  return внутри.every((о) => о.вид === 'разделитель') ? 'разделитель' : null;
+}
+
+function удаление(вперёд: boolean): Command {
+  return (view) => {
+    const state = view.state;
+    if (state.readOnly) return false;
+    const выбор = state.selection.main;
+
+    if (!выбор.empty) {
+      const блок = блокВ(state, выбор.from);
+      if (блок === null || блок.from !== выбор.from || блок.to !== выбор.to) return false;
+      const изменения = state.changes(удалениеБлока(state, блок));
+      view.dispatch({changes: изменения, selection: {anchor: изменения.mapPos(блок.from)}, scrollIntoView: true, userEvent: 'delete'});
+      return true;
+    }
+
+    const край = уКрая(state, выбор.head, вперёд);
+    if (край === null) return false;
+    if (край === 'служебное') return true;
+    if (край === 'разделитель') {
+      if (state.doc.lineAt(выбор.head).text.trim() !== '') return false;
+      const перевод = вперёд ? {from: выбор.head, to: выбор.head + 1} : {from: выбор.head - 1, to: выбор.head};
+      view.dispatch({changes: перевод, selection: {anchor: перевод.from}, userEvent: 'delete'});
+      return true;
+    }
+    view.dispatch({selection: EditorSelection.range(край.from, край.to), scrollIntoView: true});
+    return true;
+  };
+}
+
+export const клавишиПоверхности: KeyBinding[] = [
+  {key: 'Enter', run: новыйАбзац},
+  {key: 'Shift-Enter', run: жёсткийПеренос},
+  {key: 'Backspace', run: удаление(false)},
+  {key: 'Delete', run: удаление(true)},
+];
+
+export function раскладкаПоверхности() {
+  return keymap.of(клавишиПоверхности);
+}

@@ -1,10 +1,11 @@
 import {useEffect, useRef} from 'react';
-import {EditorState, Transaction} from '@codemirror/state';
+import {EditorSelection, EditorState, Transaction} from '@codemirror/state';
 import {EditorView, keymap, drawSelection, highlightActiveLine} from '@codemirror/view';
 import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
 import {запретПравки, чтениеСтатьи} from './reading';
 import {клавишиСписка} from './listKeys';
-import {абзацныеКлавиши} from './paragraphKeys';
+import {раскладкаПоверхности} from './surfaceKeys';
+import {блокВ} from './structureGuard';
 import {layerColors, слоиОкна} from '../layerColors';
 import type {Deletion} from '../../core/colorize';
 import {правкаПанелиКартинки, type КартинкаВОкне} from '../livePreview/inline';
@@ -52,6 +53,13 @@ export function useEditor(options: {
   const свежие = useRef(options);
   свежие.current = options;
 
+  // Нажатие на картинку или блок сначала выбирает его целиком по карте поверхности.
+  const сВыбором = <Т extends {from: number}>(далее: (что: Т) => void) => (что: Т): void => {
+    const блок = view.current === null ? null : блокВ(view.current.state, что.from);
+    if (блок !== null) view.current?.dispatch({selection: EditorSelection.range(блок.from, блок.to)});
+    далее(что);
+  };
+
   useEffect(() => {
     if (!host.current) return;
 
@@ -66,17 +74,15 @@ export function useEditor(options: {
           // Уровень пункта списка стоит выше общей раскладки: в ней `Tab` не занят вовсе и
           // уводил фокус из текста, а продолжение и конец списка по `Enter` уже даёт markdown.
           клавишиСписка(),
-          // Обычный абзац: `Enter` — новый абзац, `Shift+Enter` — жёсткий перенос. Ниже раскладки
-          // markdown (`Prec.high` — списки и цитаты продолжает она), выше общей, где `Enter`
-          // вставляет мягкий перенос и набранное зрительно уходит в предыдущий абзац.
-          абзацныеКлавиши(),
+          // Ниже раскладки markdown (`Prec.high` — списки и цитаты продолжает она), выше общей.
+          раскладкаПоверхности(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           ...чтениеСтатьи(
             () => свежие.current.article.path,
             options.блоки,
             options.названиеСовета,
-            (картинка) => свежие.current.onImage?.(картинка),
-            (блок) => свежие.current.onБлок?.(блок),
+            сВыбором((картинка) => свежие.current.onImage?.(картинка)),
+            сВыбором((блок) => свежие.current.onБлок?.(блок)),
           ),
           ...(options.толькоЧтение === true ? запретПравки() : []),
           // Цепочка слоёв читается свежей на каждый пересчёт, а не запоминается при создании
@@ -115,6 +121,7 @@ export function useEditor(options: {
       }),
     });
 
+    view.current.dispatch({selection: {anchor: 0}}); // начальный курсор — через карту: первая строка бывает скрытой
     (window as unknown as {__editor?: EditorView}).__editor = view.current;
 
     return () => {

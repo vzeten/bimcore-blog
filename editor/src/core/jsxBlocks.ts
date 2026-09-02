@@ -177,7 +177,8 @@ export function вставкаБлока(текст: string, at: Selection, те
   const отступПосле = после === '' ? '\n\n' : отступ(своиПереводы(после, 'начало'));
 
   const insert = `${отступДо}${тег}${отступПосле}`;
-  return {from: место, to: место, insert, caret: отступДо.length + тег.length};
+  // Курсор — на пустой строке под блоком: там человек продолжает текст.
+  return {from: место, to: место, insert, caret: отступДо.length + тег.length + 1};
 }
 
 function своиПереводы(сосед: string, край: 'начало' | 'конец'): number {

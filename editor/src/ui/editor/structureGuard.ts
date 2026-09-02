@@ -1,10 +1,8 @@
-// Карта поверхности редактирования: обычный текст — состояние по умолчанию, карта хранит только
-// исключения. Собирается из существующих разборов и отвечает лишь о границах, не о содержимом.
+// Карта поверхности: обычный текст — состояние по умолчанию, карта хранит только исключения;
+// собирается из существующих разборов и отвечает лишь о границах, не о содержимом.
 
 import {Decoration, EditorView, type DecorationSet} from '@codemirror/view';
-import {
-  Annotation, EditorState, Facet, RangeSet, RangeValue, StateField, type Extension, type Line, type Range, type Text,
-} from '@codemirror/state';
+import {EditorState, Facet, RangeSet, RangeValue, StateField, type Extension, type Line, type Range, type Text} from '@codemirror/state';
 import {советы} from '../../core/tipBlock';
 import {ВЫРАЖЕНИЕ, импортСтатьи, тегиТекста} from '../../core/jsxTag.mjs';
 import type {Блок} from '../../core/jsxBlocks';
@@ -15,12 +13,8 @@ export type Диапазон = {from: number; to: number};
 
 export interface Область extends Диапазон {
   вид: 'скрытый' | 'разделитель' | 'блок' | 'контейнер';
-  /** У контейнера — строки между границами: там текст правится как обычный. */
-  тело?: Диапазон;
+  тело?: Диапазон; // у контейнера — строки между границами, где текст правится как обычный
 }
-
-/** Правка самой поверхности (удаление блока с его импортом): последняя защита её пропускает. */
-export const правкаПоверхности = Annotation.define<boolean>();
 
 /** Пустая строка — разделитель, если к ней примыкает строка текста (не граница контейнера); рядом
  * только с пустыми, границами или краем документа она — пустой абзац; после жёсткого переноса —
@@ -81,8 +75,7 @@ export function целойСтрокой(doc: Text, о: Диапазон): boole
   return doc.lineAt(о.from).from === о.from && doc.lineAt(о.to).to === о.to;
 }
 
-/** Непроходимые для курсора области; занимающая строки целиком забирает и переводы строк вокруг
- * себя — иначе на её краях оставались бы пустые карманы. */
+/** Непроходимые для курсора области; строчная забирает и переводы строк вокруг — иначе карманы. */
 function непроходимые(doc: Text, карта: Область[]): Диапазон[] {
   const край = (о: Диапазон): Диапазон => ({from: Math.max(0, о.from - 1), to: Math.min(doc.length, о.to + 1)});
   const сырые = карта.flatMap((о): Диапазон[] => {
@@ -101,7 +94,6 @@ function непроходимые(doc: Text, карта: Область[]): Ди
   return слитые;
 }
 
-/** Строка, куда курсору вставать некуда: разделитель, граница контейнера, целиком блок или импорт. */
 function служебная(doc: Text, карта: Область[], строка: Line): boolean {
   return карта.some((о) => {
     if (о.вид === 'контейнер') return строка.from === о.from || строка.to === о.to;
@@ -127,15 +119,16 @@ function допустимаяПозиция(doc: Text, карта: Област�
 }
 
 /** Правка портит служебный синтаксис: задевает скрытое или границу контейнера, не покрыв их целиком. */
-export function портитСлужебное(карта: Область[], from: number, to: number): boolean {
-  const задевает = (о: Диапазон): boolean => (from < о.to && to > о.from) || (from === to && from > о.from && from < о.to);
+export function портитСлужебное(doc: Text, карта: Область[], from: number, to: number): boolean {
+  const задевает = (о: Диапазон, сНачала = false): boolean =>
+    (from < о.to && to > о.from) || (from === to && from < о.to && (from > о.from || (сНачала && from === о.from)));
   const покрывает = (о: Диапазон): boolean => from <= о.from && to >= о.to;
 
   return карта.some((о) => {
     if (о.вид === 'контейнер' && о.тело !== undefined) {
       return (задевает({from: о.from, to: о.тело.from}) || задевает({from: о.тело.to, to: о.to})) && !покрывает(о);
     }
-    return о.вид === 'скрытый' && задевает(о) && !покрывает(о);
+    return о.вид === 'скрытый' && задевает(о, целойСтрокой(doc, о)) && !покрывает(о);
   });
 }
 
@@ -183,17 +176,26 @@ export function поверхностьРедактирования(блоки: R
     поверхность,
     EditorState.transactionFilter.of((tr) => {
       // Последняя защита: частичная порча скрытого не проходит; отмена и возврат восстанавливают законное.
-      if (tr.docChanged && tr.annotation(правкаПоверхности) !== true && !tr.isUserEvent('undo') && !tr.isUserEvent('redo')) {
+      if (tr.docChanged && !tr.isUserEvent('undo') && !tr.isUserEvent('redo')) {
         const {карта} = tr.startState.field(поверхность);
         let портит = false;
         tr.changes.iterChangedRanges((from, to) => {
-          if (портитСлужебное(карта, from, to)) портит = true;
+          if (портитСлужебное(tr.startState.doc, карта, from, to)) портит = true;
         });
         if (портит) return [];
       }
       if (tr.selection === undefined || !tr.newSelection.main.empty) return tr;
       const {карта, области} = tr.docChanged ? построить(tr.newDoc, известные) : tr.startState.field(поверхность);
       const head = tr.newSelection.main.head;
+      // Пустая строка, куда правка поставила курсор (конец списка, `Enter` после таблицы, вставка блока), становится абзацем.
+      const строка = tr.newDoc.lineAt(head);
+      const вставка = tr.docChanged && !tr.isUserEvent('delete') && !tr.isUserEvent('undo') && !tr.isUserEvent('redo');
+      if (вставка && строка.text === '' && служебная(tr.newDoc, карта, строка)) {
+        const сосед = (n: number): boolean => n >= 1 && n <= tr.newDoc.lines && tr.newDoc.line(n).text.trim() !== '';
+        const до = сосед(строка.number - 1) ? '\n' : '';
+        const после = сосед(строка.number + 1) ? '\n' : '';
+        return [tr, {changes: [{from: строка.from, insert: до}, {from: строка.to, insert: после}], selection: {anchor: строка.from + до.length}, sequential: true}];
+      }
       const куда = допустимаяПозиция(tr.newDoc, карта, области, head, head >= tr.startState.selection.main.head);
       return куда === head ? tr : [tr, {selection: {anchor: куда}, sequential: true}];
     }),
