@@ -215,7 +215,15 @@ export function поверхностьРедактирования(блоки: R
       // Пустая строка, куда правка поставила курсор (конец списка, `Enter` после таблицы, вставка блока), становится абзацем.
       const строка = tr.newDoc.lineAt(head);
       if (tr.docChanged && своя && !tr.isUserEvent('delete') && строка.text === '' && служебная(tr.newDoc, карта, строка)) {
-        const сосед = (n: number): boolean => n >= 1 && n <= tr.newDoc.lines && tr.newDoc.line(n).text.trim() !== '';
+        const doc = tr.newDoc;
+        const есть = (n: number): boolean => n >= 1 && n <= doc.lines;
+        // Рядом уже есть пустой абзац (конец статьи, край примечания): курсор уходит в него, второй не заводится.
+        const свободная = [строка.number + 1, строка.number - 1].find((n) => есть(n) && doc.line(n).text === '' && !служебная(doc, карта, doc.line(n)));
+        if (свободная !== undefined) return [tr, {selection: {anchor: doc.line(свободная).from}, sequential: true}];
+        // У границы своего примечания разделитель не нужен: пустая строка там была бы не разделителем, а абзацем.
+        const своё = карта.find((о) => о.вид === 'контейнер' && о.тело !== undefined && о.тело.from <= строка.from && строка.to <= о.тело.to);
+        const граница = (n: number): boolean => своё !== undefined && (doc.line(n).from === своё.from || doc.line(n).to === своё.to);
+        const сосед = (n: number): boolean => есть(n) && doc.line(n).text.trim() !== '' && !граница(n);
         const до = сосед(строка.number - 1) ? '\n' : '';
         const после = сосед(строка.number + 1) ? '\n' : '';
         return [tr, {changes: [{from: строка.from, insert: до}, {from: строка.to, insert: после}], selection: {anchor: строка.from + до.length}, sequential: true}];

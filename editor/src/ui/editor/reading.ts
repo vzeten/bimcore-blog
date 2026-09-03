@@ -23,7 +23,9 @@ export function чтениеСтатьи(
   onБлок?: (блок: БлокВОкне) => void,
 ): Extension[] {
   return [
-    markdown(),
+    // Своя раскладка markdown не подключается: её `Enter` на пустом втором пункте разрежает
+    // список пустой строкой. Те же штатные команды привязаны в `listKeys.ts` с нужной настройкой.
+    markdown({addKeymap: false}),
     EditorView.lineWrapping,
     livePreview(path, блоки, названиеСовета, onImage, onБлок),
     поверхностьРедактирования(блоки),

@@ -82,10 +82,30 @@ const новыйАбзац: Command = (view) => {
   return true;
 };
 
+/**
+ * Курсор в абзаце пункта списка: колонка содержимого пункта для строки-продолжения. Не больше трёх
+ * пробелов: построчный разбор переносов счёл бы четыре отступным кодом, а меньшая колонка —
+ * законное продолжение пункта по CommonMark.
+ */
+function пунктКурсора(state: EditorState): {где: number; колонка: number} | null {
+  const главное = state.selection.main;
+  if (!главное.empty) return null;
+  let узел: ReturnType<typeof syntaxTree>['topNode'] | null = syntaxTree(state).resolveInner(главное.from, -1);
+  while (узел !== null && узел.name !== 'Paragraph') узел = узел.parent;
+  if (узел === null || узел.parent?.name !== 'ListItem') return null;
+  const маркер = /^[ \t]*([-*+]|\d{1,9}[.)])[ \t]+/.exec(state.doc.lineAt(узел.parent.from).text);
+  return маркер === null ? null : {где: главное.from, колонка: Math.min(3, маркер[0].length)};
+}
+
+/** Жёсткий перенос: в абзаце — косая и новая строка, в пункте списка — плюс отступ продолжения. */
 const жёсткийПеренос: Command = (view) => {
-  const где = view.state.readOnly ? null : точкаВОбычномАбзаце(view.state);
+  if (view.state.readOnly) return false;
+  const абзац = точкаВОбычномАбзаце(view.state);
+  const пункт = абзац === null ? пунктКурсора(view.state) : null;
+  const где = абзац ?? пункт?.где ?? null;
   if (где === null) return false;
-  view.dispatch({changes: {from: где, insert: '\\\n'}, selection: {anchor: где + 2}, scrollIntoView: true, userEvent: 'input'});
+  const insert = `\\\n${' '.repeat(пункт?.колонка ?? 0)}`;
+  view.dispatch({changes: {from: где, insert}, selection: {anchor: где + insert.length}, scrollIntoView: true, userEvent: 'input'});
   return true;
 };
 
