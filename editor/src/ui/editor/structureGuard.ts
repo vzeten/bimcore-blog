@@ -5,7 +5,7 @@ import {EditorState, Facet, RangeSet, RangeValue, StateField, type Extension, ty
 import {советы} from '../../core/tipBlock';
 import {ВЫРАЖЕНИЕ, импортСтатьи, тегиТекста} from '../../core/jsxTag.mjs';
 import type {Блок} from '../../core/jsxBlocks';
-import {КАРТИНКА_В_СТРОКЕ, внутриОграды, переносыАбзацев, строкаТолькоКартинка} from '../livePreview/softBreak';
+import {КАРТИНКА_В_СТРОКЕ, внутриОграды, переносыАбзацев, пунктСписка, строкаТолькоКартинка} from '../livePreview/softBreak';
 import type {ОписаниеБлока} from '../types';
 
 export type Диапазон = {from: number; to: number};
@@ -193,13 +193,20 @@ export function поверхностьРедактирования(блоки: R
         if (портит) return [];
       }
       const новая = tr.docChanged ? построить(tr.newDoc, известные) : tr.startState.field(поверхность);
-      // Набор маркера списка под строкой с жёстким переносом делает её косую буквой: сайт показал бы
-      // слеш. Такая косая уходит той же транзакцией, что и маркер, — отмена возвращает обе.
-      if (tr.docChanged && своя && tr.isUserEvent('input')) {
+      // Набранный маркер списка под строкой с жёстким переносом делает её косую буквой: сайт показал бы
+      // слеш. Только тогда косая уходит той же транзакцией, что и маркер, — отмена возвращает обе.
+      // Другие начала блоков и вставка из буфера косую не трогают.
+      if (tr.docChanged && своя && tr.isUserEvent('input.type')) {
+        const набрано: Диапазон[] = [];
+        tr.changes.iterChangedRanges((_fromA, _toA, fromB, toB) => набрано.push({from: fromB, to: toB}));
         const мёртвые = tr.startState.field(поверхность).карта
           .filter((о) => о.вид === 'скрытый' && !целойСтрокой(tr.startState.doc, о))
           .map((о) => tr.changes.mapPos(о.from, -1))
-          .filter((p) => tr.newDoc.sliceString(p, p + 2) === '\\\n' && !новая.карта.some((о) => о.вид === 'скрытый' && о.from === p));
+          .filter((p) => {
+            if (tr.newDoc.sliceString(p, p + 2) !== '\\\n' || новая.карта.some((о) => о.вид === 'скрытый' && о.from === p)) return false;
+            const ниже = tr.newDoc.lineAt(p + 2);
+            return пунктСписка(ниже.text) && набрано.some((н) => н.from >= ниже.from && н.to <= ниже.to);
+          });
         if (мёртвые.length > 0) return [tr, {changes: мёртвые.map((p) => ({from: p, to: p + 1})), sequential: true}];
       }
       if (tr.selection === undefined || !tr.newSelection.main.empty) return tr;
