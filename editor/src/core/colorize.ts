@@ -6,10 +6,37 @@ import {diffArrays, diffChars} from 'diff';
  * Разбивка на слова и промежутки между ними.
  * Своя, а не библиотечная: готовые сравнения слов не знают кириллицы
  * и режут русские слова по буквам — цвет тогда превращается в кашу.
+ * Косые — отдельный кусок: косая перед переводом строки есть знак переноса markdown, а не часть
+ * слова, и её появление или уход не должны менять авторство самого слова.
  * Склейка кусков обратно даёт исходный текст символ в символ.
  */
 function tokenize(text: string): string[] {
-  return text.match(/\s+|[^\s]+/gu) ?? [];
+  return text.match(/[^\s\\]+|\\+|\s+/gu) ?? [];
+}
+
+/** Кусок — знак переноса markdown: нечётная косая перед переводом строки (по CommonMark). */
+function переносMarkdown(chunk: string, following: string): boolean {
+  return /^\\+$/.test(chunk) && chunk.length % 2 === 1 && following === '\n';
+}
+
+/**
+ * Позиция из прошлого слоя в координатах следующего: удаление, найденное раньше, обязано стоять
+ * там же после всех правок, что были после него.
+ */
+function перенести(parts: {value: string[]; added?: boolean; removed?: boolean}[], at: number): number {
+  let oldPos = 0;
+  let newPos = 0;
+  for (const part of parts) {
+    const len = part.value.join('').length;
+    if (part.added) {
+      newPos += len;
+      continue;
+    }
+    if (at <= oldPos + len) return part.removed ? newPos : newPos + (at - oldPos);
+    oldPos += len;
+    if (!part.removed) newPos += len;
+  }
+  return newPos;
 }
 
 /**
@@ -65,6 +92,7 @@ export function colorize(input: Layer[]): Colorized {
     let oldPos = 0;
 
     const parts = diffArrays(tokenize(text), tokenize(layer.text));
+    for (const deletion of deletions) deletion.at = перенести(parts, deletion.at);
 
     for (let step = 0; step < parts.length; step += 1) {
       const part = parts[step];
@@ -105,8 +133,9 @@ export function colorize(input: Layer[]): Colorized {
       if (part.added) {
         for (let i = 0; i < chunk.length; i += 1) nextKinds.push(layer.kind);
       } else if (part.removed) {
-        // Удаление одних пробелов и переносов — не событие, показывать его нечего.
-        if (chunk.trim() !== '') deletions.push({at: nextKinds.length, text: chunk, kind: layer.kind});
+        // Удаление одних пробелов, переводов строк и знака переноса markdown — не событие.
+        const служебное = chunk.trim() === '' || переносMarkdown(chunk, text[oldPos + chunk.length] ?? '');
+        if (!служебное) deletions.push({at: nextKinds.length, text: chunk, kind: layer.kind});
         oldPos += chunk.length;
       } else {
         for (let i = 0; i < chunk.length; i += 1) nextKinds.push(kinds[oldPos + i] ?? layer.kind);

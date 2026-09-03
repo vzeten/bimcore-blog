@@ -104,3 +104,40 @@ describe('слои изменений', () => {
     for (let i = 1; i < segments.length; i += 1) expect(segments[i].from).toBe(segments[i - 1].to);
   });
 });
+
+describe('маркер списка и знак переноса не меняют авторство слов', () => {
+  const кусок = (text: string, r: ReturnType<typeof colorize>) => r.segments.map((s) => [text.slice(s.from, s.to), s.kind]);
+
+  it('маркеры, набранные над строками после Shift+Enter, красятся сами, слова остаются прежними и не удаляются', () => {
+    const файл = 'что то\nраз\\\nдва\\\nтри';
+    const окно = 'что то\n- раз\n- два\n- три';
+    const r = colorize([{text: файл, kind: 'prevHuman'}, {text: окно, kind: 'current'}]);
+    expect(r.deletions).toEqual([]);
+    expect(кусок(окно, r)).toEqual([
+      ['что то\n', 'prevHuman'], ['- ', 'current'], ['раз\n', 'prevHuman'], ['- ', 'current'], ['два\n', 'prevHuman'], ['- ', 'current'], ['три', 'prevHuman'],
+    ]);
+  });
+
+  it('буквальная косая — удаление: экранированная перед переводом строки и одиночная в конце текста', () => {
+    expect(colorize([{text: 'a\\\\\nb', kind: 'prevHuman'}, {text: 'a\n- b', kind: 'current'}]).deletions).toEqual([{at: 1, text: '\\\\', kind: 'current'}]);
+    expect(colorize([{text: 'a\\', kind: 'prevHuman'}, {text: 'a', kind: 'current'}]).deletions).toEqual([{at: 1, text: '\\', kind: 'current'}]);
+  });
+
+  it('набранный жёсткий перенос внутри абзаца красится текущим, слова вокруг — прежние', () => {
+    const окно = 'a\\\nb';
+    expect(кусок(окно, colorize([{text: 'a\nb', kind: 'prevHuman'}, {text: окно, kind: 'current'}]))).toEqual([['a', 'prevHuman'], ['\\', 'current'], ['\nb', 'prevHuman']]);
+  });
+
+  it('удаление прошлого слоя стоит на своём месте и после правок следующих слоёв', () => {
+    const r = colorize([{text: 'начало середина конец', kind: 'site'}, {text: 'начало конец', kind: 'prevHuman'}, {text: 'ВСТАВКА начало конец', kind: 'current'}]);
+    expect(r.deletions).toEqual([{at: 'ВСТАВКА начало '.length, text: 'середина ', kind: 'prevHuman'}]);
+  });
+
+  it('машинная правка остаётся машинной после маркера и снятого переноса, настоящее удаление видно', () => {
+    const окно = '- раз ДВА три';
+    const r = colorize([{text: 'раз два три', kind: 'site'}, {text: 'раз ДВА три', kind: 'prevAi'}, {text: 'раз ДВА три\\\nx', kind: 'prevHuman'}, {text: окно, kind: 'current'}]);
+    expect(кусок(окно, r)).toEqual([['- ', 'current'], ['раз ', 'site'], ['ДВА', 'prevAi'], [' три', 'site']]);
+    expect(r.deletions).toEqual([{at: 6, text: 'два', kind: 'prevAi'}, {at: 13, text: '\\\nx', kind: 'current'}]);
+  });
+});
+
