@@ -246,6 +246,8 @@ button { font: inherit; cursor: pointer; }
 .md-table-raw { font-family: ui-monospace, Consolas, monospace; font-size: 0.82em; line-height: 1.5; }
 
 .paper .cm-line.md-block-line { line-height: 0; font-size: 0; padding: 0 2px; }
+/* Закрывающая строка примечания — только нижнее поле рамки: своей высоты и курсорного места у неё нет. */
+.paper .cm-line.md-tip-foot { line-height: 0; font-size: 0; }
 /* Сам блок внутри такой строки живёт своей высотой строки: иначе его надписи ложатся друг на друга. */
 .paper .cm-line.md-block-line .md-card, .paper .cm-line.md-block-line .md-video, .paper .cm-line.md-block-line .md-block { line-height: 1.4; }
 .paper .cm-selectionLayer { z-index: 1; } /* выделение поверх непрозрачной картинки */

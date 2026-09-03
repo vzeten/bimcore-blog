@@ -5,7 +5,7 @@ import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
 import {запретПравки, чтениеСтатьи} from './reading';
 import {клавишиСписка} from './listKeys';
 import {клавишиПоверхности} from './surfaceKeys';
-import {блокВ, обычныйТекст} from './structureGuard';
+import {блокВ, контейнерКурсора, обычныйТекст} from './structureGuard';
 import {layerColors, слоиОкна} from '../layerColors';
 import type {Deletion} from '../../core/colorize';
 import {правкаПанелиКартинки, type КартинкаВОкне} from '../livePreview/inline';
@@ -55,7 +55,11 @@ export function useEditor(options: {
 
   const сВыбором = <Т extends {from: number}>(далее: (что: Т) => void) => (что: Т): void => {
     const блок = view.current === null ? null : блокВ(view.current.state, что.from);
-    if (блок !== null) view.current?.dispatch({selection: EditorSelection.range(блок.from, блок.to)});
+    if (блок !== null) {
+      // Виджет гасит нажатие, и без явного фокуса `Delete` не дошёл бы до редактора.
+      view.current?.dispatch({selection: EditorSelection.range(блок.from, блок.to)});
+      view.current?.focus();
+    }
     далее(что);
   };
 
@@ -138,8 +142,10 @@ export function useEditor(options: {
  */
 function spotOf(view: EditorView): Spot | null {
   const range = view.state.selection.main;
-  // Команды текста показываются только выделению обычного текста: блок и служебные строки их не получают.
-  if (range.empty || !обычныйТекст(view.state, range.from, range.to)) return null;
+  // Команды — выделению обычного текста либо курсору внутри примечания: снять или сменить его тип
+  // можно без повторного выделения. Блок и служебные строки команд не получают.
+  const годится = range.empty ? контейнерКурсора(view.state, range.head) !== null : обычныйТекст(view.state, range.from, range.to);
+  if (!годится) return null;
 
   const start = view.coordsAtPos(range.from);
   if (!start) return null;

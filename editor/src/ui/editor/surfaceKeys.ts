@@ -136,7 +136,15 @@ function удаление(вперёд: boolean): Command {
 
     const край = уКрая(state, выбор.head, вперёд);
     if (край === null) return false;
-    if (край === 'служебное') return true;
+    if (край === 'служебное') {
+      // Пустой абзац сразу после примечания уходит, курсор — в конец его текста: выход по `Enter`
+      // отменяется той же клавишей, что и в обычном тексте.
+      const строка = state.doc.lineAt(выбор.head);
+      const примечание = state.field(поверхность).карта.find((о) => о.вид === 'контейнер' && о.тело !== undefined && о.to < строка.from);
+      if (вперёд || строка.text !== '' || примечание === undefined || строка.number === 1) return true;
+      view.dispatch({changes: {from: строка.from - 1, to: строка.from}, selection: {anchor: примечание.тело!.to}, scrollIntoView: true, userEvent: 'delete'});
+      return true;
+    }
     if (край === 'разделитель') {
       if (state.doc.lineAt(выбор.head).text.trim() !== '') return false;
       const перевод = вперёд ? {from: выбор.head, to: выбор.head + 1} : {from: выбор.head - 1, to: выбор.head};
