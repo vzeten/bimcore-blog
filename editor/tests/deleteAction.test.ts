@@ -4,6 +4,7 @@
 import {describe, expect, it, vi} from 'vitest';
 import {deleteArticle} from '../src/ui/actions';
 import {trashRestore} from '../src/ui/trashActions';
+import {провестиУдаление} from '../src/ui/useDelete';
 
 const ПУТЬ = 'editor/sandbox/proba/index.mdx';
 
@@ -81,3 +82,31 @@ describe('возврат из корзины', () => {
     expect(fail).toHaveBeenCalledWith('конфликт', [ПУТЬ]);
   });
 });
+
+describe('ход удаления после подтверждения', () => {
+  const шаг = (правки: Partial<Parameters<typeof провестиУдаление>[0]>) => ({
+    дописать: async () => true, окно: () => 'a|1', своё: 'a|1', удалить: vi.fn(async () => {}), onОшибка: vi.fn(), ...правки,
+  });
+
+  it('черновик не записался — удаления нет, человеку сказано почему', async () => {
+    const с = шаг({дописать: async () => false});
+    expect(await провестиУдаление(с)).toBe('черновикНеЗаписан');
+    expect(с.удалить).not.toHaveBeenCalled();
+    expect(с.onОшибка).toHaveBeenCalledTimes(1);
+  });
+
+  it('пока дописывался черновик, окно сменилось — старое предложение не исполняется', async () => {
+    let окно = 'a|1';
+    const с = шаг({дописать: async () => { окно = 'b|1'; return true; }, окно: () => окно});
+    expect(await провестиУдаление(с)).toBe('окноСменилось');
+    expect(с.удалить).not.toHaveBeenCalled();
+    expect(с.onОшибка).not.toHaveBeenCalled();
+  });
+
+  it('черновик записан и окно то же — удаление идёт', async () => {
+    const с = шаг({});
+    expect(await провестиУдаление(с)).toBe('удалено');
+    expect(с.удалить).toHaveBeenCalledTimes(1);
+  });
+});
+

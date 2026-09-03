@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import {saveDraft, saveSnapshot} from '../src/adapters/draftStore.mjs';
-import {вКорзину, вернутьИзКорзины, довести, папкаКорзины, составАрхива, списокКорзины} from '../src/adapters/trashStore.mjs';
+import {вКорзину, вернутьИзКорзины, довести, папкаКорзины, положитьЦеликом, составАрхива, списокКорзины} from '../src/adapters/trashStore.mjs';
 
 const НАСТРОЙКИ = {хранение: {файлСостояния: '_state.json', папкаЧерновиков: '.drafts', папкаСнимков: '.history', снимковНаВерсию: 5, папкаКорзины: '.trash', корзинаДней: 30}};
 const RU = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/index.mdx';
@@ -231,6 +231,60 @@ describe('запись описи и копий без хвостов', () => {
     fs.writeFileSync(path.join(п.repo, RU), `содержимое ${RU}`, 'utf8');
     expect(вернутьИзКорзины({...параметры(п), id: запись.id})).toEqual({возвращено: РЕШЕНИЕ.пути});
     expect(fs.existsSync(path.join(п.repo, EN))).toBe(true);
+  });
+});
+
+describe('установка файла целиком', () => {
+  it('на свободное имя — файл целиком; занятое имя — отказ без перезаписи; замена — поверх; хвостов в .tmp нет', () => {
+    const п = репозиторий();
+    const цель = path.join(п.repo, 'docs/новый.txt');
+    expect(положитьЦеликом(п.editorDir, цель, Buffer.from('раз'), false)).toBe(true);
+    expect(fs.readFileSync(цель, 'utf8')).toBe('раз');
+    expect(положитьЦеликом(п.editorDir, цель, Buffer.from('два'), false)).toBe(false);
+    expect(fs.readFileSync(цель, 'utf8')).toBe('раз');
+    expect(положитьЦеликом(п.editorDir, цель, Buffer.from('три'), true)).toBe(true);
+    expect(fs.readFileSync(цель, 'utf8')).toBe('три');
+    expect(fs.readdirSync(path.join(п.editorDir, '.tmp'))).toEqual([]);
+  });
+
+  it('сбой до установки оставляет только хвост во временной папке: цели нет, повтор возврата проходит', () => {
+    const п = репозиторий();
+    const состав = составАрхива({...параметры(п), решение: РЕШЕНИЕ});
+    const запись = вКорзину({...параметры(п), статья: {название: 'Проба', пути: РЕШЕНИЕ.пути, языки: РЕШЕНИЕ.языки, папки: РЕШЕНИЕ.папки}, состав});
+    // Обрыв прошлого возврата до установки: половина байт лежит во временном файле, на месте цели ничего.
+    fs.mkdirSync(path.join(п.editorDir, '.tmp'), {recursive: true});
+    fs.writeFileSync(path.join(п.editorDir, '.tmp', 'корзина-0-0-dead'), 'полов', 'utf8');
+    expect(есть(п.repo, EN)).toBe(false);
+    expect(вернутьИзКорзины({...параметры(п), id: запись.id})).toEqual({возвращено: РЕШЕНИЕ.пути});
+    expect(fs.readFileSync(path.join(п.repo, EN), 'utf8')).toBe(`содержимое ${EN}`);
+  });
+
+  it('имя заняли между проверкой и установкой — отказ без перезаписи, запись остаётся для повтора', () => {
+    const п = репозиторий();
+    const состав = составАрхива({...параметры(п), решение: РЕШЕНИЕ});
+    const запись = вКорзину({...параметры(п), статья: {название: 'Проба', пути: РЕШЕНИЕ.пути, языки: РЕШЕНИЕ.языки, папки: РЕШЕНИЕ.папки}, состав});
+    // Занятость появляется после проверки: подменяем чтение архива так, чтобы файл цели возник перед установкой.
+    const dir = path.join(папкаКорзины(п.editorDir, НАСТРОЙКИ), запись.id);
+    const исходное = fs.readFileSync;
+    let подложено = false;
+    fs.readFileSync = function (файл, ...rest) {
+      if (!подложено && String(файл) === path.join(dir, 'repo', EN)) {
+        подложено = true;
+        fs.mkdirSync(path.join(п.repo, path.dirname(EN)), {recursive: true});
+        исходное.call(fs, файл);
+        fs.writeFileSync(path.join(п.repo, EN), 'чужое', 'utf8');
+      }
+      return исходное.call(fs, файл, ...rest);
+    };
+    try {
+      expect(вернутьИзКорзины({...параметры(п), id: запись.id})).toMatchObject({ошибка: 'возвратКонфликт', конфликты: [EN]});
+    } finally {
+      fs.readFileSync = исходное;
+    }
+    expect(fs.readFileSync(path.join(п.repo, EN), 'utf8')).toBe('чужое');
+    expect(fs.existsSync(path.join(dir, 'manifest.json'))).toBe(true);
+    fs.rmSync(path.join(п.repo, EN));
+    expect(вернутьИзКорзины({...параметры(п), id: запись.id})).toEqual({возвращено: РЕШЕНИЕ.пути});
   });
 });
 

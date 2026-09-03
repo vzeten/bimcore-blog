@@ -4,8 +4,9 @@
 // оригиналы стираются только после того, как копия целиком легла в архив, возврат не перезаписывает
 // чужое, а обрыв на любом шаге переживается повтором: оба хода идемпотентны и отмечают своё
 // продвижение в описи. Автоматически чистятся только завершённые и просроченные записи.
-// Опись и копии пишутся тем же приёмом, что и картинки: целиком во временный файл, затем `rename`
-// (`assetGuards.mjs`) — обрыв на записи не оставляет битой описи и половинного файла на месте.
+// Опись и копии пишутся целиком: временный файл в служебной папке редактора с `fsync`, затем одна
+// операция установки — `rename` поверх для описи и архива, `link` только на свободное имя при
+// возврате. Обрыв в любой момент не оставляет ни битой описи, ни половинного файла на месте.
 // Папка корзины и папка записи перед любым чтением, очисткой или возвратом проверяются на
 // подмену ссылкой или junction: чужую папку программа не читает и не чистит.
 
@@ -13,7 +14,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-import {записатьНовый, записатьПоверх} from './assetGuards.mjs';
 import {draftPath, historyDirOf} from './draftStore.mjs';
 
 const ОПИСЬ = 'manifest.json';
@@ -111,21 +111,55 @@ function прочитатьОпись(dir) {
   }
 }
 
-function записатьОпись(repo, dir, опись) {
+/**
+ * Положить байты на место целиком. Сначала временный файл в `editor/.tmp` (тот же том) с `fsync`,
+ * затем одна операция: `заменять` — `rename` поверх; иначе `link` временного файла на свободное
+ * имя — занятое имя даёт `EEXIST` и `false`, ничего не перезаписав. Половинного файла на месте не
+ * бывает ни при каком обрыве: до установки его там нет, после — он целый. Хвост уносится всегда.
+ */
+export function положитьЦеликом(editorDir, target, bytes, заменять) {
+  const папка = path.join(editorDir, '.tmp');
+  fs.mkdirSync(папка, {recursive: true});
+  const временный = path.join(папка, `корзина-${process.pid}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`);
+  try {
+    const fd = fs.openSync(временный, 'w');
+    try {
+      fs.writeSync(fd, bytes);
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+    if (заменять) {
+      fs.renameSync(временный, target);
+      return true;
+    }
+    try {
+      fs.linkSync(временный, target);
+      return true;
+    } catch (error) {
+      if (error?.code === 'EEXIST') return false;
+      throw error;
+    }
+  } finally {
+    fs.rmSync(временный, {force: true});
+  }
+}
+
+function записатьОпись(editorDir, dir, опись) {
   fs.mkdirSync(dir, {recursive: true});
-  записатьПоверх(repo, path.join(dir, ОПИСЬ), JSON.stringify(опись, null, 2));
+  положитьЦеликом(editorDir, path.join(dir, ОПИСЬ), JSON.stringify(опись, null, 2), true);
 }
 
-/** Копия в архив: целиком во временный файл, затем на место; повтор переноса перезаписывает свою же копию. */
-function копия(repo, от, куда) {
+/** Копия в архив: повтор переноса перезаписывает свою же копию. */
+function копия(editorDir, от, куда) {
   fs.mkdirSync(path.dirname(куда), {recursive: true});
-  записатьПоверх(repo, куда, fs.readFileSync(от));
+  положитьЦеликом(editorDir, куда, fs.readFileSync(от), true);
 }
 
-/** Копия на место при возврате: без перезаписи — половинный файл после сбоя на месте не появляется. */
-function копияНовая(repo, от, куда) {
+/** Копия на место при возврате: только на свободное имя — чужое не перезаписывается. */
+function копияНовая(editorDir, от, куда) {
   fs.mkdirSync(path.dirname(куда), {recursive: true});
-  if (!записатьНовый(repo, куда, fs.readFileSync(от))) throw new Error('возвратКонфликт');
+  return положитьЦеликом(editorDir, куда, fs.readFileSync(от), false);
 }
 
 /** Убрать папку, если после удаления файлов статьи в ней ничего не осталось, и так вверх до корня статьи. */
@@ -150,7 +184,7 @@ export function вКорзину({repo, editorDir, settings, статья, со�
   const корзина = папкаКорзины(editorDir, settings);
   fs.mkdirSync(корзина, {recursive: true});
   настоящаяПапка(корзина);
-  записатьОпись(repo, dir, опись);
+  записатьОпись(editorDir, dir, опись);
   return довести({repo, editorDir, settings, dir, опись});
 }
 
@@ -161,11 +195,11 @@ export function довести({repo, editorDir, settings, dir, опись}) {
     for (const файл of опись.файлы) {
       const от = проверенный(корень[файл.корень], файл.из);
       const куда = проверенный(dir, файл.в);
-      if (fs.existsSync(от)) копия(repo, от, куда);
+      if (fs.existsSync(от)) копия(editorDir, от, куда);
       else if (!fs.existsSync(куда)) throw new Error('архивПовреждён');
     }
     опись.состояние = 'скопировано';
-    записатьОпись(repo, dir, опись);
+    записатьОпись(editorDir, dir, опись);
   }
   if (опись.состояние === 'скопировано') {
     for (const файл of опись.файлы) {
@@ -174,7 +208,7 @@ export function довести({repo, editorDir, settings, dir, опись}) {
     }
     for (const папка of опись.статья.папки ?? []) убратьПустые(repo, папка);
     опись.состояние = 'готово';
-    записатьОпись(repo, dir, опись);
+    записатьОпись(editorDir, dir, опись);
   }
   void settings;
   return {id: опись.id, удалено: опись.удалено};
@@ -244,8 +278,12 @@ export function вернутьИзКорзины({repo, editorDir, settings, id}
   }
   if (конфликты.length > 0) return {ошибка: 'возвратКонфликт', конфликты};
   опись.состояние = 'возврат';
-  записатьОпись(repo, dir, опись);
-  for (const {от, куда} of план) копияНовая(repo, от, куда);
+  записатьОпись(editorDir, dir, опись);
+  for (const {от, куда} of план) {
+    if (!копияНовая(editorDir, от, куда)) {
+      return {ошибка: 'возвратКонфликт', конфликты: [path.relative(repo, куда).split(path.sep).join('/')]};
+    }
+  }
   fs.rmSync(dir, {recursive: true, force: true});
   return {возвращено: опись.статья.пути ?? []};
 }
