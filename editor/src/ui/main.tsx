@@ -8,6 +8,7 @@ import './feedback.css';
 import './versions.css';
 import './imagePanel.css';
 import './blocks.css';
+import './toolbar.css';
 
 /** Белый экран вместо программы недопустим: ошибку надо показать словами. */
 class Guard extends Component<{children: ReactNode}, {error: Error | null}> {

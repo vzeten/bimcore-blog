@@ -10,10 +10,44 @@ import type {Button, Settings} from '../types';
 import type {Spot} from './useEditor';
 
 /**
- * Панель всплывает над выделением и исчезает без него.
- * Сначала два выбора — форматировать или комментировать, — а набор команд
- * раскрывается вторым шагом: восемь кнопок сразу читать тяжело.
+ * Панель всплывает над выделением и исчезает без него. Сначала два выбора — форматировать или
+ * комментировать, — а набор команд раскрывается вторым шагом одной панелью: группы отделены
+ * визуально, короткие кнопки объясняют себя подсказкой и доступным названием.
  */
+
+/** Чем кнопка показана: короткий знак с пиктограммой либо слово из настроек. */
+export function видКнопки(button: Button): {знак: string; пиктограмма?: 'ссылка' | 'точки' | 'числа'} {
+  if (button.команда === 'заголовок') return {знак: `H${button.уровень ?? 2}`};
+  if (button.команда === 'обернуть') return {знак: button.знак === '*' ? 'I' : button.знак === '**' ? 'B' : button.подпись};
+  if (button.команда === 'ссылка') return {знак: button.подпись, пиктограмма: 'ссылка'};
+  if (button.команда === 'список') return {знак: button.подпись, пиктограмма: button.вид === 'числа' ? 'числа' : 'точки'};
+  return {знак: button.подпись};
+}
+
+/** Кнопки по группам настроек в их порядке: группа переносится целиком, кнопки не перемешиваются. */
+function поГруппам(buttons: Button[]): [string, Button[]][] {
+  const группы = new Map<string, Button[]>();
+  for (const item of buttons) группы.set(item.группа, [...(группы.get(item.группа) ?? []), item]);
+  return [...группы.entries()];
+}
+
+function Пиктограмма(props: {вид: 'ссылка' | 'точки' | 'числа'}) {
+  const общее = {width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true};
+  if (props.вид === 'ссылка') {
+    return <svg {...общее}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>;
+  }
+  if (props.вид === 'точки') {
+    return <svg {...общее}><path d="M9 6h12M9 12h12M9 18h12" /><circle cx="4" cy="6" r="1.4" fill="currentColor" stroke="none" /><circle cx="4" cy="12" r="1.4" fill="currentColor" stroke="none" /><circle cx="4" cy="18" r="1.4" fill="currentColor" stroke="none" /></svg>;
+  }
+  return (
+    <svg {...общее}>
+      <path d="M10 6h11M10 12h11M10 18h11" />
+      <text x="1" y="8.5" fontSize="7" fill="currentColor" stroke="none" fontFamily="sans-serif">1</text>
+      <text x="1" y="14.5" fontSize="7" fill="currentColor" stroke="none" fontFamily="sans-serif">2</text>
+      <text x="1" y="20.5" fontSize="7" fill="currentColor" stroke="none" fontFamily="sans-serif">3</text>
+    </svg>
+  );
+}
 export function SelectionToolbar(props: {
   settings: Settings;
   spot: Spot | null;
@@ -46,12 +80,20 @@ export function SelectionToolbar(props: {
   }
 
   return (
-    <div className="float" style={style}>
-      <button className="float-back" onClick={() => setOpen(false)}>←</button>
-      {buttons.map((item) => (
-        <button key={item.подпись} onClick={() => run(item, props)}>
-          {item.подпись}
-        </button>
+    <div className="float" style={style} role="toolbar" aria-label={п.форматировать}>
+      <button className="float-back" onClick={() => setOpen(false)} title={п.форматировать} aria-label={п.форматировать}>←</button>
+      {поГруппам(buttons).map(([группа, кнопки]) => (
+        <span className="float-group" key={группа} role="group" aria-label={группа}>
+          {кнопки.map((item) => {
+            const вид = видКнопки(item);
+            return (
+              <button key={item.подпись} onClick={() => run(item, props)} title={item.подпись} aria-label={item.подпись}
+                className={вид.пиктограмма === undefined && вид.знак !== item.подпись ? 'float-key' : undefined}>
+                {вид.пиктограмма !== undefined ? <Пиктограмма вид={вид.пиктограмма} /> : вид.знак}
+              </button>
+            );
+          })}
+        </span>
       ))}
     </div>
   );

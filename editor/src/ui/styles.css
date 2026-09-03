@@ -147,22 +147,6 @@ button { font: inherit; cursor: pointer; }
 .insert-menu button { border: 0; background: transparent; text-align: left; padding: 7px 10px; border-radius: 6px; font-size: 13px; }
 .insert-menu button:hover { background: var(--bg-soft); }
 
-.float {
-  position: fixed;
-  z-index: 6;
-  display: flex;
-  flex-wrap: wrap;
-  max-width: calc(100vw - 16px);
-  background: var(--ink);
-  border-radius: 8px;
-  padding: 3px;
-}
-
-.float button { border: 0; background: transparent; color: #fff; font-size: 12px; padding: 5px 9px; border-radius: 6px; }
-.float button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.16); }
-.float button:disabled { color: rgba(255, 255, 255, 0.4); cursor: default; }
-.float-back { color: rgba(255, 255, 255, 0.55) !important; padding: 5px 7px !important; }
-
 .ghost-on { background: var(--bg-soft); border-color: #c6ccd4; }
 
 /* Публикация — главное действие человека в этом окне, и выглядеть она должна главной: остальные
@@ -247,7 +231,7 @@ button { font: inherit; cursor: pointer; }
 
 .paper .cm-line.md-block-line { line-height: 0; font-size: 0; padding: 0 2px; }
 /* Закрывающая строка примечания — только нижнее поле рамки: своей высоты и курсорного места у неё нет. */
-.paper .cm-line.md-tip-foot { line-height: 0; font-size: 0; }
+.paper .cm-line.md-tip-foot { line-height: 0; font-size: 0; padding-bottom: 0.4rem; } /* высота под скругление */
 /* Сам блок внутри такой строки живёт своей высотой строки: иначе его надписи ложатся друг на друга. */
 .paper .cm-line.md-block-line .md-card, .paper .cm-line.md-block-line .md-video, .paper .cm-line.md-block-line .md-block { line-height: 1.4; }
 .paper .cm-content ::selection { background: rgba(18, 87, 214, 0.22); }
