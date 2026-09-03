@@ -192,8 +192,18 @@ export function поверхностьРедактирования(блоки: R
         });
         if (портит) return [];
       }
+      const новая = tr.docChanged ? построить(tr.newDoc, известные) : tr.startState.field(поверхность);
+      // Набор маркера списка под строкой с жёстким переносом делает её косую буквой: сайт показал бы
+      // слеш. Такая косая уходит той же транзакцией, что и маркер, — отмена возвращает обе.
+      if (tr.docChanged && своя && tr.isUserEvent('input')) {
+        const мёртвые = tr.startState.field(поверхность).карта
+          .filter((о) => о.вид === 'скрытый' && !целойСтрокой(tr.startState.doc, о))
+          .map((о) => tr.changes.mapPos(о.from, -1))
+          .filter((p) => tr.newDoc.sliceString(p, p + 2) === '\\\n' && !новая.карта.some((о) => о.вид === 'скрытый' && о.from === p));
+        if (мёртвые.length > 0) return [tr, {changes: мёртвые.map((p) => ({from: p, to: p + 1})), sequential: true}];
+      }
       if (tr.selection === undefined || !tr.newSelection.main.empty) return tr;
-      const {карта, области} = tr.docChanged ? построить(tr.newDoc, известные) : tr.startState.field(поверхность);
+      const {карта, области} = новая;
       const head = tr.newSelection.main.head;
       // Пустая строка, куда правка поставила курсор (конец списка, `Enter` после таблицы, вставка блока), становится абзацем.
       const строка = tr.newDoc.lineAt(head);
