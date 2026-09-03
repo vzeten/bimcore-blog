@@ -1,7 +1,7 @@
 // Имя каждого теста повторяет формулировку правила.
 // Проверяется результат применения правки к тексту, а не устройство функции.
 import {describe, expect, it} from 'vitest';
-import {heading, list, wrap, link, table, tableRow, imageAlt, imageSrc, shownAlt, type Edit, type Selection} from '../src/core/commands';
+import {heading, wrap, link, table, tableRow, imageAlt, imageSrc, shownAlt, type Edit, type Selection} from '../src/core/commands';
 
 /** Применяет правку к тексту так же, как это делает редактор. */
 function apply(text: string, edit: Edit): string {
@@ -26,21 +26,6 @@ describe('команды правки текста', () => {
   it('заголовок меняет уровень, а не задваивает решётки', () => {
     const text = '## Раздел';
     expect(apply(text, heading(text, всё(text), 3))).toBe('### Раздел');
-  });
-
-  it('список точками ставится на выделенные строки', () => {
-    const text = 'один\nдва';
-    expect(apply(text, list(text, всё(text), 'точки'))).toBe('- один\n- два');
-  });
-
-  it('повторный список точками снимается', () => {
-    const text = '- один\n- два';
-    expect(apply(text, list(text, всё(text), 'точки'))).toBe('один\nдва');
-  });
-
-  it('нумерованный список нумерует строки по порядку', () => {
-    const text = 'один\nдва\nтри';
-    expect(apply(text, list(text, всё(text), 'числа'))).toBe('1. один\n2. два\n3. три');
   });
 
   it('жирный оборачивает выделение в двойные звёздочки', () => {

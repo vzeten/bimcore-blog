@@ -12,7 +12,6 @@ export interface Button {
   команда: string;
   уровень?: number;
   знак?: string;
-  вид?: 'точки' | 'числа';
   столбцов?: number;
   строк?: number;
   текст?: string;
@@ -48,22 +47,6 @@ export function heading(text: string, at: Selection, level: number): Edit {
   });
 
   const insert = lines.join('\n');
-  return {from: bounds.from, to: bounds.to, insert, caret: insert.length};
-}
-
-/** Превращает выделенные строки в список. Повторное нажатие снимает список. */
-export function list(text: string, at: Selection, kind: 'точки' | 'числа'): Edit {
-  const bounds = lineBounds(text, at);
-  const lines = text.slice(bounds.from, bounds.to).split('\n');
-  const already = lines.every((line) => (kind === 'точки' ? /^-\s+/.test(line) : /^\d+\.\s+/.test(line)));
-
-  const changed = lines.map((line, index) => {
-    const bare = line.replace(/^(-|\d+\.)\s+/, '');
-    if (already) return bare;
-    return kind === 'точки' ? `- ${bare}` : `${index + 1}. ${bare}`;
-  });
-
-  const insert = changed.join('\n');
   return {from: bounds.from, to: bounds.to, insert, caret: insert.length};
 }
 

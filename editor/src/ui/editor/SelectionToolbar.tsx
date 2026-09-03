@@ -16,11 +16,10 @@ import type {Spot} from './useEditor';
  */
 
 /** Чем кнопка показана: короткий знак с пиктограммой либо слово из настроек. */
-export function видКнопки(button: Button): {знак: string; пиктограмма?: 'ссылка' | 'точки' | 'числа'} {
+export function видКнопки(button: Button): {знак: string; пиктограмма?: 'ссылка'} {
   if (button.команда === 'заголовок') return {знак: `H${button.уровень ?? 2}`};
   if (button.команда === 'обернуть') return {знак: button.знак === '*' ? 'I' : button.знак === '**' ? 'B' : button.подпись};
   if (button.команда === 'ссылка') return {знак: button.подпись, пиктограмма: 'ссылка'};
-  if (button.команда === 'список') return {знак: button.подпись, пиктограмма: button.вид === 'числа' ? 'числа' : 'точки'};
   return {знак: button.подпись};
 }
 
@@ -31,20 +30,12 @@ function поГруппам(buttons: Button[]): [string, Button[]][] {
   return [...группы.entries()];
 }
 
-function Пиктограмма(props: {вид: 'ссылка' | 'точки' | 'числа'}) {
-  const общее = {width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true};
-  if (props.вид === 'ссылка') {
-    return <svg {...общее}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>;
-  }
-  if (props.вид === 'точки') {
-    return <svg {...общее}><path d="M9 6h12M9 12h12M9 18h12" /><circle cx="4" cy="6" r="1.4" fill="currentColor" stroke="none" /><circle cx="4" cy="12" r="1.4" fill="currentColor" stroke="none" /><circle cx="4" cy="18" r="1.4" fill="currentColor" stroke="none" /></svg>;
-  }
+/** Цепочка ссылки — единственная пиктограмма панели. */
+function Пиктограмма() {
   return (
-    <svg {...общее}>
-      <path d="M10 6h11M10 12h11M10 18h11" />
-      <text x="1" y="8.5" fontSize="7" fill="currentColor" stroke="none" fontFamily="sans-serif">1</text>
-      <text x="1" y="14.5" fontSize="7" fill="currentColor" stroke="none" fontFamily="sans-serif">2</text>
-      <text x="1" y="20.5" fontSize="7" fill="currentColor" stroke="none" fontFamily="sans-serif">3</text>
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
     </svg>
   );
 }
@@ -89,7 +80,7 @@ export function SelectionToolbar(props: {
             return (
               <button key={item.подпись} onClick={() => run(item, props)} title={item.подпись} aria-label={item.подпись}
                 className={вид.пиктограмма === undefined && вид.знак !== item.подпись ? 'float-key' : undefined}>
-                {вид.пиктограмма !== undefined ? <Пиктограмма вид={вид.пиктограмма} /> : вид.знак}
+                {вид.пиктограмма !== undefined ? <Пиктограмма /> : вид.знак}
               </button>
             );
           })}
@@ -127,7 +118,6 @@ function decide(
   props: {settings: Settings; articlePath: string; шапка?: Record<string, string>},
 ): act.Edit | null {
   if (button.команда === 'заголовок') return act.heading(doc, at, button.уровень ?? 2);
-  if (button.команда === 'список') return act.list(doc, at, button.вид ?? 'точки');
   if (button.команда === 'обернуть') return act.wrap(doc, at, button.знак ?? '**');
   if (button.команда === 'ссылка') {
     return act.link(doc, at, {адрес: props.settings.подписи.ссылкаЗаглушка, текст: props.settings.подписи.ссылкаТекст});
