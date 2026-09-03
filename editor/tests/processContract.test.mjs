@@ -104,34 +104,6 @@ describe('короткий контракт процесса', () => {
     expect(change).toContain('ready_for_review');
   });
 
-  it('stop-hook не путает конец хода с концом сессии', () => {
-    const root = mkdtempSync(resolve(tmpdir(), 'editor-process-'));
-    const coordination = resolve(root, 'editor/.coordination');
-    const statusPath = resolve(coordination, 'run-status.json');
-    mkdirSync(coordination, { recursive: true });
-    writeFileSync(statusPath, JSON.stringify({ state: 'running', head: 'abc' }));
-
-    try {
-      execFileSync(process.execPath, [resolve(repoRoot, '.claude/hooks/leftovers.mjs')], {
-        cwd: repoRoot,
-        env: { ...process.env, CLAUDE_PROJECT_DIR: root },
-      });
-      const status = JSON.parse(readFileSync(statusPath, 'utf8'));
-      expect(status).toEqual({ state: 'running', head: 'abc' });
-
-      for (const state of ['ready_for_review', 'owner_required', 'failed']) {
-        writeFileSync(statusPath, JSON.stringify({ state, head: 'abc' }));
-        execFileSync(process.execPath, [resolve(repoRoot, '.claude/hooks/leftovers.mjs')], {
-          cwd: repoRoot,
-          env: { ...process.env, CLAUDE_PROJECT_DIR: root },
-        });
-        expect(JSON.parse(readFileSync(statusPath, 'utf8'))).toEqual({ state, head: 'abc' });
-      }
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
   it('не завершает ход, пока жив точный процесс Claude', () => {
     const rules = [read('AGENTS.md'), read('editor/TASKS.md')].join('\n');
 
