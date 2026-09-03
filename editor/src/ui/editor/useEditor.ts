@@ -5,7 +5,7 @@ import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
 import {запретПравки, чтениеСтатьи} from './reading';
 import {клавишиСписка} from './listKeys';
 import {клавишиПоверхности} from './surfaceKeys';
-import {блокВ} from './structureGuard';
+import {блокВ, обычныйТекст} from './structureGuard';
 import {layerColors, слоиОкна} from '../layerColors';
 import type {Deletion} from '../../core/colorize';
 import {правкаПанелиКартинки, type КартинкаВОкне} from '../livePreview/inline';
@@ -138,7 +138,8 @@ export function useEditor(options: {
  */
 function spotOf(view: EditorView): Spot | null {
   const range = view.state.selection.main;
-  if (range.empty) return null;
+  // Команды текста показываются только выделению обычного текста: блок и служебные строки их не получают.
+  if (range.empty || !обычныйТекст(view.state, range.from, range.to)) return null;
 
   const start = view.coordsAtPos(range.from);
   if (!start) return null;

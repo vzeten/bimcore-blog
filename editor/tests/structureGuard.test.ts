@@ -4,7 +4,7 @@
 import {describe, expect, it} from 'vitest';
 import {EditorSelection, EditorState, Text} from '@codemirror/state';
 import {markdown} from '@codemirror/lang-markdown';
-import {блокВ, картаПоверхности, контейнерКурсора, поверхностьРедактирования, портитСлужебное} from '../src/ui/editor/structureGuard';
+import {блокВ, картаПоверхности, контейнерКурсора, обычныйТекст, поверхностьРедактирования, портитСлужебное} from '../src/ui/editor/structureGuard';
 import {вставкаБлока} from '../src/core/jsxBlocks';
 import type {ОписаниеБлока} from '../src/ui/types';
 
@@ -56,6 +56,9 @@ describe('карта хранит только исключения из обы�
     expect(карта(':::tip\n\n:::').filter((о) => о.вид === 'разделитель')).toEqual([]);
     expect(карта(':::tip\nТекст\n\n\n:::').filter((о) => о.вид === 'разделитель').map((о) => о.from)).toEqual([13]);
     expect(карта('А\n\n').map((о) => о.from)).toEqual([2]);
+    // Снаружи граница совета — как текст: пустая под закрытием и над открытием — разделитель.
+    expect(карта(':::tip\nТ\n:::\n\n\nПосле.').filter((о) => о.вид === 'разделитель').map((о) => о.from)).toEqual([13, 14]);
+    expect(карта('До.\n\n\n:::tip\nТ\n:::').filter((о) => о.вид === 'разделитель').map((о) => о.from)).toEqual([4, 5]);
   });
 
   it('косая жёсткого переноса скрыта вместе с переводом строки, а пустая строка за ней — продолжение абзаца', () => {
@@ -120,8 +123,8 @@ describe('курсор на служебной строке переставля
     }
   });
 
-  it('пустой абзац между разделителем и границей совета курсору доступен', () => {
-    expect(курсор('До.\n\n\n:::tip\nТекст\n:::', 5)).toBe(5);
+  it('пустая строка над примечанием курсору не даётся: он уходит в его текст', () => {
+    expect(курсор('До.\n\n\n:::tip\nТекст\n:::', 5)).toBe(13);
   });
 
   it('пустая строка в начале и в конце документа курсору не даётся', () => {
@@ -183,6 +186,19 @@ describe('последняя защита: частичная порча слу�
     expect(состояние(КАРТОЧКА).update({changes: {from: 3, insert: 'x'}}).docChanged).toBe(false);
     expect(состояние(КАРТОЧКА).update({changes: {from: 0, insert: 'x'}}).docChanged).toBe(false);
     expect(состояние(КАРТОЧКА).update({changes: {from: 0, to: КАРТОЧКА.indexOf('/>') + 2}}).docChanged).toBe(true);
+  });
+});
+
+describe('обычный текст для команд выделения', () => {
+  it('выделение внутри абзацев и тела совета — обычный текст; задевшее блок, импорт или границу — нет', () => {
+    const текст = 'До.\n\n![a](./a.png)\n\n:::tip\nТело совета\n:::\n\nПосле.';
+    const с = состояние(текст);
+    expect(обычныйТекст(с, 0, 3)).toBe(true);
+    expect(обычныйТекст(с, текст.indexOf('Тело') + 1, текст.indexOf('Тело') + 4)).toBe(true);
+    expect(обычныйТекст(с, 0, текст.length)).toBe(false);
+    expect(обычныйТекст(с, 1, текст.indexOf('![a]') + 2)).toBe(false);
+    expect(обычныйТекст(с, текст.indexOf('Тело'), текст.indexOf('После.'))).toBe(false);
+    expect(обычныйТекст(состояние(КАРТОЧКА), 0, 5)).toBe(false);
   });
 });
 

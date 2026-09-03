@@ -48,9 +48,10 @@ export function выходИзКонтейнера(state: EditorState): Transact
 
   const хвост = {from: текст === 0 ? контейнер.тело.to : doc.line(текст).to, to: контейнер.тело.to};
   const дальше = doc.lineAt(контейнер.to).number < doc.lines ? doc.line(doc.lineAt(контейнер.to).number + 1) : null;
+  // За закрытием — разделитель и пустой абзац для текста; текст вплотную получает и свой разделитель.
   return {
-    changes: [хвост, {from: контейнер.to, insert: дальше === null || дальше.text.trim() === '' ? '\n' : '\n\n'}],
-    selection: {anchor: контейнер.to - (хвост.to - хвост.from) + 1},
+    changes: [хвост, {from: контейнер.to, insert: дальше === null || дальше.text.trim() === '' ? '\n\n' : '\n\n\n'}],
+    selection: {anchor: контейнер.to - (хвост.to - хвост.from) + 2},
     scrollIntoView: true,
     userEvent: 'input',
   };

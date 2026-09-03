@@ -244,6 +244,8 @@ button { font: inherit; cursor: pointer; }
 .md-table-raw { font-family: ui-monospace, Consolas, monospace; font-size: 0.82em; line-height: 1.5; }
 
 .paper .cm-line.md-block-line { line-height: 0; font-size: 0; padding: 0 2px; }
+/* Сам блок внутри такой строки живёт своей высотой строки: иначе его надписи ложатся друг на друга. */
+.paper .cm-line.md-block-line .md-card, .paper .cm-line.md-block-line .md-video, .paper .cm-line.md-block-line .md-block { line-height: 1.4; }
 .paper .cm-selectionLayer { z-index: 1; } /* выделение поверх непрозрачной картинки */
 .paper .cm-editor .cm-selectionBackground,
 .paper .cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground { background: rgba(18, 87, 214, 0.16); }

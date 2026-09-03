@@ -82,15 +82,18 @@ export function ArticlePane(props: {
     onDeletions: props.onDeletions,
     onSelection: setSpot,
     onPaste: (file, editor) => void вставить(file, editor),
+    // Открыта панель свойств только одного выбранного: прежняя уходит вместе со своими значениями.
     onImage: (картинка) => {
       выборРеф.current += 1;
       setВыбор(выборРеф.current);
+      setБлок(null);
       setКартинка(картинка);
     },
     блоки: props.settings.блоки,
     названиеСовета: названиеСоветаСтатьи(props.settings, props.article.path),
     onБлок: (блок) => {
       setВставкой(false);
+      setКартинка(null);
       setБлок(блок);
     },
     // Панель свойств картинки держит позицию узла на момент открытия: любая правка текста
