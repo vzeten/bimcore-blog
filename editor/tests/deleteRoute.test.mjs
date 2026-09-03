@@ -243,3 +243,28 @@ describe('корзина и возврат через ручки', () => {
     expect((await ручка(repo, trashRoute, '/api/trash/restore', {id: '../../docs'})).code).toBe(404);
   });
 });
+
+describe('неполная история', () => {
+  /** Клон глубиной один от репозитория, где статья была опубликована и снята коммитом раньше среза. */
+  function неполныйКлон() {
+    const исток = репозиторий({снятыИзВетки: [RU, EN]});
+    git(исток, 'commit', '-q', '--allow-empty', '-m', 'ещё один коммит поверх');
+    const клон = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-shallow-'));
+    песочницы.push(клон);
+    execFileSync('git', ['clone', '-q', '--depth', '1', '--branch', 'main', `file://${исток.replace(/\\/g, '/')}`, клон], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']});
+    for (const rel of [RU, EN]) записать(клон, rel);
+    return {исток, клон};
+  }
+
+  it('в неполной копии пустой git log по пути — не доказательство: режим корзина, причина неизвестно', async () => {
+    const {клон} = неполныйКлон();
+    expect(execFileSync('git', ['rev-parse', '--is-shallow-repository'], {cwd: клон, encoding: 'utf8'}).trim()).toBe('true');
+    expect((await удалить(клон, RU, undefined, 'origin/main')).data).toMatchObject({режим: 'корзина', причина: 'неизвестно'});
+  });
+
+  it('в полной истории та же статья — корзина по доказанной прошлой публикации', async () => {
+    const {исток} = неполныйКлон();
+    expect((await удалить(исток, RU)).data).toMatchObject({режим: 'корзина', причина: 'опубликована'});
+  });
+});
+

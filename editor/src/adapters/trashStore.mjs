@@ -4,11 +4,16 @@
 // оригиналы стираются только после того, как копия целиком легла в архив, возврат не перезаписывает
 // чужое, а обрыв на любом шаге переживается повтором: оба хода идемпотентны и отмечают своё
 // продвижение в описи. Автоматически чистятся только завершённые и просроченные записи.
+// Опись и копии пишутся тем же приёмом, что и картинки: целиком во временный файл, затем `rename`
+// (`assetGuards.mjs`) — обрыв на записи не оставляет битой описи и половинного файла на месте.
+// Папка корзины и папка записи перед любым чтением, очисткой или возвратом проверяются на
+// подмену ссылкой или junction: чужую папку программа не читает и не чистит.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
+import {записатьНовый, записатьПоверх} from './assetGuards.mjs';
 import {draftPath, historyDirOf} from './draftStore.mjs';
 
 const ОПИСЬ = 'manifest.json';
@@ -40,9 +45,22 @@ function проверенный(корень, rel) {
   // Существующая часть пути обязана быть настоящей: реальный путь папки совпадает с ожидаемым.
   let есть = полный;
   while (!fs.existsSync(есть)) есть = path.dirname(есть);
-  const тотЖе = (a, b) => (process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b);
   if (!тотЖе(fs.realpathSync.native(есть), есть) || (есть === полный && fs.lstatSync(полный).isSymbolicLink())) throw new Error('ссылкаВПути');
   return полный;
+}
+
+const тотЖе = (a, b) => (process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b);
+
+/** Существующая папка — настоящая: не ссылка, не junction и не лежит за ними. Иначе — исключение. */
+function настоящаяПапка(dir) {
+  if (fs.lstatSync(dir).isSymbolicLink() || !тотЖе(fs.realpathSync.native(dir), path.resolve(dir))) throw new Error('ссылкаВПути');
+  return dir;
+}
+
+/** Папка корзины, проверенная на подмену; её ещё нет — `null`. */
+function корзинаНастоящая(editorDir, settings) {
+  const папка = папкаКорзины(editorDir, settings);
+  return fs.existsSync(папка) ? настоящаяПапка(папка) : null;
 }
 
 /** Все обычные файлы под папкой, путями относительно `repo` со слэшами. Ссылки — отказ. */
@@ -93,14 +111,21 @@ function прочитатьОпись(dir) {
   }
 }
 
-function записатьОпись(dir, опись) {
+function записатьОпись(repo, dir, опись) {
   fs.mkdirSync(dir, {recursive: true});
-  fs.writeFileSync(path.join(dir, ОПИСЬ), JSON.stringify(опись, null, 2), 'utf8');
+  записатьПоверх(repo, path.join(dir, ОПИСЬ), JSON.stringify(опись, null, 2));
 }
 
-function копия(от, куда) {
+/** Копия в архив: целиком во временный файл, затем на место; повтор переноса перезаписывает свою же копию. */
+function копия(repo, от, куда) {
   fs.mkdirSync(path.dirname(куда), {recursive: true});
-  fs.copyFileSync(от, куда);
+  записатьПоверх(repo, куда, fs.readFileSync(от));
+}
+
+/** Копия на место при возврате: без перезаписи — половинный файл после сбоя на месте не появляется. */
+function копияНовая(repo, от, куда) {
+  fs.mkdirSync(path.dirname(куда), {recursive: true});
+  if (!записатьНовый(repo, куда, fs.readFileSync(от))) throw new Error('возвратКонфликт');
 }
 
 /** Убрать папку, если после удаления файлов статьи в ней ничего не осталось, и так вверх до корня статьи. */
@@ -122,7 +147,10 @@ export function вКорзину({repo, editorDir, settings, статья, со�
   const id = `${сейчас.toISOString().replace(/[:.]/g, '-')}-${crypto.randomBytes(3).toString('hex')}`;
   const dir = path.join(папкаКорзины(editorDir, settings), id);
   const опись = {версия: 1, id, удалено: сейчас.toISOString(), статья, состояние: 'перенос', файлы: состав};
-  записатьОпись(dir, опись);
+  const корзина = папкаКорзины(editorDir, settings);
+  fs.mkdirSync(корзина, {recursive: true});
+  настоящаяПапка(корзина);
+  записатьОпись(repo, dir, опись);
   return довести({repo, editorDir, settings, dir, опись});
 }
 
@@ -133,11 +161,11 @@ export function довести({repo, editorDir, settings, dir, опись}) {
     for (const файл of опись.файлы) {
       const от = проверенный(корень[файл.корень], файл.из);
       const куда = проверенный(dir, файл.в);
-      if (fs.existsSync(от)) копия(от, куда);
+      if (fs.existsSync(от)) копия(repo, от, куда);
       else if (!fs.existsSync(куда)) throw new Error('архивПовреждён');
     }
     опись.состояние = 'скопировано';
-    записатьОпись(dir, опись);
+    записатьОпись(repo, dir, опись);
   }
   if (опись.состояние === 'скопировано') {
     for (const файл of опись.файлы) {
@@ -146,7 +174,7 @@ export function довести({repo, editorDir, settings, dir, опись}) {
     }
     for (const папка of опись.статья.папки ?? []) убратьПустые(repo, папка);
     опись.состояние = 'готово';
-    записатьОпись(dir, опись);
+    записатьОпись(repo, dir, опись);
   }
   void settings;
   return {id: опись.id, удалено: опись.удалено};
@@ -161,12 +189,14 @@ function срокДо(опись, settings) {
  * и возвраты, повреждённые описи и всё, что не удалось разобрать, остаются как есть.
  */
 export function списокКорзины({editorDir, settings, сейчас = new Date()}) {
-  const папка = папкаКорзины(editorDir, settings);
-  if (!fs.existsSync(папка)) return [];
+  const папка = корзинаНастоящая(editorDir, settings);
+  if (папка === null) return [];
   const записи = [];
   for (const имя of fs.readdirSync(папка).sort().reverse()) {
     if (!ИМЯ_ЗАПИСИ.test(имя)) continue;
     const dir = path.join(папка, имя);
+    // Подменённая папка записи не читается и не чистится: за ней чужие файлы.
+    if (!fs.statSync(dir).isDirectory() || fs.lstatSync(dir).isSymbolicLink() || !тотЖе(fs.realpathSync.native(dir), dir)) continue;
     const опись = прочитатьОпись(dir);
     if (опись === null) continue;
     const срок = срокДо(опись, settings);
@@ -186,7 +216,14 @@ export function списокКорзины({editorDir, settings, сейчас = 
  */
 export function вернутьИзКорзины({repo, editorDir, settings, id}) {
   if (!ИМЯ_ЗАПИСИ.test(String(id))) return {ошибка: 'нетЗаписи'};
-  const dir = path.join(папкаКорзины(editorDir, settings), id);
+  let dir;
+  try {
+    const папка = корзинаНастоящая(editorDir, settings);
+    if (папка === null || !fs.existsSync(path.join(папка, id))) return {ошибка: 'нетЗаписи'};
+    dir = настоящаяПапка(path.join(папка, id));
+  } catch {
+    return {ошибка: 'ссылкаВПути'};
+  }
   const опись = прочитатьОпись(dir);
   if (опись === null) return {ошибка: 'нетЗаписи'};
   const корень = корни(repo, editorDir);
@@ -207,8 +244,8 @@ export function вернутьИзКорзины({repo, editorDir, settings, id}
   }
   if (конфликты.length > 0) return {ошибка: 'возвратКонфликт', конфликты};
   опись.состояние = 'возврат';
-  записатьОпись(dir, опись);
-  for (const {от, куда} of план) копия(от, куда);
+  записатьОпись(repo, dir, опись);
+  for (const {от, куда} of план) копияНовая(repo, от, куда);
   fs.rmSync(dir, {recursive: true, force: true});
   return {возвращено: опись.статья.пути ?? []};
 }

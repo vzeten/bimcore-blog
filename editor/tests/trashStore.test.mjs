@@ -170,3 +170,67 @@ describe('срок корзины', () => {
     return вКорзину({...параметры(п), статья: {название: 'x', пути: [rel], языки: ['en'], папки: []}, состав, сейчас: когда});
   }
 });
+
+describe('подмена папок корзины', () => {
+  it('корень корзины подменён junction на чужую папку — ни чтения, ни очистки: чужая просроченная запись цела', () => {
+    const п = репозиторий();
+    const чужая = path.join(п.repo, 'foreign');
+    const id = '2026-01-01T00-00-00-000Z-abcdef';
+    fs.mkdirSync(path.join(чужая, id), {recursive: true});
+    fs.writeFileSync(path.join(чужая, id, 'manifest.json'), JSON.stringify({версия: 1, id, удалено: '2026-01-01T00:00:00.000Z', статья: {пути: []}, состояние: 'готово', файлы: []}), 'utf8');
+    fs.mkdirSync(п.editorDir, {recursive: true});
+    try {
+      fs.symlinkSync(чужая, папкаКорзины(п.editorDir, НАСТРОЙКИ), 'junction');
+    } catch {
+      return;
+    }
+    expect(() => списокКорзины({editorDir: п.editorDir, settings: НАСТРОЙКИ, сейчас: new Date('2026-09-04T00:00:00.000Z')})).toThrow('ссылкаВПути');
+    expect(fs.existsSync(path.join(чужая, id, 'manifest.json'))).toBe(true);
+    expect(вернутьИзКорзины({...параметры(п), id})).toEqual({ошибка: 'ссылкаВПути'});
+    expect(fs.existsSync(path.join(чужая, id, 'manifest.json'))).toBe(true);
+  });
+
+  it('папка записи подменена junction — запись пропускается и не чистится, возврат отказывает', () => {
+    const п = репозиторий();
+    const чужая = path.join(п.repo, 'foreign-entry');
+    fs.mkdirSync(чужая, {recursive: true});
+    fs.writeFileSync(path.join(чужая, 'manifest.json'), JSON.stringify({версия: 1, id: 'x', удалено: '2026-01-01T00:00:00.000Z', статья: {пути: []}, состояние: 'готово', файлы: []}), 'utf8');
+    const корзина = папкаКорзины(п.editorDir, НАСТРОЙКИ);
+    fs.mkdirSync(корзина, {recursive: true});
+    const id = '2026-01-01T00-00-00-000Z-abcdef';
+    try {
+      fs.symlinkSync(чужая, path.join(корзина, id), 'junction');
+    } catch {
+      return;
+    }
+    expect(списокКорзины({editorDir: п.editorDir, settings: НАСТРОЙКИ, сейчас: new Date('2026-09-04T00:00:00.000Z')})).toEqual([]);
+    expect(fs.existsSync(path.join(чужая, 'manifest.json'))).toBe(true);
+    expect(вернутьИзКорзины({...параметры(п), id})).toEqual({ошибка: 'ссылкаВПути'});
+  });
+});
+
+describe('запись описи и копий без хвостов', () => {
+  it('опись и копии пишутся через временный файл и rename: после переноса и возврата ни одного временного хвоста, опись цела', () => {
+    const п = репозиторий();
+    const состав = составАрхива({...параметры(п), решение: РЕШЕНИЕ});
+    const запись = вКорзину({...параметры(п), статья: {название: 'Проба', пути: РЕШЕНИЕ.пути, языки: РЕШЕНИЕ.языки, папки: РЕШЕНИЕ.папки}, состав});
+    const dir = path.join(папкаКорзины(п.editorDir, НАСТРОЙКИ), запись.id);
+    expect(() => JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'))).not.toThrow();
+    expect(fs.readdirSync(path.join(п.editorDir, '.tmp'))).toEqual([]);
+    expect(вернутьИзКорзины({...параметры(п), id: запись.id})).toEqual({возвращено: РЕШЕНИЕ.пути});
+    expect(fs.readdirSync(path.join(п.editorDir, '.tmp'))).toEqual([]);
+    expect(fs.readFileSync(path.join(п.repo, RU), 'utf8')).toBe(`содержимое ${RU}`);
+  });
+
+  it('возврат кладёт файл на место только новым: занятое имя — конфликт до записи, половинного файла на месте не бывает', () => {
+    const п = репозиторий();
+    const состав = составАрхива({...параметры(п), решение: РЕШЕНИЕ});
+    const запись = вКорзину({...параметры(п), статья: {название: 'Проба', пути: РЕШЕНИЕ.пути, языки: РЕШЕНИЕ.языки, папки: РЕШЕНИЕ.папки}, состав});
+    // Обрыв прошлого возврата: часть файлов уже на месте байт в байт — повтор проходит, остальное дописывается.
+    fs.mkdirSync(path.join(п.repo, path.dirname(RU)), {recursive: true});
+    fs.writeFileSync(path.join(п.repo, RU), `содержимое ${RU}`, 'utf8');
+    expect(вернутьИзКорзины({...параметры(п), id: запись.id})).toEqual({возвращено: РЕШЕНИЕ.пути});
+    expect(fs.existsSync(path.join(п.repo, EN))).toBe(true);
+  });
+});
+
