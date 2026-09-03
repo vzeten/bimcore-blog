@@ -140,7 +140,8 @@ function удаление(вперёд: boolean): Command {
       // Пустой абзац сразу после примечания уходит, курсор — в конец его текста: выход по `Enter`
       // отменяется той же клавишей, что и в обычном тексте.
       const строка = state.doc.lineAt(выбор.head);
-      const примечание = state.field(поверхность).карта.find((о) => о.вид === 'контейнер' && о.тело !== undefined && о.to < строка.from);
+      // Ближайшее примечание выше: карта отсортирована по началу, берётся последнее подходящее.
+      const примечание = state.field(поверхность).карта.filter((о) => о.вид === 'контейнер' && о.тело !== undefined && о.to < строка.from).pop();
       if (вперёд || строка.text !== '' || примечание === undefined || строка.number === 1) return true;
       view.dispatch({changes: {from: строка.from - 1, to: строка.from}, selection: {anchor: примечание.тело!.to}, scrollIntoView: true, userEvent: 'delete'});
       return true;
