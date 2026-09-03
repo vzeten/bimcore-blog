@@ -230,20 +230,44 @@ export async function startLocale(
  * Отказ сервера — обычный путь, а не поломка: статью, уже вышедшую на сайт, программа удалять
  * не умеет, и человеку это говорится словами.
  */
-export async function deleteArticle(
+/** Что сервер говорит об удалении до действия: режим, языки и срок корзины. */
+export interface DeletePreview {
+  режим: 'корзина' | 'навсегда';
+  причина: string;
+  пути: string[];
+  языки: string[];
+  дней: number;
+}
+
+export interface DeleteResult {
+  удалено: string[];
+  режим: 'корзина' | 'навсегда';
+  корзина?: string;
+  удаленоКогда?: string;
+  дней?: number;
+  предупреждения?: string[];
+}
+
+/**
+ * Удаление статьи двумя заходами одним адресом: без подтверждения сервер только называет режим
+ * и ничего не меняет; с подтверждением именно этого режима — действует. Режим решает сервер по
+ * свежим фактам, поэтому окно не запоминает его дольше одного вопроса.
+ */
+export async function deleteArticle<T extends DeletePreview | DeleteResult>(
   path: string,
+  подтверждено: 'корзина' | 'навсегда' | null,
   effects: {
-    ok: (итог: {удалено: string[]; предупреждения?: string[]}) => void | Promise<void>;
+    ok: (итог: T) => void | Promise<void>;
     /** `стёрто` — что уже успело исчезнуть, когда удаление сорвалось на середине. */
     fail: (reason: string, стёрто: string[]) => void | Promise<void>;
   },
   request: Request = requestJson,
 ): Promise<void> {
   try {
-    await effects.ok(await request<{удалено: string[]; предупреждения?: string[]}>('/api/article/delete', {
+    await effects.ok(await request<T>('/api/article/delete', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({path}),
+      body: JSON.stringify(подтверждено === null ? {path} : {path, подтверждено}),
     }));
   } catch (error) {
     // Перечень уже стёртого доносим вместе с причиной: при сбое посреди удаления человек иначе

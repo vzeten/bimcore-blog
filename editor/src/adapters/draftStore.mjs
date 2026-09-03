@@ -62,6 +62,11 @@ export function dropDraft(editorDir, settings, rel) {
 
 const snapshotDir = (editorDir, settings, rel) => path.join(historyDir(editorDir, settings), historyFolder(rel));
 
+/** Папка снимков этой версии: корзине нужен её состав, чтобы унести историю вместе со статьёй. */
+export function historyDirOf(editorDir, settings, rel) {
+  return snapshotDir(editorDir, settings, rel);
+}
+
 /**
  * Убрать всю историю этой версии статьи. Зовётся только при удалении самой статьи:
  * история без статьи — мусор, который лента всё равно никогда не покажет.

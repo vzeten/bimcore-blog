@@ -3,6 +3,7 @@ import {filterArticles, lastEditOf, readinessOf, sortArticles, visibilityOf} fro
 import {label} from '../labels';
 import {NewArticle} from './NewArticle';
 import {SectionTree} from './SectionTree';
+import {TrashPanel} from './TrashPanel';
 import type {ArticleRow, Settings} from '../types';
 
 /** Реестр статей — стартовый экран: дерево разделов слева, таблица справа. */
@@ -10,6 +11,8 @@ export function Registry(props: {
   settings: Settings;
   articles: ArticleRow[];
   onOpen: (path: string) => void;
+  /** Перечитать реестр: из корзины вернулась статья, и список обязан её показать. */
+  onОбновить: () => Promise<void>;
   /** Создание статьи: своё состояние живёт в хуке окна, реестр только показывает форму. */
   создание: {
     раздел: string | null | undefined;
@@ -28,6 +31,7 @@ export function Registry(props: {
   const [запрос, setЗапрос] = useState('');
   const [колонка, setКолонка] = useState(р.сортировкаПоУмолчанию);
   const [сторона, setСторона] = useState<'вверх' | 'вниз'>('вверх');
+  const [корзина, setКорзина] = useState(false);
 
   const строки = useMemo(
     () => sortArticles(
@@ -52,11 +56,16 @@ export function Registry(props: {
         />
       )}
 
+      {корзина && (
+        <TrashPanel settings={props.settings} onЗакрыть={() => setКорзина(false)} onВозвращено={() => void props.onОбновить()} />
+      )}
+
       <SectionTree settings={props.settings} articles={props.articles} chosen={раздел} onChoose={setРаздел} />
 
       <div className="registry-main">
         <div className="registry-filters">
           <button className="ghost" onClick={() => props.создание.начать(раздел)}>{п.новаяСтатья}</button>
+          <button className="ghost" onClick={() => setКорзина(true)}>{п.корзина}</button>
 
           <input
             className="registry-search"

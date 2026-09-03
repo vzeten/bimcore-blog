@@ -29,3 +29,12 @@
 .cell-hidden { color: var(--ink-quiet); background: #eef1f4; }
 .cell-section .cell-title { color: var(--ink-quiet); font-style: italic; }
 .td-когда, .td-автор { color: var(--ink-quiet); font-size: 12px; white-space: nowrap; }
+
+/* Корзина: список записей поверх реестра, у каждой — срок возврата и кнопка «Вернуть». */
+.trash-panel { position: fixed; inset: 56px 24px auto 24px; z-index: 7; max-height: calc(100vh - 80px); overflow: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12); }
+.trash-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.trash-head h2 { margin: 0; font-size: 15px; }
+.trash-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid #eef1f4; }
+.trash-row .trash-name { flex: 1; min-width: 0; }
+.trash-row .trash-meta { color: var(--ink-quiet); font-size: 12px; white-space: nowrap; }
+.trash-note { color: var(--ink-quiet); font-size: 13px; margin: 6px 0; }

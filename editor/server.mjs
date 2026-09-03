@@ -16,6 +16,7 @@ import {assetIntakeRoute} from './src/adapters/assetIntake.mjs';
 import {productsRoute} from './src/adapters/productsRoute.mjs';
 import {versionsRoute} from './src/adapters/versionsRoute.mjs';
 import {deleteRoute} from './src/adapters/deleteRoute.mjs';
+import {trashRoute} from './src/adapters/trashRoute.mjs';
 import {articleRoute} from './src/adapters/articleRoute.mjs';
 import {createRoute} from './src/adapters/createRoute.mjs';
 import {localeRoute} from './src/adapters/localeRoute.mjs';
@@ -118,8 +119,11 @@ async function api(req, res, url) {
   // на момент запуска сервера она ещё не определена, а к запросу уже известна.
   if (await deleteRoute({
     req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git,
-    publishedRef: () => publishedRef, тело, insideRepo, send, articles,
+    publishedRef: () => publishedRef, тело, insideRepo, send, articles, последняяПравка,
   })) return;
+
+  // Корзина: перечень записей и возврат. Просроченные завершённые записи чистятся при обращении.
+  if (await trashRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), тело, send})) return;
 
   // Открытие статьи — отдельным модулем: сервер иначе выходит за лимит размера файла.
   if (await articleRoute({

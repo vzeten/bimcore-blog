@@ -169,8 +169,7 @@ export function App() {
         onColors={setColors}
         onSave={save}
         fields={fields}
-        onDelete={() => void удаление.удалить()}
-        удаление={удаление.идёт}
+        удаление={удаление}
         onОбновить={refresh}
         onСообщить={setОшибка}
         // Просмотр версии ничего не пишет: пишущие кнопки шапки на это время заперты.
@@ -217,7 +216,7 @@ export function App() {
         />
 
         {article === null ? (
-          <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} создание={создание} />
+          <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} onОбновить={refresh} создание={создание} />
         ) : (
           <>
             {/* Всё, что показывается вместо открытой статьи, встаёт РЯДОМ с рабочим редактором,
@@ -225,7 +224,7 @@ export function App() {
                 пересоздать его при возврате — из текста, каким статья открывалась, — то есть
                 потерять несохранённую правку и всю историю отмены. */}
             {реестр && (
-              <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} создание={создание} />
+              <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} onОбновить={refresh} создание={создание} />
             )}
 
             {версии.просмотр && (
