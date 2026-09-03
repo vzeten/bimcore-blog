@@ -1,11 +1,11 @@
 import {useEffect, useRef} from 'react';
 import {EditorSelection, EditorState, Transaction} from '@codemirror/state';
-import {EditorView, keymap, drawSelection, highlightActiveLine} from '@codemirror/view';
+import {EditorView, keymap, highlightActiveLine} from '@codemirror/view';
 import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
 import {запретПравки, чтениеСтатьи} from './reading';
 import {клавишиСписка} from './listKeys';
 import {клавишиПоверхности} from './surfaceKeys';
-import {блокВ, контейнерКурсора, обычныйТекст} from './structureGuard';
+import {блокВ, обычныйТекст} from './structureGuard';
 import {layerColors, слоиОкна} from '../layerColors';
 import type {Deletion} from '../../core/colorize';
 import {правкаПанелиКартинки, type КартинкаВОкне} from '../livePreview/inline';
@@ -72,7 +72,7 @@ export function useEditor(options: {
         doc: options.article.body,
         extensions: [
           history(),
-          drawSelection(),
+          // Выделение рисует сам браузер: оно идёт по знакам, а не полосой на всю строку.
           highlightActiveLine(),
           // Уровень пункта списка стоит выше общей раскладки: в ней `Tab` не занят вовсе и
           // уводил фокус из текста, а продолжение и конец списка по `Enter` уже даёт markdown.
@@ -142,10 +142,8 @@ export function useEditor(options: {
  */
 function spotOf(view: EditorView): Spot | null {
   const range = view.state.selection.main;
-  // Команды — выделению обычного текста либо курсору внутри примечания: снять или сменить его тип
-  // можно без повторного выделения. Блок и служебные строки команд не получают.
-  const годится = range.empty ? контейнерКурсора(view.state, range.head) !== null : обычныйТекст(view.state, range.from, range.to);
-  if (!годится) return null;
+  // Команды показываются только непустому выделению обычного текста: блок и служебные строки их не получают.
+  if (range.empty || !обычныйТекст(view.state, range.from, range.to)) return null;
 
   const start = view.coordsAtPos(range.from);
   if (!start) return null;

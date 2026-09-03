@@ -250,9 +250,9 @@ button { font: inherit; cursor: pointer; }
 .paper .cm-line.md-tip-foot { line-height: 0; font-size: 0; }
 /* Сам блок внутри такой строки живёт своей высотой строки: иначе его надписи ложатся друг на друга. */
 .paper .cm-line.md-block-line .md-card, .paper .cm-line.md-block-line .md-video, .paper .cm-line.md-block-line .md-block { line-height: 1.4; }
-.paper .cm-selectionLayer { z-index: 1; } /* выделение поверх непрозрачной картинки */
-.paper .cm-editor .cm-selectionBackground,
-.paper .cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground { background: rgba(18, 87, 214, 0.16); }
+.paper .cm-content ::selection { background: rgba(18, 87, 214, 0.22); }
+/* Отступ до и после примечания заметнее межабзацного: на сайте у блока свой внешний отступ. */
+.paper .cm-line.md-tip-foot + .cm-line.md-sep, .paper .cm-line.md-sep:has(+ .cm-line.md-tip-head) { line-height: 1.3; }
 .md-image { display: block; margin: 10px 0; }
 .md-image img { display: block; max-width: 100%; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; }
 
