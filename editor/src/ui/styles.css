@@ -151,6 +151,8 @@ button { font: inherit; cursor: pointer; }
   position: fixed;
   z-index: 6;
   display: flex;
+  flex-wrap: wrap;
+  max-width: calc(100vw - 16px);
   background: var(--ink);
   border-radius: 8px;
   padding: 3px;

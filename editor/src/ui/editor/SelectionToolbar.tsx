@@ -32,7 +32,8 @@ export function SelectionToolbar(props: {
   const ВЫСОТА = 40;
   const сверхуТесно = props.spot.top < ВЫСОТА + 8;
   const top = сверхуТесно ? props.spot.bottom + 6 : props.spot.top - ВЫСОТА;
-  const left = Math.max(8, Math.min(props.spot.left, window.innerWidth - 220));
+  // Раскрытый набор команд широкий: панель переносит кнопки и прижимается к правому краю окна.
+  const left = Math.max(8, Math.min(props.spot.left, window.innerWidth - (open ? 720 : 220)));
   const style = {left, top};
 
   if (!open) {
@@ -110,8 +111,8 @@ function decide(
   // Заголовок берётся по языку статьи, чтобы на сайте блок не назвался чужим словом.
   if (button.команда === 'совет' && button.блок !== undefined) {
     const строки = doc.split('\n');
-    const заголовок = названиеСоветаСтатьи(props.settings, props.articlePath)[button.блок] ?? '';
-    return оформлениеСовета(doc, at, button.блок, заголовок, советы(строки, внутриОграды(строки)));
+    const названия = названиеСоветаСтатьи(props.settings, props.articlePath);
+    return оформлениеСовета(doc, at, button.блок, названия, советы(строки, внутриОграды(строки)));
   }
 
   if (button.команда === 'вставить' && button.текст) {
