@@ -1,10 +1,11 @@
 import {useState} from 'react';
 import type {EditorView} from '@codemirror/view';
+import {ensureSyntaxTree} from '@codemirror/language';
 import * as act from '../../core/commands';
 import {sectionOf} from '../../core/articles.mjs';
-import {оформлениеСовета, советы} from '../../core/tipBlock';
-import {видСписка, преобразованиеСписка} from '../../core/listConvert';
-import {внутриОграды, строкаАбзаца} from '../livePreview/softBreak';
+import {границыСоветов, оформлениеСовета, советы} from '../../core/tipBlock';
+import {видСписка, преобразованиеСписка, type Окружение} from '../../core/listConvert';
+import {блокВнеРазбора, внутриОграды} from '../livePreview/softBreak';
 import {названиеСоветаСтатьи} from '../livePreview/tip';
 import {вставкаБлока, значениеПоРазделу, новыйТег} from '../../core/jsxBlocks';
 import type {Button, Settings} from '../types';
@@ -32,6 +33,18 @@ function поГруппам(buttons: Button[]): [string, Button[]][] {
   const группы = new Map<string, Button[]>();
   for (const item of buttons) группы.set(item.группа, [...(группы.get(item.группа) ?? []), item]);
   return [...группы.entries()];
+}
+
+/**
+ * Что о тексте знает правило списка: настоящее дерево разбора окна (целиком, не только видимая
+ * часть), границы примечаний и какие строки абзаца сайт всё же покажет блоком. Дерево не успело —
+ * правило откажет.
+ */
+function окружениеСписка(view: EditorView): Окружение | null {
+  const дерево = ensureSyntaxTree(view.state, view.state.doc.length, 5000);
+  if (дерево === null) return null;
+  const строки = view.state.doc.toString().split('\n');
+  return {дерево, границы: границыСоветов(строки, внутриОграды(строки)), обычная: (строка) => !блокВнеРазбора(строка)};
 }
 
 /** Пиктограммы панели: цепочка ссылки и два знакомых знака списка. */
@@ -68,7 +81,8 @@ export function SelectionToolbar(props: {
   const buttons = props.settings.вставки.filter((item) => item.группа !== 'Блоки');
   // Действующий вид списка у выделения подсвечивает свою кнопку: повторное нажатие снимает список.
   const {from, to} = props.view.state.selection.main;
-  const активныйСписок = open ? видСписка(props.view.state.doc.toString(), {from, to}, строкаАбзаца) : null;
+  const окружение = open ? окружениеСписка(props.view) : null;
+  const активныйСписок = окружение === null ? null : видСписка(props.view.state.doc.toString(), {from, to}, окружение);
 
   // Панель встаёт над выделением; если сверху мало места — под ним, чтобы не уйти за край окна.
   // Координаты оконные (position: fixed), слева не даём вылезти за правый край.
@@ -118,7 +132,7 @@ function run(
 
   const doc = view.state.doc.toString();
   const at = {from: view.state.selection.main.from, to: view.state.selection.main.to};
-  const edit = decide(button, doc, at, props);
+  const edit = decide(button, doc, at, {...props, окружение: () => окружениеСписка(view)});
   if (!edit) {
     // Список отказал целиком — человек обязан узнать причину, а не гадать, почему ничего не произошло.
     if (button.команда === 'список') props.onСообщить?.(props.settings.подписи.списокНельзя);
@@ -138,10 +152,13 @@ function decide(
   button: Button,
   doc: string,
   at: act.Selection,
-  props: {settings: Settings; articlePath: string; шапка?: Record<string, string>},
+  props: {settings: Settings; articlePath: string; шапка?: Record<string, string>; окружение?: () => Окружение | null},
 ): act.Edit | null {
   if (button.команда === 'заголовок') return act.heading(doc, at, button.уровень ?? 2);
-  if (button.команда === 'список') return преобразованиеСписка(doc, at, button.вид ?? 'точки', строкаАбзаца);
+  if (button.команда === 'список') {
+    const окружение = props.окружение?.() ?? null;
+    return окружение === null ? null : преобразованиеСписка(doc, at, button.вид ?? 'точки', окружение);
+  }
   if (button.команда === 'обернуть') return act.wrap(doc, at, button.знак ?? '**');
   if (button.команда === 'ссылка') {
     return act.link(doc, at, {адрес: props.settings.подписи.ссылкаЗаглушка, текст: props.settings.подписи.ссылкаТекст});
