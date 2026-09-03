@@ -1,5 +1,4 @@
 import {useEffect, useRef, useState} from 'react';
-import type {Deletion} from '../core/colorize';
 import {Rail} from './zones/Rail';
 import {Registry} from './zones/Registry';
 import {TopBar} from './zones/TopBar';
@@ -37,7 +36,6 @@ export function App() {
   const [fields, setFields] = useState<Field[]>([]);
   // Текст живёт в редакторе и в `текстСейчас`; состояние нужно только для пересоздания зоны.
   const [, setText] = useState('');
-  const [deletions, setDeletions] = useState<Deletion[]>([]);
   const [dirty, setDirty] = useState(false);
   const [colors, setColors] = useState(true);
   const [ошибка, setОшибка] = useState<string | null>(null);
@@ -97,7 +95,7 @@ export function App() {
 
   const {refresh, open, closeArticle} = useNavigation({
     article, settingsRef, автосохранение, версии, текстСейчас, шапкаСейчас, статьяСейчас, открытие, runSafe,
-    setArticles, setArticle, setFields, setText, setDeletions, setMode, setDirty,
+    setArticles, setArticle, setFields, setText, setMode, setDirty,
     setОшибка, setКонфликтСохранения, setСостояние: setСостояниеСохранения,
   });
 
@@ -259,7 +257,6 @@ export function App() {
                 setText(next);
                 правка(next, шапкаСейчас.current);
               }}
-              onDeletions={setDeletions}
               onСообщить={setОшибка}
               // Возврат к версии кладёт текст сюда транзакцией: пересоздание зоны стёрло бы
               // историю отмены вместе с обещанием обратимости.
@@ -274,7 +271,7 @@ export function App() {
               ссылкаОбновлена={makeСсылкаОбновлена({текстСейчас, setText, setArticle})}
             />
 
-            {!реестр && !просмотрИдёт && <CommentGutter settings={settings} deletions={deletions} />}
+            {!реестр && !просмотрИдёт && <CommentGutter settings={settings} />}
           </>
         )}
       </div>

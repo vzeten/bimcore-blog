@@ -1,8 +1,8 @@
 // Слой цвета поверх текста: чем отличается от сайта и кто это сделал.
 // Сами правила — в core/colorize.ts, здесь только показ.
-import {Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate} from '@codemirror/view';
+import {Decoration, EditorView, ViewPlugin, type DecorationSet, type ViewUpdate} from '@codemirror/view';
 import {ChangeSet, type Range, type Text} from '@codemirror/state';
-import {colorize, type Deletion, type Layer, type LayerKind, type Правка} from '../core/colorize';
+import {colorize, type Layer, type LayerKind, type Правка} from '../core/colorize';
 import {переносыАбзацев} from './livePreview/softBreak';
 
 /**
@@ -24,23 +24,6 @@ const подписи: Record<string, string> = {};
 /** Как назвать слой человеку. Своих слов у кода нет: пусто — значит подсказки не будет. */
 export function подписьСлоя(kind: string): string {
   return подписи[kind] ?? '';
-}
-
-class DeletionWidget extends WidgetType {
-  constructor(private readonly deleted: string) {
-    super();
-  }
-
-  eq(other: DeletionWidget): boolean {
-    return other.deleted === this.deleted;
-  }
-
-  toDOM(): HTMLElement {
-    const mark = document.createElement('span');
-    mark.className = 'layer-deleted';
-    mark.title = `${подписьСлоя('deleted')}: ${this.deleted.trim()}`;
-    return mark;
-  }
 }
 
 /**
@@ -73,10 +56,11 @@ export function слоиОкна(article: {
   return [...сайт, ...история, {text: файл, kind: article.мойСлой ?? 'prevHuman'}];
 }
 
-export function layerColors(
-  before: () => Layer[],
-  report: (deletions: Deletion[]) => void,
-) {
+/**
+ * Слой цвета показывает только то, что стоит в тексте: кто написал кусок. Удалённое сравнение
+ * по-прежнему находит, но в окне набора оно не рисуется — красные риски мешали читать статью.
+ */
+export function layerColors(before: () => Layer[]) {
   return ViewPlugin.fromClass(
     class {
       decorations: DecorationSet;
@@ -90,7 +74,7 @@ export function layerColors(
         this.основа = before();
         this.исходный = view.state.doc;
         this.правки = ChangeSet.empty(view.state.doc.length);
-        this.decorations = build(view, this.основа, this.исходный, this.правки, report);
+        this.decorations = build(view, this.основа, this.исходный, this.правки);
       }
 
       update(update: ViewUpdate): void {
@@ -111,7 +95,7 @@ export function layerColors(
           this.правки = ChangeSet.empty(update.state.doc.length);
         }
         this.основа = свежая;
-        this.decorations = build(update.view, свежая, this.исходный, this.правки, report);
+        this.decorations = build(update.view, свежая, this.исходный, this.правки);
       }
     },
     {decorations: (plugin) => plugin.decorations},
@@ -134,23 +118,16 @@ export function служебноеУдаление(text: string, from: number, t
   return переносыАбзацев(строки).жёсткие.includes(номер);
 }
 
-function build(
-  view: EditorView,
-  before: Layer[],
-  исходный: Text,
-  правки: ChangeSet,
-  report: (deletions: Deletion[]) => void,
-): DecorationSet {
+function build(view: EditorView, before: Layer[], исходный: Text, правки: ChangeSet): DecorationSet {
   const text = view.state.doc.toString();
   const границы: Правка[] = [];
   правки.iterChangedRanges((fromA, toA, fromB, toB) => границы.push({fromA, toA, fromB, toB}));
   // Текст на конец цепочки сравнивается с файлом целиком (так восстанавливается черновик),
   // а нынешний текст — только внутри своих правок.
-  const {segments, deletions} = colorize(
+  const {segments} = colorize(
     [...before, {text: исходный.toString(), kind: 'current'}, {text, kind: 'current', правки: границы}],
     служебноеУдаление,
   );
-  report(deletions);
 
   const list: Range<Decoration>[] = [];
 
@@ -160,11 +137,6 @@ function build(
     list.push(Decoration
       .mark({class: `layer-${segment.kind}`, attributes: подпись === '' ? undefined : {title: подпись}})
       .range(segment.from, Math.min(segment.to, text.length)));
-  }
-
-  for (const deletion of deletions) {
-    const at = Math.min(deletion.at, text.length);
-    list.push(Decoration.widget({widget: new DeletionWidget(deletion.text), side: 1}).range(at));
   }
 
   return Decoration.set(list, true);

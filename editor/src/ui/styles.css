@@ -168,7 +168,6 @@ button { font: inherit; cursor: pointer; }
   gap: 8px;
 }
 
-.gutter-mark { width: 9px; height: 9px; border-radius: 50%; background: var(--layer-deleted); }
 .gutter-empty { justify-content: flex-start; }
 .gutter-hint { display: none; }
 
@@ -254,19 +253,6 @@ button { font: inherit; cursor: pointer; }
 .mono .layer-prevAi,
 .mono .layer-prevOther,
 .mono .layer-current { color: var(--ink); }
-
-.mono .layer-deleted { display: none; }
-.mono .gutter-mark { opacity: 0.35; }
-
-.layer-deleted {
-  display: inline-block;
-  width: 3px;
-  height: 1.05em;
-  vertical-align: -0.2em;
-  margin: 0 1px;
-  border-radius: 2px;
-  background: var(--layer-deleted);
-}
 
 
 .side-foreign { color: var(--layer-deleted); }

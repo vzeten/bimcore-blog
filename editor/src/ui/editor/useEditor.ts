@@ -7,7 +7,6 @@ import {клавишиСписка} from './listKeys';
 import {клавишиПоверхности} from './surfaceKeys';
 import {блокВ, обычныйТекст} from './structureGuard';
 import {layerColors, слоиОкна} from '../layerColors';
-import type {Deletion} from '../../core/colorize';
 import {правкаПанелиКартинки, type КартинкаВОкне} from '../livePreview/inline';
 import type {БлокВОкне} from '../livePreview/blocks';
 import type {Article, ОписаниеБлока} from '../types';
@@ -23,7 +22,6 @@ export interface Spot {
 export function useEditor(options: {
   article: Article;
   onText: (text: string) => void;
-  onDeletions: (deletions: Deletion[]) => void;
   onSelection: (spot: Spot | null) => void;
   onPaste: (file: File, view: EditorView) => void;
   /** Нажатие по картинке в тексте: открыть панель её свойств. */
@@ -91,10 +89,7 @@ export function useEditor(options: {
           // редактора: иначе после сохранения цвет остался бы прежним до повторного открытия
           // статьи, и правка, которой человек перекрыл текст ИИ, не сменила бы цвет.
           // На диск за ней при этом никто не ходит — она приходит с открытием статьи.
-          layerColors(
-            () => слоиОкна(свежие.current.article),
-            (deletions) => свежие.current.onDeletions(deletions),
-          ),
+          layerColors(() => слоиОкна(свежие.current.article)),
           EditorView.domEventHandlers({
             paste: (event, editor) => {
               const file = [...(event.clipboardData?.items ?? [])]

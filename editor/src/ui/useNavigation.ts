@@ -2,7 +2,6 @@ import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import {loadArticle} from './actions';
 import {requestJson} from './api';
 import {parseFrontmatter, type Field} from './headFields';
-import type {Deletion} from '../core/colorize';
 import type {Article, ArticleRow, PanelMode, SaveState, Settings} from './types';
 
 /**
@@ -32,7 +31,6 @@ export function useNavigation(deps: {
   setArticle: Dispatch<SetStateAction<Article | null>>;
   setFields: (fields: Field[]) => void;
   setText: (text: string) => void;
-  setDeletions: (deletions: Deletion[]) => void;
   setMode: (mode: PanelMode) => void;
   setDirty: (dirty: boolean) => void;
   setОшибка: (текст: string | null) => void;
@@ -114,7 +112,6 @@ export function useNavigation(deps: {
     deps.setArticle({...art, заход: открытие.current});
     deps.setFields(parseFrontmatter(art.frontmatterRaw, path, s.контент, s.сайт?.обложкаПоУмолчанию ?? null));
     deps.setText(art.body);
-    deps.setDeletions([]);
     // Исходное состояние окна: от него считается «есть несохранённое».
     deps.текстСейчас.current = art.body;
     deps.шапкаСейчас.current = art.frontmatterRaw;

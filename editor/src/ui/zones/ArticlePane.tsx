@@ -3,7 +3,6 @@ import {Transaction} from '@codemirror/state';
 import type {EditorView} from '@codemirror/view';
 import {типыТелаСтатьи} from '../../core/imageType.mjs';
 import {выбратьФайл, type ВставленнаяКартинка} from '../editor/images';
-import type {Deletion} from '../../core/colorize';
 import {ImagePanel} from '../editor/ImagePanel';
 import {BlockPanel} from '../editor/BlockPanel';
 import {ProductPicker} from '../editor/ProductPicker';
@@ -25,7 +24,6 @@ export function ArticlePane(props: {
   fields: Field[];
   onFields: (fields: Field[]) => void;
   onText: (text: string) => void;
-  onDeletions: (deletions: Deletion[]) => void;
   /** Отказ команды панели: причина уходит в общую строку сообщений окна. */
   onСообщить: (текст: string) => void;
   /**
@@ -78,7 +76,6 @@ export function ArticlePane(props: {
   const {host, view} = useEditor({
     article: props.article,
     onText: props.onText,
-    onDeletions: props.onDeletions,
     onSelection: setSpot,
     onPaste: (file, editor) => void вставить(file, editor),
     onImage: (картинка) => {
