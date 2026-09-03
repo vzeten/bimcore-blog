@@ -104,7 +104,7 @@ describe('короткий контракт процесса', () => {
     expect(change).toContain('ready_for_review');
   });
 
-  it('завершает забытый running отказом, а не вечным ожиданием', () => {
+  it('не принимает конец ответа Claude за окончание рабочей операции', () => {
     const root = mkdtempSync(resolve(tmpdir(), 'editor-process-'));
     const coordination = resolve(root, 'editor/.coordination');
     const statusPath = resolve(coordination, 'run-status.json');
@@ -117,8 +117,7 @@ describe('короткий контракт процесса', () => {
         env: { ...process.env, CLAUDE_PROJECT_DIR: root },
       });
       const status = JSON.parse(readFileSync(statusPath, 'utf8'));
-      expect(status.state).toBe('failed');
-      expect(status.reason).toBe('claude_stopped_without_terminal_status');
+      expect(status).toEqual({ state: 'running', head: 'abc' });
 
       for (const state of ['ready_for_review', 'owner_required', 'failed']) {
         writeFileSync(statusPath, JSON.stringify({ state, head: 'abc' }));
