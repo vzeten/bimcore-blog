@@ -158,6 +158,9 @@ describe('пустая строка, куда правка поставила к
     const итог = состояние(текст, 6).update({changes: {from: правка.from, insert: правка.insert}, selection: {anchor: правка.from + правка.caret!}}).state;
     expect(итог.doc.toString()).toBe('Абзац.\n\n<YouTube id="x" />\n\n\n\nЕщё.');
     expect(итог.selection.main.head).toBe(итог.doc.toString().indexOf('\n\n\n\nЕщё.') + 2);
+    // Панель свойств находит вставленный тег по карте от знака `<` перед курсором — без хвоста переводов строк.
+    const начало = итог.doc.toString().lastIndexOf('<', итог.selection.main.head);
+    expect(блокВ(итог, начало)).toEqual({вид: 'блок', from: начало, to: начало + '<YouTube id="x" />'.length});
   });
 
   it('отмена возвращает прежний текст без добавленных разделителей', () => {

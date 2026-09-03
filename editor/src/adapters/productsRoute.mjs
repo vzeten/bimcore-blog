@@ -70,13 +70,13 @@ export async function productsRoute({req, res, url, repo, settings, тело, in
     return true;
   }
 
-  const байты = await скачать(товар.картинка, settings);
-  if (байты === null) {
-    send(res, 502, {error: ошибки['картинкаТовараНеДоехала']});
+  const скачано = await скачать(товар.картинка, settings);
+  if (скачано.байты === undefined) {
+    send(res, 502, {error: ошибки['картинкаТовараНеДоехала'].replace('{причина}', скачано.причина)});
     return true;
   }
 
-  const итог = подготовитьБайты({repo, settings, article: payload.article, bytes: байты});
+  const итог = подготовитьБайты({repo, settings, article: payload.article, bytes: скачано.байты});
   if (итог.код !== undefined) send(res, итог.код, {error: итог.error});
   else send(res, 200, итог);
   return true;
@@ -122,18 +122,19 @@ function читатьКаталог(repo) {
 }
 
 /**
- * Байты картинки товара; предел тот же, что у тела запроса. `null` — сеть, отказ хранилища или
- * перевес: в статье и в её папке при этом ничего не меняется.
+ * Байты картинки товара; предел тот же, что у тела запроса. Отказ приходит с причиной — ответ
+ * хранилища, перевес или сбой сети: в статье и в её папке при этом ничего не меняется.
  */
 async function скачать(адрес, settings) {
   try {
     const ответ = await fetch(адрес);
-    if (!ответ.ok) return null;
+    if (!ответ.ok) return {причина: `HTTP ${ответ.status}`};
 
     const байты = Buffer.from(await ответ.arrayBuffer());
-    return байты.length > settings['сервер']['пределТелаМБ'] * 1024 * 1024 ? null : байты;
+    const предел = settings['сервер']['пределТелаМБ'];
+    return байты.length > предел * 1024 * 1024 ? {причина: `больше ${предел} МБ`} : {байты};
   } catch (error) {
     console.error(error);
-    return null;
+    return {причина: error?.cause?.code ?? error?.message ?? String(error)};
   }
 }

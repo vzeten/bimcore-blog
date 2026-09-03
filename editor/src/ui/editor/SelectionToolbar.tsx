@@ -2,7 +2,8 @@ import {useState} from 'react';
 import type {EditorView} from '@codemirror/view';
 import * as act from '../../core/commands';
 import {sectionOf} from '../../core/articles.mjs';
-import {вставкаСовета} from '../../core/tipBlock';
+import {оформлениеСовета, советы} from '../../core/tipBlock';
+import {внутриОграды} from '../livePreview/softBreak';
 import {названиеСоветаСтатьи} from '../livePreview/tip';
 import {вставкаБлока, значениеПоРазделу, новыйТег} from '../../core/jsxBlocks';
 import type {Button, Settings} from '../types';
@@ -105,10 +106,12 @@ function decide(
     return вставкаБлока(doc, at, тег);
   }
 
-  // Совет — не тег, а директива Docusaurus: у него нет полей, и текст человек пишет прямо
-  // в блоке. Заголовок берётся по языку статьи, чтобы на сайте блок не назвался чужим словом.
+  // Примечание — оформление выделенного текста, а не вставка: повторный выбор снимает его.
+  // Заголовок берётся по языку статьи, чтобы на сайте блок не назвался чужим словом.
   if (button.команда === 'совет' && button.блок !== undefined) {
-    return вставкаСовета(doc, at, button.блок, названиеСоветаСтатьи(props.settings, props.articlePath)[button.блок] ?? '');
+    const строки = doc.split('\n');
+    const заголовок = названиеСоветаСтатьи(props.settings, props.articlePath)[button.блок] ?? '';
+    return оформлениеСовета(doc, at, button.блок, заголовок, советы(строки, внутриОграды(строки)));
   }
 
   if (button.команда === 'вставить' && button.текст) {

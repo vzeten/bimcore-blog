@@ -11,6 +11,7 @@ import {перенестиВыбор} from '../editor/imagePanelPlace';
 import {уУзла} from '../editor/widgetPlace';
 import {SelectionToolbar, decideEdit} from '../editor/SelectionToolbar';
 import {useEditor, type Spot} from '../editor/useEditor';
+import {блокВ} from '../editor/structureGuard';
 import type {КартинкаВОкне} from '../livePreview/inline';
 import type {БлокВОкне} from '../livePreview/blocks';
 import {названиеСоветаСтатьи} from '../livePreview/tip';
@@ -267,13 +268,14 @@ export function ArticlePane(props: {
     if ((props.settings.блоки[имя]?.поля.length ?? 0) === 0) return;
     setВставкой(true);
 
-    // Тег кончается на позиции курсора, а знака `<` внутри него не бывает.
+    // Курсор стоит под блоком; границы самого тега даёт карта поверхности от знака `<` перед ним.
     const начало = editor.state.doc.toString().lastIndexOf('<', конец);
-    const место = начало === -1 ? null : уУзла(editor, начало, '.md-block');
-    if (место === null) return;
+    const блок = начало === -1 ? null : блокВ(editor.state, начало);
+    const место = блок === null ? null : уУзла(editor, блок.from, '.md-block');
+    if (блок === null || место === null) return;
 
     setБлок({
-      имя, текст: editor.state.sliceDoc(начало, конец), from: начало, to: конец,
+      имя, текст: editor.state.sliceDoc(блок.from, блок.to), from: блок.from, to: блок.to,
       left: место.left, top: место.bottom,
     });
   }
