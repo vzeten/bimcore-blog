@@ -14,16 +14,41 @@ function tokenize(text: string): string[] {
   return text.match(/[^\s\\]+|\\+|\s+/gu) ?? [];
 }
 
-/** Кусок — знак переноса markdown: нечётная косая перед переводом строки (по CommonMark). */
-function переносMarkdown(chunk: string, following: string): boolean {
-  return /^\\+$/.test(chunk) && chunk.length % 2 === 1 && following === '\n';
+/** Границы одной правки: что стояло в прошлом слое и что стоит вместо этого в новом. */
+export interface Правка {
+  fromA: number;
+  toA: number;
+  fromB: number;
+  toB: number;
 }
+
+type Части = {value: string[]; added?: boolean; removed?: boolean}[];
+
+/**
+ * Сравнение по известным правкам: нетронутое между ними берётся как есть, слова сравниваются
+ * только внутри каждой правки. Без этого две одинаковые строки не отличить: сравнение текстов
+ * вправе счесть новой любую из них, и синий цвет перескакивает на соседа.
+ */
+function поПравкам(старый: string, новый: string, правки: Правка[]): Части {
+  const части: Части = [];
+  let a = 0;
+  for (const правка of правки) {
+    if (правка.fromA > a) части.push({value: [старый.slice(a, правка.fromA)]});
+    части.push(...diffArrays(tokenize(старый.slice(правка.fromA, правка.toA)), tokenize(новый.slice(правка.fromB, правка.toB))));
+    a = правка.toA;
+  }
+  if (a < старый.length) части.push({value: [старый.slice(a)]});
+  return части;
+}
+
+/** Удаление этого куска прошлого текста — служебное, показывать его нечего. Смысл знает вызывающий. */
+export type Служебное = (text: string, from: number, to: number) => boolean;
 
 /**
  * Позиция из прошлого слоя в координатах следующего: удаление, найденное раньше, обязано стоять
  * там же после всех правок, что были после него.
  */
-function перенести(parts: {value: string[]; added?: boolean; removed?: boolean}[], at: number): number {
+function перенести(parts: Части, at: number): number {
   let oldPos = 0;
   let newPos = 0;
   for (const part of parts) {
@@ -50,6 +75,8 @@ export interface Layer {
   text: string;
   /** Чем помечать то, что появилось именно в этом слое. */
   kind: LayerKind;
+  /** Известные границы правок от прошлого слоя к этому; нет — слои сравниваются целиком. */
+  правки?: Правка[];
 }
 
 export interface Segment {
@@ -75,7 +102,7 @@ export interface Colorized {
  * Слои идут по времени: первый — то, что стоит на сайте, последний — текущий текст.
  * Между ними могут стоять прошлые правки человека и правки ИИ.
  */
-export function colorize(input: Layer[]): Colorized {
+export function colorize(input: Layer[], служебное: Служебное = () => false): Colorized {
   if (input.length === 0) return {segments: [], deletions: []};
 
   // Переводы строк сравнивать нельзя: на диске файл может быть в windows-виде,
@@ -91,7 +118,9 @@ export function colorize(input: Layer[]): Colorized {
     const nextKinds: LayerKind[] = [];
     let oldPos = 0;
 
-    const parts = diffArrays(tokenize(text), tokenize(layer.text));
+    const parts = layer.правки
+      ? поПравкам(text, layer.text, layer.правки)
+      : diffArrays(tokenize(text), tokenize(layer.text));
     for (const deletion of deletions) deletion.at = перенести(parts, deletion.at);
 
     for (let step = 0; step < parts.length; step += 1) {
@@ -133,9 +162,10 @@ export function colorize(input: Layer[]): Colorized {
       if (part.added) {
         for (let i = 0; i < chunk.length; i += 1) nextKinds.push(layer.kind);
       } else if (part.removed) {
-        // Удаление одних пробелов, переводов строк и знака переноса markdown — не событие.
-        const служебное = chunk.trim() === '' || переносMarkdown(chunk, text[oldPos + chunk.length] ?? '');
-        if (!служебное) deletions.push({at: nextKinds.length, text: chunk, kind: layer.kind});
+        // Удаление одних пробелов и переводов строк — не событие; что ещё служебно, решает вызывающий.
+        if (chunk.trim() !== '' && !служебное(text, oldPos, oldPos + chunk.length)) {
+          deletions.push({at: nextKinds.length, text: chunk, kind: layer.kind});
+        }
         oldPos += chunk.length;
       } else {
         for (let i = 0; i < chunk.length; i += 1) nextKinds.push(kinds[oldPos + i] ?? layer.kind);
