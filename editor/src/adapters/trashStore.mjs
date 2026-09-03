@@ -124,7 +124,7 @@ export function положитьЦеликом(editorDir, target, bytes, зам�
   try {
     const fd = fs.openSync(временный, 'w');
     try {
-      fs.writeSync(fd, bytes);
+      fs.writeFileSync(fd, bytes);
       fs.fsyncSync(fd);
     } finally {
       fs.closeSync(fd);
@@ -230,7 +230,7 @@ export function списокКорзины({editorDir, settings, сейчас = 
     if (!ИМЯ_ЗАПИСИ.test(имя)) continue;
     const dir = path.join(папка, имя);
     // Подменённая папка записи не читается и не чистится: за ней чужие файлы.
-    if (!fs.statSync(dir).isDirectory() || fs.lstatSync(dir).isSymbolicLink() || !тотЖе(fs.realpathSync.native(dir), dir)) continue;
+    if (fs.lstatSync(dir).isSymbolicLink() || !fs.lstatSync(dir).isDirectory() || !тотЖе(fs.realpathSync.native(dir), dir)) continue;
     const опись = прочитатьОпись(dir);
     if (опись === null) continue;
     const срок = срокДо(опись, settings);
