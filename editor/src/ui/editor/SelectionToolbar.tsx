@@ -1,11 +1,13 @@
 import {useState} from 'react';
 import type {EditorView} from '@codemirror/view';
-import {ensureSyntaxTree} from '@codemirror/language';
+import {ChangeSet} from '@codemirror/state';
+import {isolateHistory} from '@codemirror/commands';
+import {ensureSyntaxTree, language} from '@codemirror/language';
 import * as act from '../../core/commands';
 import {sectionOf} from '../../core/articles.mjs';
 import {границыСоветов, оформлениеСовета, советы} from '../../core/tipBlock';
-import {видСписка, преобразованиеСписка, type Окружение} from '../../core/listConvert';
-import {блокВнеРазбора, внутриОграды} from '../livePreview/softBreak';
+import {видСписка, преобразованиеСписка, type Окружение, type ПравкаСписка} from '../../core/listConvert';
+import {КОСАЯ_ПЕРЕНОСА, блокВнеРазбора, внутриОграды} from '../livePreview/softBreak';
 import {названиеСоветаСтатьи} from '../livePreview/tip';
 import {вставкаБлока, значениеПоРазделу, новыйТег} from '../../core/jsxBlocks';
 import type {Button, Settings} from '../types';
@@ -42,9 +44,31 @@ function поГруппам(buttons: Button[]): [string, Button[]][] {
  */
 function окружениеСписка(view: EditorView): Окружение | null {
   const дерево = ensureSyntaxTree(view.state, view.state.doc.length, 5000);
-  if (дерево === null) return null;
+  const язык = view.state.facet(language);
+  if (дерево === null || язык === null) return null;
   const строки = view.state.doc.toString().split('\n');
-  return {дерево, границы: границыСоветов(строки, внутриОграды(строки)), обычная: (строка) => !блокВнеРазбора(строка)};
+  return {
+    дерево,
+    границы: границыСоветов(строки, внутриОграды(строки)),
+    обычная: (строка) => !блокВнеРазбора(строка),
+    косая: (строка) => КОСАЯ_ПЕРЕНОСА.test(строка),
+    // Вторая ступень правки смотрит на результат тем же разбором, что и окно.
+    разбор: (text) => язык.parser.parse(text),
+  };
+}
+
+/** Правка списка одной транзакцией: две ступени замен, выделение — задетые единицы целиком. */
+export function правкаСписка(view: EditorView, правка: ПравкаСписка): void {
+  const первая = view.state.changes(правка.changes);
+  const изменения = первая.compose(ChangeSet.of(правка.затем, первая.newLength));
+  view.dispatch({
+    changes: изменения,
+    selection: {anchor: изменения.mapPos(правка.выделение.from, 1), head: изменения.mapPos(правка.выделение.to, -1)},
+    scrollIntoView: true,
+    userEvent: 'input',
+    // Одна запись истории на действие: набор до и после него в неё не склеивается.
+    annotations: isolateHistory.of('full'),
+  });
 }
 
 /** Пиктограммы панели: цепочка ссылки и два знакомых знака списка. */
@@ -132,12 +156,18 @@ function run(
 
   const doc = view.state.doc.toString();
   const at = {from: view.state.selection.main.from, to: view.state.selection.main.to};
-  const edit = decide(button, doc, at, {...props, окружение: () => окружениеСписка(view)});
-  if (!edit) {
-    // Список отказал целиком — человек обязан узнать причину, а не гадать, почему ничего не произошло.
-    if (button.команда === 'список') props.onСообщить?.(props.settings.подписи.списокНельзя);
+  if (button.команда === 'список') {
+    const окружение = окружениеСписка(view);
+    const правка = окружение === null ? null : преобразованиеСписка(doc, at, button.вид ?? 'точки', окружение);
+    if (правка !== null) правкаСписка(view, правка);
+    // Список отказал целиком либо правку не пропустил фильтр разметки — человек обязан узнать об
+    // этом, а не гадать, почему ничего не произошло.
+    if (правка === null || view.state.doc.toString() === doc) props.onСообщить?.(props.settings.подписи.списокНельзя);
+    view.focus();
     return;
   }
+  const edit = decide(button, doc, at, props);
+  if (!edit) return;
 
   view.dispatch({
     changes: {from: edit.from, to: edit.to, insert: edit.insert},
@@ -152,13 +182,9 @@ function decide(
   button: Button,
   doc: string,
   at: act.Selection,
-  props: {settings: Settings; articlePath: string; шапка?: Record<string, string>; окружение?: () => Окружение | null},
+  props: {settings: Settings; articlePath: string; шапка?: Record<string, string>},
 ): act.Edit | null {
   if (button.команда === 'заголовок') return act.heading(doc, at, button.уровень ?? 2);
-  if (button.команда === 'список') {
-    const окружение = props.окружение?.() ?? null;
-    return окружение === null ? null : преобразованиеСписка(doc, at, button.вид ?? 'точки', окружение);
-  }
   if (button.команда === 'обернуть') return act.wrap(doc, at, button.знак ?? '**');
   if (button.команда === 'ссылка') {
     return act.link(doc, at, {адрес: props.settings.подписи.ссылкаЗаглушка, текст: props.settings.подписи.ссылкаТекст});

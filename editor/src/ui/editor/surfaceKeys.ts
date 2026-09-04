@@ -3,10 +3,12 @@
 import type {Command, KeyBinding} from '@codemirror/view';
 import {syntaxTree} from '@codemirror/language';
 import {EditorSelection, type EditorState, type TransactionSpec} from '@codemirror/state';
+import {isolateHistory} from '@codemirror/commands';
 import {тегиТекста} from '../../core/jsxTag.mjs';
 import type {Блок} from '../../core/jsxBlocks';
 import {строкаАбзаца} from '../livePreview/softBreak';
 import {блокВ, контейнерКурсора, поверхность, целойСтрокой, type Диапазон, type Область} from './structureGuard';
+import {зазорМеждуПунктами} from './listKeys';
 
 /** Курсор в абзаце (или заголовке) прямо в документе; чего commonmark не знает, отсекает `строкаАбзаца`. */
 export function точкаВОбычномАбзаце(state: EditorState, иЗаголовок = false): number | null {
@@ -158,6 +160,13 @@ function удаление(вперёд: boolean): Command {
       return true;
     }
 
+    // Зазор между пунктами одного списка уходит целиком: маркер со словами не склеивается. Пустая
+    // строка после косой переноса разделителем не считается, поэтому зазор ищется раньше края.
+    const зазор = зазорМеждуПунктами(state, выбор.head, вперёд);
+    if (зазор !== null) {
+      view.dispatch({changes: зазор.changes, selection: {anchor: зазор.anchor}, scrollIntoView: true, userEvent: 'delete', annotations: isolateHistory.of('full')});
+      return true;
+    }
     const край = уКрая(state, выбор.head, вперёд);
     if (край === null) return false;
     if (край === 'служебное') {
