@@ -1,0 +1,90 @@
+---
+title: "Free Revit Families: How to Avoid Mistakes in Your Project"
+slug: free-revit-families-risks
+description: "What to check in a free Revit family before using it in an interior project: dimensions, parameters, drawing views and furniture placement."
+date: '2026-09-05'
+authors:
+  - ivan
+tags:
+  - revit
+  - families
+  - interior-design
+draft: false
+keywords:
+  - free Revit families
+  - parametric Revit families
+  - Revit family mistakes
+---
+
+import sofaVideo from './img/sofa-parameters.webm';
+
+When you download a Revit family, check whether you can adjust it for your project. A convincing preview is not enough. The model may have fixed dimensions, and the controls you need may be missing.
+
+I design interiors in Revit and create families for this work. I need an object to be adjustable to the required dimensions, easy to check inside a room and suitable for drawings. This is why we make BIMCORE families parametric.
+
+![Interior project in Revit with BIMCORE furniture](./img/sofa-interior.jpg)
+
+*Interior project in Revit with BIMCORE furniture.*
+
+<truncate />
+
+## What can go wrong with an approximate model
+
+Suppose you download a sofa that looks like the one selected for a project. Its shape is similar, but its width and depth are different. If you leave it unchanged, you will assess the layout using the dimensions of another product. The plan may appear to have enough space, while the real sofa leaves a passage that is too narrow.
+
+The consequences can be more noticeable with wardrobes and kitchens. A deeper cabinet takes space from a passage. An open door may hit a table, and a drawer may not have enough room in front of a bed. It is better to see these problems in the model before the furniture is ordered.
+
+With a non-parametric family, you cannot simply change the required dimensions in Properties. You have to edit the geometry or find another model. If you keep an approximate object to save time, the discrepancy can reach the drawings.
+
+## Why parametric families are useful
+
+In a parametric family, dimensions and other properties control the model. For example, when you change the width of a cabinet, its geometry rebuilds according to the rules used to create the family. The available adjustments depend on the individual file.
+
+![Resizing a parametric BIMCORE sofa inside a Revit interior](./img/sofa-resize-interior.gif)
+
+*The sofa dimensions change through family parameters inside the interior project.*
+
+I see several practical benefits for an interior project.
+
+**The object is easier to adjust.** You can change the available dimensions, materials and configurations through parameters. This is especially useful when a client asks for a revision after the layout has already been prepared.
+
+**You can check whether it fits the room.** Once the required dimensions are entered, you can see how much space the furniture occupies and what remains around it. You are reviewing the layout with the dimensions intended for the project.
+
+**Potential clashes are easier to spot.** In plan and 3D, you can check whether the furniture overlaps another object. If the family includes an opening control, you can also examine the position of a door. Changing a dimension does not resolve a clash automatically, but it helps you find the problem and revise the layout.
+
+**The model is closer to the intended interior.** When the dimensions, form and materials correspond to the selected design, a client can understand the proposal more clearly. Both the available controls and the family's original form matter. Changing the width does not turn one sofa into an exact copy of another.
+
+## A free family can still be suitable
+
+Price alone does not determine the quality of a file. Some free families are parametric. Others represent a particular product with fixed dimensions and can be suitable when that exact product is used.
+
+I look at whether a family supports the task. If its dimensions match the selected product and no adjustment is needed, a fixed model may be entirely appropriate. If you need to test different sizes and options, a family with the relevant controls is more useful.
+
+Our guide to [free Revit family websites](/blog/free-revit-family-websites/) lists sources where you can find files to test.
+
+## What to check after downloading a family
+
+Load the family into a separate test project before using it in live project work.
+
+1. Compare its width, depth and height with the selected object. Check what is included in each stated dimension.
+2. Change the parameters you will need. Confirm that the geometry updates and that the parts remain in the correct positions.
+3. View the family in plan, elevation and 3D. Check whether its representation is suitable for your drawings.
+4. Place the object in the intended room. Check passages, overlaps and the space required to open doors and drawers.
+
+A parametric family helps you evaluate a design, but you still need to verify the selected product and any custom furniture with the manufacturer. Entering a dimension in a model is easier than manufacturing an object at that size.
+
+## How we use this approach at BIMCORE
+
+Our full interior set brings together parametric families for interior design work. They can be adjusted within their available controls and used to develop layouts, prepare drawings and present a project to a client.
+
+If you regularly design interiors in Revit, a consistent library lets you return to familiar families and controls in later projects. You can begin with one category, such as our [Revit kitchen families](/guides/families/kitchen-for-revit/), and check whether they suit your workflow.
+
+<video controls muted loop playsInline style={{width: '100%', height: 'auto'}} aria-label="Adjusting a parametric sofa from the BIMCORE sofa set">
+  <source src={sofaVideo} type="video/webm" />
+</video>
+
+*Adjusting one parametric sofa from the BIMCORE sofa set.*
+
+[Explore the BIMCORE full interior set](https://bimcore.one/) and choose families that help you present your design more accurately and make revisions more efficiently.
+
+<CTA type="guide" />
