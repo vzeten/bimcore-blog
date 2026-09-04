@@ -1,0 +1,71 @@
+---
+title: How to Check Furniture Dimensions and Clearances in Revit
+slug: revit-furniture-dimensions-layout
+description: Check furniture dimensions and clearances in Revit. Compare finished room sizes, door and drawer movement, and access before issuing interior drawings.
+date: '2026-09-04'
+authors:
+  - ivan
+tags:
+  - revit
+  - tips
+  - interior-design
+draft: false
+keywords:
+  - revit furniture dimensions
+  - furniture clearances revit
+  - revit interior layout
+---
+
+Furniture can fit on a plan and still make a room difficult to use. A placeholder may have the wrong dimensions, a handle may be missing, or a drawer may have no space to open. Check each object's closed footprint, the space occupied by moving parts and the space a person needs to use it.
+
+A parametric family lets you bring the model closer to the specified dimensions. You can then identify a conflict and revise the design before issuing drawings.
+
+<truncate />
+
+## Compare the overall size with the selected product
+
+Check the model against the supplier's dimensions. Include a sofa's arms in its overall width. For a cabinet, consider fronts, handles and side panels. Look at table legs that extend beyond the top into a circulation route.
+
+If you are using a similar object as a placeholder, adjust the available dimensions and inspect its outline. Entering an overall width does not turn a parametric family into an exact model of any brand. A specific product still needs its manufacturer's information for specification and ordering.
+
+The [BIMCORE interior family library](https://bimcore.one/) includes adjustable dimensions across different objects. For example, the [sofa families](/guides/families/sofas-for-revit/) provide configuration and size controls. These help you test a layout when a standard placeholder has the wrong footprint.
+
+## Measure the recess between finished surfaces
+
+A wardrobe is installed in the finished room. A dimension between the main walls may overstate the available space once finishes are added.
+
+For example, a 2,500 mm opening with 15 mm of finish on each side leaves 2,470 mm between finished faces. These figures illustrate the calculation; they are not a recommended wall finish thickness.
+
+Compare that width with the complete wardrobe, including side pieces and the installation allowances required by the construction. A cabinet is not guaranteed to fit just because its nominal width is less than the original 2,500 mm.
+
+Existing rooms also need a current survey. A model based on an incorrect measurement retains that error regardless of how detailed its furniture is.
+
+## Check opening and use
+
+A hinged front needs room to swing. A drawer projects into the room. For a sliding door, check how much of the opening remains accessible when the panels are open.
+
+Then consider the person using it. Two objects can avoid intersecting while still leaving too little room to reach a drawer or walk behind someone seated at a table. Required clearances depend on the room's use, project requirements and applicable standards.
+
+Use a family's movement controls where available. Otherwise, add checking graphics and keep them current when depth or opening arrangements change.
+
+## Inspect the same arrangement from the side
+
+Plans do not reveal every obstruction. A high backrest can cover a switch, a wall cabinet can meet a window reveal, and a handle can sit beneath a projecting sill.
+
+Open an elevation or section through the area. Compare heights, projections and neighbouring finishes. Check awkward angled junctions in 3D as well.
+
+| Check | Details that are easy to miss |
+|---|---|
+| Overall size | Arms, fronts, handles and side panels |
+| Finished room size | Linings, tiles and decorative panels |
+| Moving parts | Drawers, hinged fronts and appliance doors |
+| Space for a person | Access to furniture and circulation beside it |
+| Heights and projections | Switches, reveals, sills and cornices |
+
+## Keep the dimensions current
+
+When the client selects a different product, update its dimensions before reissuing the plan. Recheck the passage beside it and access to adjacent furniture. Changing only the product name or finish leaves the drawing based on the previous object.
+
+Adjustable families let you update the footprint and inspect it in the same views. With the [BIMCORE full set](https://bimcore.one/), you can check kitchen units, storage, upholstered furniture and doors together in the same interior. Reliable measurements and a review of how the room will be used remain essential.
+
+<CTA type="guide" />
