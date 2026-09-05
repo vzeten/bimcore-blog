@@ -7,12 +7,10 @@ import {ImagePanel} from '../editor/ImagePanel';
 import {BlockPanel} from '../editor/BlockPanel';
 import {ProductPicker} from '../editor/ProductPicker';
 import {перенестиВыбор} from '../editor/imagePanelPlace';
-import {уУзла} from '../editor/widgetPlace';
+import {вставленныйБлок, уУзла} from '../editor/widgetPlace';
 import {SelectionToolbar, decideEdit} from '../editor/SelectionToolbar';
 import {useEditor, type Spot} from '../editor/useEditor';
-import {блокВ} from '../editor/structureGuard';
-import {имяФайлаРолика, type ЗаменённыйРолик, type УзелРолика} from '../editor/videoReplace';
-import {ИМЯ_БЛОКА_ВИДЕО} from '../../core/videoFile.mjs';
+import {файлБлока, type ЗаменаВидео} from '../editor/videoReplace';
 import type {КартинкаВОкне} from '../livePreview/inline';
 import type {БлокВОкне} from '../livePreview/blocks';
 import {названиеСоветаСтатьи} from '../livePreview/tip';
@@ -33,10 +31,9 @@ export function ArticlePane(props: {
    * вставки не было (окно сменилось или запрос не прошёл), и панель свойств не открывается.
    */
   вставитьКартинку: (file: File, view: EditorView) => Promise<ВставленнаяКартинка | null>;
-  /** Вставка ролика WebM той же дорогой: файл на сервер, импорт и тег в текст; название — для доступности. */
+  /** Ролик WebM той же дорогой: вставка (файл на сервер, импорт и тег в текст; название — для доступности) и замена файла у выбранного блока (`null` — замены не было, причина показана). */
   вставитьВидео: (file: File, view: EditorView, название: string) => Promise<unknown>;
-  /** Замена файла у выбранного ролика той же дорогой; `null` — замены не было, причина показана. */
-  заменитьВидео: (file: File, view: EditorView, узел: УзелРолика, передПравкой: () => void) => Promise<ЗаменённыйРолик | null>;
+  заменитьВидео: ЗаменаВидео;
   /** Загрузка файла для поля-картинки в свойствах. `null` в ответе — не вышло, причина показана. */
   загрузить: (file: File) => Promise<string | null>;
   /** Текст окна совпадает с файлом — условие входа в смену формата картинки. */
@@ -204,10 +201,7 @@ export function ArticlePane(props: {
           onСвояПравка={() => {
             свояПравкаБлока.current = true;
           }}
-          файл={блок.имя === ИМЯ_БЛОКА_ВИДЕО ? {
-            имя: имяФайлаРолика(view.current.state, блок) ?? '',
-            заменить: (file, узел, передПравкой) => props.заменитьВидео(file, view.current as EditorView, узел, передПравкой),
-          } : undefined}
+          файл={файлБлока(view.current, блок, props.заменитьВидео)}
           onClose={() => setБлок(null)}
         />
       )}
@@ -272,16 +266,10 @@ export function ArticlePane(props: {
     if ((props.settings.блоки[имя]?.поля.length ?? 0) === 0) return;
     setВставкой(true);
 
-    // Курсор стоит под блоком; границы самого тега даёт карта поверхности от знака `<` перед ним.
-    const начало = editor.state.doc.toString().lastIndexOf('<', конец);
-    const блок = начало === -1 ? null : блокВ(editor.state, начало);
-    const место = блок === null ? null : уУзла(editor, блок.from, '.md-block');
-    if (блок === null || место === null) return;
+    const блок = вставленныйБлок(editor, конец);
+    if (блок === null) return;
 
-    setБлок({
-      имя, текст: editor.state.sliceDoc(блок.from, блок.to), from: блок.from, to: блок.to,
-      left: место.left, top: место.bottom,
-    });
+    setБлок({имя, текст: editor.state.sliceDoc(блок.from, блок.to), ...блок});
   }
 
   /**

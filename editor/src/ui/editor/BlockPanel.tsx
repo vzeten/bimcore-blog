@@ -1,9 +1,9 @@
-import {useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {useLayoutEffect, useRef, useState} from 'react';
 import type {EditorView} from '@codemirror/view';
 import {сменаСвойства, значениеСвойства, type ПолеБлока} from '../../core/jsxBlocks';
 import {ссылкаВидео} from '../../core/videoLink.mjs';
-import {типыВидео} from '../../core/imageType.mjs';
-import {выбратьФайл} from './images';
+import {BlockFile, Флажок, type ФайлБлока} from './BlockFile';
+import {местоПанели, поВертикали} from './widgetPlace';
 import {датаПонятна, начальные, непонятное, чтоЗаписать} from './blockFields';
 import type {БлокВОкне} from '../livePreview/blocks';
 import type {Settings} from '../types';
@@ -30,14 +30,8 @@ export function BlockPanel(props: {
   приВставке?: boolean;
   /** Правку в тег делает сама панель: окно по этому знаку не закрывает её как чужую. */
   onСвояПравка: () => void;
-  /**
-   * У блока есть файл, и его можно заменить: имя для подписи и сама замена. Она возвращает новые
-   * границы тега и имя файла либо `null` — замены не было, причина уже показана человеку.
-   */
-  файл?: {
-    имя: string;
-    заменить: (file: File, узел: Узел, передПравкой: () => void) => Promise<{узел: Узел; имяФайла: string} | null>;
-  };
+  /** У блока есть файл, и его можно заменить (ролик): строка файла с кнопкой — `BlockFile`. */
+  файл?: ФайлБлока;
   onClose: () => void;
 }) {
   const п = props.settings.подписи;
@@ -53,18 +47,6 @@ export function BlockPanel(props: {
   const тронуто = useRef<Record<string, true>>({});
   const узелРеф = useRef(узел);
   узелРеф.current = узел;
-  // Файл блока: пока едет замена, кнопка заперта — второй выбор поверх первого устроил бы гонку.
-  const [имяФайла, setИмяФайла] = useState(props.файл?.имя ?? '');
-  const [занято, setЗанято] = useState(false);
-  // Поздний ответ замены не трогает снятую с экрана панель. Признак взводится в эффекте, а не в
-  // начальном значении ref: StrictMode монтирует эффект дважды (правило панели картинки).
-  const жив = useRef(true);
-  useEffect(() => {
-    жив.current = true;
-    return () => {
-      жив.current = false;
-    };
-  }, []);
 
   // Панель у блока внизу экрана иначе уезжает за его край вместе со всеми полями: у видео их
   // пять, и вниз она не помещается. Высота известна только после отрисовки, поэтому меряется она,
@@ -81,19 +63,15 @@ export function BlockPanel(props: {
   const поля = props.приВставке === true && дляВставки.length > 0 ? дляВставки : описание.поля;
 
   return (
-    <div className="block-panel" ref={корпус} style={{left: место(props.блок.left), top: поВертикали(props.блок.top + 6, высота)}}>
+    <div className="block-panel" ref={корпус} style={{left: местоПанели(props.блок.left), top: поВертикали(props.блок.top + 6, высота)}}>
       <div className="block-panel-head">
         <div className="block-panel-name">{описание.подпись}</div>
         <button className="block-panel-close" onClick={props.onClose} title={п.блокЗакрыть}>✕</button>
       </div>
 
       {props.файл !== undefined && (
-        <div className="block-panel-file">
-          <span className="block-panel-file-name" title={имяФайла}>{имяФайла}</span>
-          <button onClick={() => выбратьФайл(типыВидео(), (file) => void заменитьФайл(file))} disabled={занято}>
-            {занято ? п.картинкаЗаменяю : п.картинкаЗаменитьФайл}
-          </button>
-        </div>
+        <BlockFile файл={props.файл} подписи={п} узел={() => узелРеф.current} onСвояПравка={props.onСвояПравка}
+          onЗамена={(стало) => { узелРеф.current = стало; setУзел(стало); }} />
       )}
 
       {поля.length === 0 && <div className="block-panel-empty">{п.блокБезСвойств}</div>}
@@ -141,39 +119,10 @@ export function BlockPanel(props: {
     );
   }
 
-  /**
-   * Признак тега (`muted`, `loop`): стоит — включён. Записывается сразу по нажатию — тут нечего
-   * дописывать, — и панель остаётся открытой: рядом второй флажок и название.
-   */
+  /** Признак тега флажком: запись сразу по нажатию, панель остаётся открытой (`Флажок`). */
   function флажок(поле: ПолеБлока) {
-    return (
-      <input
-        type="checkbox"
-        checked={значениеСвойства(узел.текст, поле.имя) === 'true'}
-        onChange={(event) => {
-          тронуто.current[поле.имя] = true;
-          записать(поле.имя, event.target.checked ? 'true' : '');
-        }}
-      />
-    );
-  }
-
-  /**
-   * Замена файла блока. Границы тега и имя файла после неё берутся у самой замены: импорт выше
-   * стал другой длины, и старые границы указывали бы мимо тега. Панель на время заперта.
-   */
-  async function заменитьФайл(file: File): Promise<void> {
-    if (props.файл === undefined || занято) return;
-    setЗанято(true);
-    try {
-      const итог = await props.файл.заменить(file, узелРеф.current, props.onСвояПравка);
-      if (!жив.current || итог === null) return;
-      узелРеф.current = итог.узел;
-      setУзел(итог.узел);
-      setИмяФайла(итог.имяФайла);
-    } finally {
-      if (жив.current) setЗанято(false);
-    }
+    const включить = (включён: boolean): void => { тронуто.current[поле.имя] = true; записать(поле.имя, включён ? 'true' : ''); };
+    return <Флажок включён={значениеСвойства(узел.текст, поле.имя) === 'true'} onChange={включить} />;
   }
 
   /**
@@ -336,15 +285,4 @@ export function BlockPanel(props: {
 
     return 'записано';
   }
-}
-
-function место(left: number): number {
-  return Math.max(8, Math.min(left, window.innerWidth - 280));
-}
-
-/** Панель целиком на экране: не влезла под блоком — поднимается, но выше края экрана не уходит. */
-function поВертикали(top: number, высота: number): number {
-  if (высота === 0) return top;
-
-  return Math.max(8, Math.min(top, window.innerHeight - высота - 8));
 }
