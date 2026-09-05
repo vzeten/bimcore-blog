@@ -9,7 +9,7 @@ function apply(text: string, edit: Edit): string {
 }
 
 const всё = (text: string): Selection => ({from: 0, to: text.length});
-const ЗАГЛУШКИ = {адрес: 'вставьте ссылку', текст: 'текст ссылки'};
+const ЗАГЛУШКИ = {текст: 'текст ссылки'};
 const ШАБЛОН = 'Столбец {номер}';
 
 describe('команды правки текста', () => {
@@ -49,17 +49,25 @@ describe('команды правки текста', () => {
     expect(edit.caret).toBe(2);
   });
 
-  it('ссылка вставляется с адресом-заглушкой из настроек', () => {
-    const text = 'сайт';
-    const edit = link(text, всё(text), ЗАГЛУШКИ);
-    expect(apply(text, edit)).toBe('[сайт](вставьте ссылку)');
-    // Курсор выделяет именно адрес, чтобы его сразу заменить.
-    expect(edit.insert.slice(edit.select!.from, edit.select!.to)).toBe(ЗАГЛУШКИ.адрес);
+  it('ссылка оборачивает выделенное и ставит курсор между пустых скобок адреса', () => {
+    const text = 'наш сайт тут';
+    const edit = link(text, {from: 4, to: 8}, ЗАГЛУШКИ);
+    expect(apply(text, edit)).toBe('наш [сайт]() тут');
+    // Курсор строго между «(» и «)»: вставка из буфера ложится адресом, ничего стирать не надо.
+    expect(edit.select).toBeUndefined();
+    expect(edit.insert.slice(0, edit.caret)).toBe('[сайт](');
+    expect(apply(text, edit).slice(0, edit.from + edit.caret!) + 'https://a.b' + apply(text, edit).slice(edit.from + edit.caret!)).toBe('наш [сайт](https://a.b) тут');
   });
 
-  it('ссылка без выделения берёт текст-заглушку из настроек', () => {
+  it('ссылка не подставляет заглушку адреса ни в каком случае', () => {
+    expect(apply('слово', link('слово', всё('слово'), ЗАГЛУШКИ))).not.toContain('вставьте');
+    expect(apply('', link('', {from: 0, to: 0}, ЗАГЛУШКИ))).not.toContain('вставьте');
+  });
+
+  it('ссылка без выделения берёт текст-заглушку из настроек и выделяет его под набор', () => {
     const edit = link('', {from: 0, to: 0}, ЗАГЛУШКИ);
-    expect(apply('', edit)).toBe('[текст ссылки](вставьте ссылку)');
+    expect(apply('', edit)).toBe('[текст ссылки]()');
+    expect(edit.insert.slice(edit.select!.from, edit.select!.to)).toBe(ЗАГЛУШКИ.текст);
   });
 
   it('таблица создаётся с заголовком-шаблоном из настроек', () => {

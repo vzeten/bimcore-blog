@@ -4,6 +4,8 @@
   z-index: 6;
   display: flex;
   flex-wrap: wrap;
+  /* Своя ширина по содержимому: панель, сдвинутая к правому краю, не ужимается и не переносит кнопки иначе. */
+  width: max-content;
   max-width: calc(100vw - 16px);
   background: var(--ink);
   border-radius: 8px;

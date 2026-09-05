@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {EditorView} from '@codemirror/view';
 import {ChangeSet} from '@codemirror/state';
 import {isolateHistory} from '@codemirror/commands';
@@ -71,6 +71,36 @@ export function правкаСписка(view: EditorView, правка: Пра�
   });
 }
 
+/** Размер панели, измеренный у настоящего DOM: для какой ступени (раскрытой или нет) он снят. */
+interface Размер {
+  раскрытая: boolean;
+  ширина: number;
+  высота: number;
+}
+
+/**
+ * Куда встать панели, чтобы не закрыть выделение: над ним, а если сверху видимой области мало
+ * места — под ним. Не помещается ни там, ни там (выделение выше видимой области) — панель у верха
+ * окна. Слева она идёт от начала выделения, но не выходит за края окна. Все размеры настоящие:
+ * измеренная панель, рамка выделения и видимая область, никаких запасов «на глаз».
+ */
+export function положениеПанели(
+  spot: Pick<Spot, 'left' | 'top' | 'bottom' | 'область'>,
+  размер: {ширина: number; высота: number},
+  окно: {ширина: number; высота: number},
+): {left: number; top: number} {
+  const ЗАЗОР = 6;
+  const КРАЙ = 8;
+  const над = spot.top - ЗАЗОР - размер.высота;
+  const под = spot.bottom + ЗАЗОР;
+  let top: number;
+  if (над >= spot.область.top) top = над;
+  else if (под + размер.высота <= spot.область.bottom) top = под;
+  else top = Math.max(КРАЙ, Math.min(над, окно.высота - размер.высота - КРАЙ));
+  const left = Math.max(КРАЙ, Math.min(spot.left, окно.ширина - размер.ширина - КРАЙ));
+  return {left, top};
+}
+
 /** Пиктограммы панели: цепочка ссылки и два знакомых знака списка. */
 function Пиктограмма(props: {вид: Пиктограммы}) {
   const общее = {width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true};
@@ -99,27 +129,44 @@ export function SelectionToolbar(props: {
 }) {
   const [open, setOpen] = useState(false);
   const п = props.settings.подписи;
+  const view = props.view;
+  const state = view?.state ?? null;
 
-  if (!props.spot || !props.view) return null;
+  // Настоящий размер панели снимается с её DOM после каждой отрисовки; пока размер не снят или снят
+  // с другой ступени, панель невидима — иначе на один кадр она встала бы по чужому размеру.
+  const корень = useRef<HTMLDivElement>(null);
+  const [размер, setРазмер] = useState<Размер | null>(null);
+  useLayoutEffect(() => {
+    const el = корень.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setРазмер((прежний) =>
+      прежний !== null && прежний.раскрытая === open && прежний.ширина === r.width && прежний.высота === r.height
+        ? прежний
+        : {раскрытая: open, ширина: r.width, высота: r.height},
+    );
+  });
+
+  // Действующий вид списка у выделения подсвечивает свою кнопку: повторное нажатие снимает список.
+  // Разбор всего документа привязан к его состоянию: прокрутка и смена размера окна его не повторяют.
+  const окружение = useMemo(() => (open && view !== null ? окружениеСписка(view) : null), [open, view, state]);
+
+  if (!props.spot || view === null || state === null) return null;
 
   const buttons = props.settings.вставки.filter((item) => item.группа !== 'Блоки');
-  // Действующий вид списка у выделения подсвечивает свою кнопку: повторное нажатие снимает список.
-  const {from, to} = props.view.state.selection.main;
-  const окружение = open ? окружениеСписка(props.view) : null;
-  const активныйСписок = окружение === null ? null : видСписка(props.view.state.doc.toString(), {from, to}, окружение);
+  const {from, to} = state.selection.main;
+  const активныйСписок = окружение === null ? null : видСписка(state.doc.toString(), {from, to}, окружение);
 
-  // Панель встаёт над выделением; если сверху мало места — под ним, чтобы не уйти за край окна.
-  // Координаты оконные (position: fixed), слева не даём вылезти за правый край.
-  const ВЫСОТА = 40;
-  const сверхуТесно = props.spot.top < ВЫСОТА + 8;
-  const top = сверхуТесно ? props.spot.bottom + 6 : props.spot.top - ВЫСОТА;
-  // Раскрытый набор команд широкий: панель переносит кнопки и прижимается к правому краю окна.
-  const left = Math.max(8, Math.min(props.spot.left, window.innerWidth - (open ? 720 : 220)));
-  const style = {left, top};
+  // Координаты оконные (position: fixed). Панель не закрывает выделение и не выходит за края окна.
+  const измерена = размер !== null && размер.раскрытая === open;
+  const место = измерена ? положениеПанели(props.spot, размер, {ширина: window.innerWidth, высота: window.innerHeight}) : {left: 8, top: 0};
+  const style = {...место, visibility: измерена ? undefined : ('hidden' as const)};
+  // Нажатие по панели не забирает фокус у текста: выделение остаётся живым до самой команды.
+  const держатьФокус = (event: {preventDefault(): void}) => event.preventDefault();
 
   if (!open) {
     return (
-      <div className="float" style={style}>
+      <div className="float" style={style} ref={корень} onMouseDown={держатьФокус}>
         <button onClick={() => setOpen(true)}>{п.форматировать}</button>
         <button disabled title={п.скороКомментарий}>{п.комментировать}</button>
       </div>
@@ -127,7 +174,7 @@ export function SelectionToolbar(props: {
   }
 
   return (
-    <div className="float" style={style} role="toolbar" aria-label={п.форматировать}>
+    <div className="float" style={style} ref={корень} onMouseDown={держатьФокус} role="toolbar" aria-label={п.форматировать}>
       <button className="float-back" onClick={() => setOpen(false)} title={п.форматировать} aria-label={п.форматировать}>←</button>
       {поГруппам(buttons).map(([группа, кнопки]) => (
         <span className="float-group" key={группа} role="group" aria-label={группа}>
@@ -187,7 +234,7 @@ function decide(
   if (button.команда === 'заголовок') return act.heading(doc, at, button.уровень ?? 2);
   if (button.команда === 'обернуть') return act.wrap(doc, at, button.знак ?? '**');
   if (button.команда === 'ссылка') {
-    return act.link(doc, at, {адрес: props.settings.подписи.ссылкаЗаглушка, текст: props.settings.подписи.ссылкаТекст});
+    return act.link(doc, at, {текст: props.settings.подписи.ссылкаТекст});
   }
   if (button.команда === 'таблица') {
     return act.table(doc, at, button.столбцов ?? 3, button.строк ?? 2, props.settings.подписи.столбецШаблон);

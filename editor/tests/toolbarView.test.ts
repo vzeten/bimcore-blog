@@ -30,3 +30,48 @@ describe('вид кнопок панели форматирования', () => 
     for (const item of кнопки) expect(item.подпись.trim()).not.toBe('');
   });
 });
+
+// Положение панели считается по настоящим размерам панели, выделения и видимой области.
+import {положениеПанели} from '../src/ui/editor/SelectionToolbar';
+
+describe('положение панели относительно выделения', () => {
+  const окно = {ширина: 1440, высота: 900};
+  const область = {top: 120, bottom: 880};
+  const панель = {ширина: 300, высота: 36};
+  const пересекает = (место: {left: number; top: number}, spot: {left: number; right: number; top: number; bottom: number}) =>
+    место.left < spot.right && место.left + панель.ширина > spot.left && место.top < spot.bottom && место.top + панель.высота > spot.top;
+
+  it('над выделением, когда сверху есть место, и без пересечения с ним', () => {
+    const spot = {left: 400, right: 520, top: 300, bottom: 330, область};
+    const место = положениеПанели(spot, панель, окно);
+    expect(место.top + панель.высота).toBeLessThanOrEqual(spot.top);
+    expect(место.left).toBe(400);
+    expect(пересекает(место, spot)).toBe(false);
+  });
+
+  it('под выделением у верхнего края видимой области — по настоящей высоте панели, не по запасу', () => {
+    const spot = {left: 400, right: 520, top: 150, bottom: 180, область};
+    const место = положениеПанели(spot, panelHigh(80), окно);
+    expect(место.top).toBeGreaterThanOrEqual(spot.bottom);
+    // Панель пониже над тем же выделением помещается сверху.
+    expect(положениеПанели(spot, panelHigh(20), окно).top + 20).toBeLessThanOrEqual(spot.top);
+  });
+
+  it('у правого края окна панель сдвигается влево на свою ширину, а не на условные 720', () => {
+    const spot = {left: 1300, right: 1400, top: 300, bottom: 330, область};
+    const место = положениеПанели(spot, {ширина: 700, высота: 36}, окно);
+    expect(место.left + 700).toBeLessThanOrEqual(окно.ширина - 8);
+    expect(место.left).toBeGreaterThanOrEqual(8);
+  });
+
+  it('многострочное выделение во всю видимую область: панель у верха окна, а не за его пределами', () => {
+    const spot = {left: 200, right: 1200, top: 100, bottom: 900, область};
+    const место = положениеПанели(spot, панель, окно);
+    expect(место.top).toBeGreaterThanOrEqual(8);
+    expect(место.top + панель.высота).toBeLessThanOrEqual(окно.высота);
+  });
+
+  function panelHigh(высота: number) {
+    return {ширина: 300, высота};
+  }
+});

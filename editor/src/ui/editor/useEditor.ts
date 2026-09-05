@@ -11,12 +11,16 @@ import {правкаПанелиКартинки, type КартинкаВОкн�
 import type {БлокВОкне} from '../livePreview/blocks';
 import type {Article, ОписаниеБлока} from '../types';
 
+/** Рамка выделения в координатах окна и видимая часть области редактора: панель встаёт мимо обеих. */
 export interface Spot {
   left: number;
+  right: number;
   /** Верх выделения в координатах окна. */
   top: number;
   /** Низ выделения в координатах окна: сюда падает панель, если сверху места нет. */
   bottom: number;
+  /** Видимая часть прокручиваемой области редактора: за неё панель не выходит, пока есть куда встать. */
+  область: {top: number; bottom: number};
 }
 
 export function useEditor(options: {
@@ -121,7 +125,17 @@ export function useEditor(options: {
     view.current.dispatch({selection: {anchor: 0}}); // начальный курсор — через карту: первая строка бывает скрытой
     (window as unknown as {__editor?: EditorView}).__editor = view.current;
 
+    // Панель стоит в координатах окна: прокрутка и смена размера окна двигают выделение, а не
+    // документ, и без пересчёта панель осталась бы висеть над чужим текстом.
+    const пересчёт = () => {
+      if (view.current) свежие.current.onSelection(spotOf(view.current));
+    };
+    window.addEventListener('scroll', пересчёт, true);
+    window.addEventListener('resize', пересчёт);
+
     return () => {
+      window.removeEventListener('scroll', пересчёт, true);
+      window.removeEventListener('resize', пересчёт);
       view.current?.destroy();
       view.current = null;
     };
@@ -131,17 +145,32 @@ export function useEditor(options: {
 }
 
 /**
- * Где показать всплывающую панель команд: у начала выделения, в координатах окна.
+ * Где показать всплывающую панель команд: рамка выделения в координатах окна.
  * Панель позиционируется fixed, поэтому вычитать контейнер не нужно — раньше из-за этого
  * панель улетала вверх, ведь редактор начинается ниже своего родителя.
+ * Выделение в несколько строк занимает строки целиком, и его рамка — вся ширина текста.
  */
-function spotOf(view: EditorView): Spot | null {
+export function spotOf(view: EditorView): Spot | null {
   const range = view.state.selection.main;
   // Команды показываются только непустому выделению обычного текста: блок и служебные строки их не получают.
   if (range.empty || !обычныйТекст(view.state, range.from, range.to)) return null;
 
   const start = view.coordsAtPos(range.from);
-  if (!start) return null;
+  const end = view.coordsAtPos(range.to, -1);
+  if (!start || !end) return null;
 
-  return {left: start.left, top: start.top, bottom: start.bottom};
+  const прокрутка = view.scrollDOM.getBoundingClientRect();
+  const область = {top: Math.max(прокрутка.top, 0), bottom: Math.min(прокрутка.bottom, window.innerHeight)};
+  // Выделение целиком ушло за видимую область — панели не к чему стоять, она уходит с ним.
+  if (end.bottom <= область.top || start.top >= область.bottom) return null;
+
+  const текст = view.contentDOM.getBoundingClientRect();
+  const наОднойСтроке = end.top < start.bottom;
+  return {
+    left: наОднойСтроке ? start.left : текст.left,
+    right: наОднойСтроке ? end.right : текст.right,
+    top: start.top,
+    bottom: end.bottom,
+    область,
+  };
 }

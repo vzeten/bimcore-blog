@@ -62,14 +62,16 @@ export function wrap(text: string, at: Selection, sign: string): Edit {
 }
 
 /**
- * Оборачивает выделенное слово в ссылку и выделяет место под адрес.
- * Обе видимые человеку заглушки приходят из настроек: своих строк в ядре нет.
+ * Оборачивает выделенное слово в ссылку с пустым адресом: курсор встаёт между скобок, и адрес из
+ * буфера ложится туда одной вставкой — стирать заглушку не нужно. Без выделения текстом ссылки
+ * становится заглушка из настроек, выделенная целиком под набор; адрес и тогда пуст.
  */
-export function link(text: string, at: Selection, заглушки: {адрес: string; текст: string}): Edit {
-  const chosen = text.slice(at.from, at.to) || заглушки.текст;
-  const insert = `[${chosen}](${заглушки.адрес})`;
-  const start = chosen.length + 3;
-  return {from: at.from, to: at.to, insert, select: {from: start, to: start + заглушки.адрес.length}};
+export function link(text: string, at: Selection, заглушки: {текст: string}): Edit {
+  const chosen = text.slice(at.from, at.to);
+  const label = chosen || заглушки.текст;
+  const insert = `[${label}]()`;
+  if (chosen) return {from: at.from, to: at.to, insert, caret: label.length + 3};
+  return {from: at.from, to: at.to, insert, select: {from: 1, to: 1 + label.length}};
 }
 
 /**
