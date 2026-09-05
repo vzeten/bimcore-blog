@@ -107,6 +107,16 @@ describe('удаление ролика целым блоком', () => {
     expect(удалено.match(/<video/g)).toHaveLength(1);
   });
 
+  it('общий импорт с долларом в имени остаётся, когда удалён один из двух роликов', () => {
+    const импорт = "import a$b from './img-01.webm';";
+    const тег = ТЕГ.replace('{sofaVideo}', '{a$b}');
+    const два = `${импорт}\n\nАбзац до.\n\n${тег}\n\nМежду.\n\n${тег}\n\nПосле.`;
+    const {from, to} = границы(два);
+    const удалено = нажать('Delete', состояние(два, from, to)).doc.toString();
+    expect(удалено.startsWith(`${импорт}\n\n`)).toBe(true);
+    expect(удалено.match(/<video/g)).toHaveLength(1);
+  });
+
   it('единственная карточка товара забирает свой импорт, а импорт ролика рядом оставляет', () => {
     const текст = `${КАРТОЧКА}\n\n${СТАТЬЯ}`;
     const карточка = {from: текст.indexOf('<ProductCard'), to: текст.indexOf('/>') + 2};
