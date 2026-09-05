@@ -6,10 +6,11 @@
 import {Decoration, EditorView, WidgetType, type DecorationSet} from '@codemirror/view';
 import {StateField, type EditorState, type Range} from '@codemirror/state';
 import {разборТега} from '../../core/jsxBlocks';
-import {импортСтатьи, тегиТекста} from '../../core/jsxTag.mjs';
+import {тегиТекста} from '../../core/jsxTag.mjs';
 import {обложкаВидео} from '../../core/videoLink.mjs';
 import {внутриОграды} from './softBreak';
 import {видКарточки, картинкаКарточки, карточкаТовара, type КарточкаТовара} from './productCard';
+import {видеофайлыСтатьи, спрятатьИмпорт} from './videoFile';
 import {label} from '../labels';
 import type {ОписаниеБлока} from '../types';
 
@@ -190,37 +191,6 @@ class BlockWidget extends WidgetType {
   }
 }
 
-/**
- * Служебная строка `import productPreview from '…'` человеку не показывается: рядом с карточкой
- * она выглядит куском кода посреди статьи, а нужна она только сайту. В файле строка остаётся на
- * месте, а в окне занимает нулевую высоту — иначе на её месте оставалась бы пустая строка.
- *
- * Вместе со строкой прячется пустая строка под ней: в MDX она принадлежит самому импорту —
- * отделяет служебную строку от разметки, — и без неё над карточкой оставался бы лишний пустой
- * ряд. Пустых строк подряд правило берёт ровно одну: вторая уже собственный отступ человека,
- * и съесть её значило бы менять вид статьи там, где его задал он.
- *
- * Внутри огороженного кода строка остаётся примером, как и сам тег.
- */
-function спрятатьИмпорт(
-  state: EditorState,
-  текст: string,
-  код: boolean[],
-  переменная: string,
-  импорты: Map<number, number>,
-): void {
-  const импорт = импортСтатьи(текст, переменная) as {от: number} | null;
-  if (импорт === null) return;
-
-  const строка = state.doc.lineAt(импорт.от);
-  if (код[строка.number - 1]) return;
-
-  const следом = строка.number < state.doc.lines ? state.doc.line(строка.number + 1) : null;
-  const конец = следом !== null && следом.text.trim() === '' ? следом.to : строка.to;
-
-  импорты.set(строка.from, Math.min(конец + 1, state.doc.length));
-}
-
 function тотЖеВыбор(один: ВидБлока, другой: ВидБлока): boolean {
   return один.выбор.length === другой.выбор.length
     && один.выбор.every((слово, номер) => слово === другой.выбор[номер])
@@ -257,8 +227,8 @@ function построить(
   const код = внутриОграды(строки);
 
   const list: Range<Decoration>[] = [];
-  // Строки импорта показанных карточек: прячутся по одному разу, даже если карточек с одной
-  // картинкой в статье две.
+  // Строки импорта показанных карточек и роликов: прячутся по одному разу, даже если блоков
+  // с одним файлом в статье два. Правило скрытия — в `videoFile.ts`, одно на оба блока.
   const импорты = new Map<number, number>();
 
   for (const тег of тегиТекста(текст) as {имя: string; от: number; до: number}[]) {
@@ -286,6 +256,9 @@ function построить(
     const widget = new BlockWidget(кусок, вид, тег.от, тег.до, картинка, onБлок);
     list.push(Decoration.replace({widget}).range(от, до));
   }
+
+  // Ролики статьи: проигрыватель вместо трёх строк тега, импорт — тем же скрытием.
+  видеофайлыСтатьи(state, текст, код, article, импорты, list);
 
   for (const [от, до] of импорты) list.push(Decoration.replace({}).range(от, до));
 

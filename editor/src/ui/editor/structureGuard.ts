@@ -4,6 +4,7 @@ import {Decoration, EditorView, type DecorationSet} from '@codemirror/view';
 import {EditorState, Facet, RangeSet, RangeValue, StateField, type Extension, type Line, type Range, type Text} from '@codemirror/state';
 import {советы} from '../../core/tipBlock';
 import {ВЫРАЖЕНИЕ, импортСтатьи, тегиТекста} from '../../core/jsxTag.mjs';
+import {видеоТекста} from '../../core/videoFile.mjs';
 import type {Блок} from '../../core/jsxBlocks';
 import {КАРТИНКА_В_СТРОКЕ, внутриОграды, переносыАбзацев, пунктСписка, строкаТолькоКартинка} from '../livePreview/softBreak';
 import type {ОписаниеБлока} from '../types';
@@ -42,9 +43,19 @@ export function картаПоверхности(doc: Text, имена: Readonly
     if (тег.свойства.some((свойство) => свойство.выражение)) карточка = true;
   }
 
+  // Скрытые импорты: картинка карточки и файл каждого понятного ролика. Строка прячется вместе
+  // со своей пустой строкой ниже и ровно один раз, сколько бы блоков на неё ни ссылалось.
+  const импорты = new Set<number>();
   const импорт = импортСтатьи(текст, ВЫРАЖЕНИЕ.имя) as {от: number} | null;
-  if (импорт !== null && карточка && !код[номер(импорт.от)]) {
-    const i = номер(импорт.от);
+  if (импорт !== null && карточка) импорты.add(импорт.от);
+  for (const видео of видеоТекста(текст) as {от: number; до: number; импорт: {от: number}}[]) {
+    if (код[номер(видео.от)]) continue;
+    карта.push({вид: 'блок', from: видео.от, to: видео.до});
+    импорты.add(видео.импорт.от);
+  }
+  for (const от of импорты) {
+    const i = номер(от);
+    if (код[i]) continue;
     const пустаяНиже = i + 1 < строки.length && строки[i + 1].trim() === '';
     карта.push({вид: 'скрытый', from: строка(i).from, to: строка(пустаяНиже ? i + 1 : i).to});
   }

@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {Transaction} from '@codemirror/state';
 import type {EditorView} from '@codemirror/view';
-import {типыТелаСтатьи} from '../../core/imageType.mjs';
+import {типыВидео, типыТелаСтатьи} from '../../core/imageType.mjs';
 import {выбратьФайл, type ВставленнаяКартинка} from '../editor/images';
 import {ImagePanel} from '../editor/ImagePanel';
 import {BlockPanel} from '../editor/BlockPanel';
@@ -31,6 +31,8 @@ export function ArticlePane(props: {
    * вставки не было (окно сменилось или запрос не прошёл), и панель свойств не открывается.
    */
   вставитьКартинку: (file: File, view: EditorView) => Promise<ВставленнаяКартинка | null>;
+  /** Вставка ролика WebM той же дорогой: файл на сервер, импорт и тег в текст; название — для доступности. */
+  вставитьВидео: (file: File, view: EditorView, название: string) => Promise<unknown>;
   /** Загрузка файла для поля-картинки в свойствах. `null` в ответе — не вышло, причина показана. */
   загрузить: (file: File) => Promise<string | null>;
   /** Текст окна совпадает с файлом — условие входа в смену формата картинки. */
@@ -240,6 +242,7 @@ export function ArticlePane(props: {
     // Картинка и товар — не текстовые вставки: сначала человек выбирает файл (ровно тех родов,
     // что примет сервер) или товар, сервер кладёт картинку рядом со статьёй, потом правится текст.
     if (button.команда === 'картинка') return выбратьФайл(типыТелаСтатьи(), (file) => void вставить(file, editor));
+    if (button.команда === 'видеофайл') return выбратьФайл(типыВидео(), (file) => void props.вставитьВидео(file, editor, props.fields.find((поле) => поле.key === 'title')?.display ?? ''));
     if (button.команда === 'товар') return setТовар(true);
 
     const at = {from: editor.state.selection.main.from, to: editor.state.selection.main.to};

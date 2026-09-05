@@ -232,7 +232,7 @@ button { font: inherit; cursor: pointer; }
 /* Закрывающая строка примечания — только нижнее поле рамки: своей высоты и курсорного места у неё нет. */
 .paper .cm-line.md-tip-foot { line-height: 0; font-size: 0; padding-bottom: 0.4rem; } /* высота под скругление */
 /* Сам блок внутри такой строки живёт своей высотой строки: иначе его надписи ложатся друг на друга. */
-.paper .cm-line.md-block-line .md-card, .paper .cm-line.md-block-line .md-video, .paper .cm-line.md-block-line .md-block { line-height: 1.4; }
+.paper .cm-line.md-block-line .md-card, .paper .cm-line.md-block-line .md-video, .paper .cm-line.md-block-line .md-video-file, .paper .cm-line.md-block-line .md-block { line-height: 1.4; }
 .paper .cm-content ::selection { background: rgba(18, 87, 214, 0.22); }
 /* Разделитель — отступ, а не строка: выделение через него не рисует ему свой хвост. */
 .paper .cm-line.md-sep::selection, .paper .cm-line.md-sep *::selection { background: transparent; }

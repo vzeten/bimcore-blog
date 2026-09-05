@@ -5,6 +5,7 @@ import {syntaxTree} from '@codemirror/language';
 import {EditorSelection, type EditorState, type TransactionSpec} from '@codemirror/state';
 import {isolateHistory} from '@codemirror/commands';
 import {тегиТекста} from '../../core/jsxTag.mjs';
+import {видеоТекста, упоминаетсяВне} from '../../core/videoFile.mjs';
 import type {Блок} from '../../core/jsxBlocks';
 import {строкаАбзаца} from '../livePreview/softBreak';
 import {блокВ, контейнерКурсора, поверхность, целойСтрокой, type Диапазон, type Область} from './structureGuard';
@@ -120,11 +121,21 @@ export function удалениеБлока(state: EditorState, блок: Обл�
     : пустая(последняя.number + 1) ? [{from: первая.from, to: Math.min(doc.length, doc.line(последняя.number + 1).to + 1)}]
       : [{from: пустая(первая.number - 1) ? doc.line(первая.number - 1).from : первая.from, to: последняя.to}];
 
-  const карточки = (тегиТекста(doc.toString()) as (Блок & {от: number; до: number})[]).filter((тег) => тег.свойства.some((с) => с.выражение));
+  const текст = doc.toString();
+  const скрытые = state.field(поверхность).карта.filter((о) => о.вид === 'скрытый' && целойСтрокой(doc, о));
+  const карточки = (тегиТекста(текст) as (Блок & {от: number; до: number})[]).filter((тег) => тег.свойства.some((с) => с.выражение));
+  const ролики = видеоТекста(текст) as {от: number; до: number; переменная: string; импорт: {от: number}}[];
   if (карточки.length === 1 && карточки[0].от === блок.from && карточки[0].до === блок.to) {
-    for (const о of state.field(поверхность).карта) {
-      if (о.вид === 'скрытый' && целойСтрокой(doc, о)) правки.push({from: о.from, to: Math.min(doc.length, о.to + 1)});
-    }
+    // Единственная карточка забирает свой импорт; импорты роликов остаются при своих блоках.
+    const своиРоликов = new Set(ролики.map((р) => скрытые.find((о) => о.from <= р.импорт.от && р.импорт.от < о.to)));
+    for (const о of скрытые) if (!своиРоликов.has(о)) правки.push({from: о.from, to: Math.min(doc.length, о.to + 1)});
+  }
+  // Ролик забирает свой импорт только тогда, когда переменная больше нигде не упомянута:
+  // на один файл могут ссылаться два тега, и второй без импорта уронил бы сборку сайта.
+  const ролик = ролики.find((р) => р.от === блок.from && р.до === блок.to);
+  const импорт = ролик === undefined ? undefined : скрытые.find((о) => о.from <= ролик.импорт.от && ролик.импорт.от < о.to);
+  if (ролик !== undefined && импорт !== undefined && !упоминаетсяВне(текст, ролик.переменная, [блок, импорт])) {
+    правки.push({from: импорт.from, to: Math.min(doc.length, импорт.to + 1)});
   }
   return правки;
 }

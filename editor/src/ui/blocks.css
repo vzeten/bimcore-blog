@@ -71,6 +71,13 @@
   font: inherit;
 }
 
+/* Видеофайл статьи показан настоящим проигрывателем без автозапуска: человек проверяет ролик
+   на месте. Подпись под ним — ручка блока: нажатие выделяет тег целиком для удаления. */
+.md-video-file { display: block; width: 100%; margin: 6px 0; }
+.md-video-file video { display: block; width: 100%; max-height: 70vh; border: 1px solid var(--line); border-radius: 10px; background: #000; }
+.md-video-file-caption { display: flex; align-items: baseline; gap: 8px; padding: 4px 2px; cursor: pointer; user-select: none; }
+.md-video-file-caption .md-video-title { color: var(--ink-quiet); }
+
 /* Видео в статье показано так же, как его увидит читатель: полоса во всю ширину текста
    и строгие 16:9 — те же пропорции, что у компонента сайта. */
 .md-video {
