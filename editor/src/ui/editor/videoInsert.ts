@@ -71,6 +71,40 @@ export function правкиВидео(текст: string, at: Selection, src: s
   return {правки: [{from: место, to: место, insert: импорт}, {from: блок.from, to: блок.to, insert: блок.insert}], курсор};
 }
 
+/** Что лежит рядом со статьёй после приёма файла: адрес для импорта. */
+export interface УложенныйФайл {
+  src: string;
+}
+
+/**
+ * Приём файла ролика — одна дорога на вставку и на замену: заслон окна, карантин, укладка рядом
+ * со статьёй под свободным именем. `null` — окно сменилось, пока файл ехал, и уложенное забрано
+ * обратно; это не ошибка. Файл всегда ложится новым именем: прежний ролик никогда не переписывается
+ * поверх — отмена обязана вернуть его работающим.
+ */
+export async function принятьВидеофайл(
+  file: File,
+  article: string,
+  view: EditorView,
+  правило: ПравилоВидео,
+  актуально: () => boolean,
+): Promise<УложенныйФайл | null> {
+  const отказ = await отказВидеофайла(file, правило);
+  if (отказ !== null) throw new Error(отказ);
+
+  const готово = await requestJson<{жетон?: string}>('/api/asset/prepare', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({article, base64: await toBase64(file), род: 'видео'}),
+  });
+  if (!готово.жетон) throw new Error(label('ошибкаВидео'));
+
+  // Окно сменилось, пока файл ехал: он остался только в карантине, и уборка унесёт его сама.
+  if (!актуально() || !view.dom.isConnected) return null;
+
+  return уложитьПодготовленную(article, готово.жетон, () => актуально() && view.dom.isConnected);
+}
+
 /**
  * Вставка ролика в статью. `null` — вставки не было, и это не ошибка: окно сменилось, пока файл
  * ехал, и уже уложенный файл забран обратно. Место считается ПОСЛЕ ответа сервера, по живому
@@ -86,20 +120,7 @@ export async function вставитьВидеофайл(
   название: string,
   актуально: () => boolean = () => true,
 ): Promise<{src: string} | null> {
-  const отказ = await отказВидеофайла(file, правило);
-  if (отказ !== null) throw new Error(отказ);
-
-  const готово = await requestJson<{жетон?: string}>('/api/asset/prepare', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({article, base64: await toBase64(file), род: 'видео'}),
-  });
-  if (!готово.жетон) throw new Error(label('ошибкаВидео'));
-
-  // Окно сменилось, пока файл ехал: он остался только в карантине, и уборка унесёт его сама.
-  if (!актуально() || !view.dom.isConnected) return null;
-
-  const уложено = await уложитьПодготовленную(article, готово.жетон, () => актуально() && view.dom.isConnected);
+  const уложено = await принятьВидеофайл(file, article, view, правило, актуально);
   if (уложено === null) return null;
 
   const было = view.state.doc.toString();
@@ -124,19 +145,27 @@ interface Признак<T> {
   current: T;
 }
 
-/**
- * Вставка ролика для окна — по тем же признакам, что и вставка картинки: другая статья,
- * повторное открытие той же или просмотр старой версии означают «окно сменилось», и в чужой
- * или запертый текст ничего не дописывается. Причина отказа показывается человеку словами.
- */
-export function makeVideoInsert(deps: {
+/** Признаки окна: какая статья открыта, который это её заход и не просмотр ли старой версии. */
+export interface ПризнакиОкна {
   runSafe: (action: () => Promise<void>, contextKey?: string) => Promise<boolean>;
   статья: Признак<string | null>;
   заход: Признак<number>;
   просмотр: Признак<boolean>;
   правило: ПравилоВидео | null;
-}): (file: File, view: EditorView, название: string) => Promise<{src: string} | null> {
-  return async (file, view, название) => {
+}
+
+/**
+ * Действие с роликом для окна — по тем же признакам, что и вставка картинки: другая статья,
+ * повторное открытие той же или просмотр старой версии означают «окно сменилось», и в чужой
+ * или запертый текст ничего не дописывается. Причина отказа показывается человеку словами.
+ * Одно правило на вставку и на замену: второго сторожа окна для того же самого не заводится.
+ */
+export function действиеВидео<T>(
+  deps: ПризнакиОкна,
+  ключОшибки: string,
+  действие: (куда: string, правило: ПравилоВидео, актуально: () => boolean) => Promise<T | null>,
+): () => Promise<T | null> {
+  return async () => {
     const куда = deps.статья.current;
     // Статьи на экране нет или настройки не пришли — класть файл некуда.
     if (!куда || deps.правило === null) return null;
@@ -146,12 +175,18 @@ export function makeVideoInsert(deps: {
     const тоЖеОкно = (): boolean => !deps.просмотр.current
       && deps.статья.current === куда && deps.заход.current === заход;
 
-    let итог: {src: string} | null = null;
+    let итог: T | null = null;
     await deps.runSafe(async () => {
-      итог = await вставитьВидеофайл(file, куда, view, правило, название, тоЖеОкно);
-    }, 'ошибкаВидео');
+      итог = await действие(куда, правило, тоЖеОкно);
+    }, ключОшибки);
 
     // Тип берётся явно: значение присвоено внутри замыкания, и вывод типов этого не видит.
-    return итог as {src: string} | null;
+    return итог as T | null;
   };
+}
+
+/** Вставка ролика для окна: файл на сервер, импорт и тег в текст; название — для доступности. */
+export function makeVideoInsert(deps: ПризнакиОкна): (file: File, view: EditorView, название: string) => Promise<{src: string} | null> {
+  return (file, view, название) => действиеВидео(deps, 'ошибкаВидео',
+    (куда, правило, актуально) => вставитьВидеофайл(file, куда, view, правило, название, актуально))();
 }

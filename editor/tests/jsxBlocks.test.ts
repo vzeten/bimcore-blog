@@ -237,3 +237,18 @@ describe('настоящие настройки предлагают загот�
     });
   }
 });
+
+describe('панель говорит с тегом ролика теми же словами, что с компонентом', () => {
+  const РОЛИК = [
+    "<video controls muted loop playsInline style={{width: '100%', height: 'auto'}} aria-label=\"Диван\">",
+    '  <source src={sofaVideo} type="video/webm" />',
+    '</video>',
+  ].join('\n');
+
+  it('значение и смена свойства у тега ролика идут через его собственное правило', () => {
+    expect(значениеСвойства(РОЛИК, 'aria-label')).toBe('Диван');
+    expect(значениеСвойства(РОЛИК, 'muted')).toBe('true');
+    expect(сменаСвойства(РОЛИК, 'loop', '')).toBe(РОЛИК.replace(' loop', ''));
+    expect(сменаСвойства(РОЛИК, 'aria-label', 'a"b')).toBeNull();
+  });
+});

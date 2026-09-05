@@ -11,6 +11,8 @@ import {уУзла} from '../editor/widgetPlace';
 import {SelectionToolbar, decideEdit} from '../editor/SelectionToolbar';
 import {useEditor, type Spot} from '../editor/useEditor';
 import {блокВ} from '../editor/structureGuard';
+import {имяФайлаРолика, type ЗаменённыйРолик, type УзелРолика} from '../editor/videoReplace';
+import {ИМЯ_БЛОКА_ВИДЕО} from '../../core/videoFile.mjs';
 import type {КартинкаВОкне} from '../livePreview/inline';
 import type {БлокВОкне} from '../livePreview/blocks';
 import {названиеСоветаСтатьи} from '../livePreview/tip';
@@ -33,6 +35,8 @@ export function ArticlePane(props: {
   вставитьКартинку: (file: File, view: EditorView) => Promise<ВставленнаяКартинка | null>;
   /** Вставка ролика WebM той же дорогой: файл на сервер, импорт и тег в текст; название — для доступности. */
   вставитьВидео: (file: File, view: EditorView, название: string) => Promise<unknown>;
+  /** Замена файла у выбранного ролика той же дорогой; `null` — замены не было, причина показана. */
+  заменитьВидео: (file: File, view: EditorView, узел: УзелРолика, передПравкой: () => void) => Promise<ЗаменённыйРолик | null>;
   /** Загрузка файла для поля-картинки в свойствах. `null` в ответе — не вышло, причина показана. */
   загрузить: (file: File) => Promise<string | null>;
   /** Текст окна совпадает с файлом — условие входа в смену формата картинки. */
@@ -200,6 +204,10 @@ export function ArticlePane(props: {
           onСвояПравка={() => {
             свояПравкаБлока.current = true;
           }}
+          файл={блок.имя === ИМЯ_БЛОКА_ВИДЕО ? {
+            имя: имяФайлаРолика(view.current.state, блок) ?? '',
+            заменить: (file, узел, передПравкой) => props.заменитьВидео(file, view.current as EditorView, узел, передПравкой),
+          } : undefined}
           onClose={() => setБлок(null)}
         />
       )}

@@ -170,6 +170,33 @@ export const поверхность = StateField.define<{карта: Облас�
   ],
 });
 
+const АКТИВНАЯ_СТРОКА = Decoration.line({class: 'cm-activeLine'});
+
+/**
+ * Подсветка строки курсора — как штатная `highlightActiveLine`, но строку, целиком занятую блоком,
+ * она не трогает. Смена класса строки пересобирает её DOM вместе с виджетом, и выделенный ручкой
+ * ролик гас бы и терял время (наблюдение владельца 2026-09-05); подсвечивать под виджетом и нечего.
+ */
+function активныеСтроки(state: EditorState): DecorationSet {
+  const {карта} = state.field(поверхность);
+  const декорации: Range<Decoration>[] = [];
+  let последняя = -1;
+  for (const r of state.selection.ranges) {
+    const строка = state.doc.lineAt(r.head);
+    if (строка.from <= последняя) continue;
+    последняя = строка.from;
+    if (карта.some((о) => о.вид === 'блок' && о.from <= строка.from && строка.to <= о.to)) continue;
+    декорации.push(АКТИВНАЯ_СТРОКА.range(строка.from));
+  }
+  return Decoration.set(декорации);
+}
+
+export const активнаяСтрока = StateField.define<DecorationSet>({
+  create: активныеСтроки,
+  update: (значение, tr) => (tr.docChanged || tr.selection !== undefined ? активныеСтроки(tr.state) : значение),
+  provide: (поле) => EditorView.decorations.from(поле),
+});
+
 export function блокВ(state: EditorState, pos: number): Область | null {
   return state.field(поверхность).карта.find((о) => о.вид === 'блок' && о.from <= pos && pos <= о.to) ?? null;
 }
@@ -193,6 +220,7 @@ export function поверхностьРедактирования(блоки: R
   return [
     имена.of(известные),
     поверхность,
+    активнаяСтрока,
     EditorState.transactionFilter.of((tr) => {
       const своя = !tr.isUserEvent('undo') && !tr.isUserEvent('redo');
       if (tr.docChanged && своя) {

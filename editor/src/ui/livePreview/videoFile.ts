@@ -5,11 +5,12 @@
 // правило «спрятать строку импорта»: им пользуются и карточка товара, и ролик, а второго
 // правила про одно и то же не заводится (SPEC 4.3).
 import {Decoration, EditorView, WidgetType} from '@codemirror/view';
-import {EditorSelection, type EditorState, type Range} from '@codemirror/state';
+import type {EditorState, Range} from '@codemirror/state';
 import {импортСтатьи} from '../../core/jsxTag.mjs';
-import {видеоТекста} from '../../core/videoFile.mjs';
+import {ИМЯ_БЛОКА_ВИДЕО, видеоТекста, свойствоВидео} from '../../core/videoFile.mjs';
 import {адресКартинки} from './assetSrc';
 import {label} from '../labels';
+import type {БлокВОкне} from './blocks';
 
 /** Что ядро знает о ролике статьи: границы тега, переменная, адрес файла и границы импорта. */
 export interface Видеофайл {
@@ -20,25 +21,38 @@ export interface Видеофайл {
   до: number;
 }
 
+/** Свойство тега, которое панель зовёт названием: оно же читается вслух читателю с экрана. */
+const НАЗВАНИЕ = 'aria-label';
+
 class VideoFileWidget extends WidgetType {
   constructor(
     private readonly src: string,
     private readonly имяФайла: string,
-    private readonly from: number,
-    private readonly to: number,
+    private readonly название: string | null,
+    private readonly onOpen: ((блок: БлокВОкне) => void) | undefined,
   ) {
     super();
   }
 
-  // Позиция входит в сравнение наравне с адресом: тот же ролик в другом месте статьи — другой
-  // блок, и переиспользованный DOM выделял бы по нажатию чужие границы.
+  // Позиция в сравнение НЕ входит: набор буквы выше сдвигает тег, и тот же ролик на новом месте —
+  // тот же проигрыватель. Пересоздание DOM на каждую букву гасило бы игру и сбрасывало время
+  // (наблюдение владельца 2026-09-05). Где тег стоит сейчас, ручка узнаёт у редактора в момент
+  // нажатия (`posAtDOM`), а не из запомненных при отрисовке чисел.
   eq(другой: VideoFileWidget): boolean {
-    return другой.src === this.src && другой.from === this.from && другой.to === this.to;
+    return другой.src === this.src && другой.имяФайла === this.имяФайла && другой.название === this.название;
+  }
+
+  // Сменилось только название или имя файла — проигрыватель остаётся, меняется подпись.
+  updateDOM(dom: HTMLElement): boolean {
+    if (dom.dataset.src !== this.src) return false;
+    this.подписать(dom);
+    return true;
   }
 
   toDOM(): HTMLElement {
     const блок = document.createElement('div');
     блок.className = 'md-video-file';
+    блок.dataset.src = this.src;
 
     // Ролик играет по кнопке человека: ни `autoplay`, ни `loop` окну не нужны — оно показывает
     // место и даёт проверить файл, а не крутит видео само. Кнопки браузера остаются живыми:
@@ -50,27 +64,65 @@ class VideoFileWidget extends WidgetType {
     video.src = this.src;
     блок.append(video);
 
-    // Подпись — ручка блока: нажатие выделяет тег целиком, дальше работают обычные жесты
-    // редактора — `Backspace`/`Delete` убирают блок, отмена возвращает его.
+    // Подпись — ручка блока: нажатие выделяет тег целиком и открывает его свойства, дальше
+    // работают обычные жесты редактора — `Backspace`/`Delete` убирают блок, отмена возвращает его.
     const низ = document.createElement('span');
     низ.className = 'md-video-file-caption';
-    const подпись = document.createElement('span');
-    подпись.className = 'md-block-name';
-    подпись.textContent = label('блокВидеофайл');
-    const файл = document.createElement('span');
-    файл.className = 'md-video-title';
-    файл.textContent = this.имяФайла;
-    низ.append(подпись, файл);
     низ.addEventListener('mousedown', (event) => {
       event.preventDefault();
       const view = EditorView.findFromDOM(блок);
-      view?.dispatch({selection: EditorSelection.range(this.from, this.to), scrollIntoView: true});
-      view?.focus();
+      if (view === null) return;
+      const ролик = роликУзла(view, блок);
+      if (ролик === null) return;
+      const место = блок.getBoundingClientRect();
+      this.onOpen?.({
+        имя: ИМЯ_БЛОКА_ВИДЕО, текст: view.state.sliceDoc(ролик.от, ролик.до), from: ролик.от, to: ролик.до,
+        left: место.left, top: место.bottom,
+      });
     });
     блок.append(низ);
+    this.подписать(блок);
 
     return блок;
   }
+
+  /** Подпись блока: его имя, название ролика словами человека и имя файла тише. */
+  private подписать(блок: HTMLElement): void {
+    const низ = блок.querySelector('.md-video-file-caption');
+    if (низ === null) return;
+    низ.replaceChildren();
+
+    const подпись = document.createElement('span');
+    подпись.className = 'md-block-name';
+    подпись.textContent = label('блокВидеофайл');
+    низ.append(подпись);
+
+    if (this.название !== null && this.название !== '') {
+      const название = document.createElement('span');
+      название.className = 'md-video-title';
+      название.textContent = this.название;
+      низ.append(название);
+    }
+
+    const файл = document.createElement('span');
+    файл.className = this.название ? 'md-video-file-name' : 'md-video-title';
+    файл.textContent = this.имяФайла;
+    низ.append(файл);
+  }
+}
+
+/**
+ * Ролик, которому принадлежит этот DOM, — по живому положению в документе, а не по числам,
+ * запомненным при отрисовке: те устаревают с первой же буквой выше по тексту.
+ */
+function роликУзла(view: EditorView, блок: HTMLElement): Видеофайл | null {
+  const pos = view.posAtDOM(блок);
+  const ролики = видеоТекста(view.state.doc.toString()) as Видеофайл[];
+  const внутри = ролики.find((в) => в.от <= pos && pos <= в.до);
+  if (внутри !== undefined) return внутри;
+  // Положение пришлось на край строки блока: берётся ближайший ролик.
+  return ролики.reduce<Видеофайл | null>((лучший, в) =>
+    (лучший === null || Math.abs(в.от - pos) < Math.abs(лучший.от - pos) ? в : лучший), null);
 }
 
 /**
@@ -116,6 +168,7 @@ export function видеофайлыСтатьи(
   article: string,
   импорты: Map<number, number>,
   list: Range<Decoration>[],
+  onБлок?: (блок: БлокВОкне) => void,
 ): void {
   for (const видео of видеоТекста(текст) as Видеофайл[]) {
     if (код[state.doc.lineAt(видео.от).number - 1]) continue;
@@ -124,7 +177,8 @@ export function видеофайлыСтатьи(
     // одним правилом на все записи (`adapters/assets.mjs`).
     const src = article === '' ? '' : адресКартинки(article, видео.адрес);
     const имяФайла = видео.адрес.split('/').pop() ?? видео.адрес;
-    const widget = new VideoFileWidget(src, имяФайла, видео.от, видео.до);
+    const название = свойствоВидео(текст.slice(видео.от, видео.до), НАЗВАНИЕ) as string | null;
+    const widget = new VideoFileWidget(src, имяФайла, название, onБлок);
     list.push(Decoration.replace({widget}).range(видео.от, видео.до));
     спрятатьИмпорт(state, текст, код, видео.переменная, импорты);
   }

@@ -1,6 +1,6 @@
 import {useEffect, useRef} from 'react';
 import {EditorSelection, EditorState, Transaction} from '@codemirror/state';
-import {EditorView, keymap, highlightActiveLine} from '@codemirror/view';
+import {EditorView, keymap} from '@codemirror/view';
 import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
 import {запретПравки, чтениеСтатьи} from './reading';
 import {клавишиСписка} from './listKeys';
@@ -75,7 +75,7 @@ export function useEditor(options: {
         extensions: [
           history(),
           // Выделение рисует сам браузер: оно идёт по знакам, а не полосой на всю строку.
-          highlightActiveLine(),
+          // Подсветка строки курсора — своя, из поверхности: строку блока она не трогает.
           // Уровень пункта списка стоит выше общей раскладки: в ней `Tab` не занят вовсе и
           // уводил фокус из текста, а продолжение и конец списка по `Enter` уже даёт markdown.
           клавишиСписка(),

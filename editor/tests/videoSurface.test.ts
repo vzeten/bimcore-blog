@@ -7,7 +7,7 @@ import type {EditorView} from '@codemirror/view';
 import {ensureSyntaxTree} from '@codemirror/language';
 import {markdown} from '@codemirror/lang-markdown';
 import {history, undo} from '@codemirror/commands';
-import {блокВ, картаПоверхности, обычныйТекст, поверхностьРедактирования} from '../src/ui/editor/structureGuard';
+import {активнаяСтрока, блокВ, картаПоверхности, обычныйТекст, поверхностьРедактирования} from '../src/ui/editor/structureGuard';
 import {клавишиПоверхности} from '../src/ui/editor/surfaceKeys';
 import type {ОписаниеБлока} from '../src/ui/types';
 
@@ -141,5 +141,20 @@ describe('удаление ролика целым блоком', () => {
     const state = состояние(СТАТЬЯ, конец);
     expect(нажать('Enter', state).doc.toString()).toBe(СТАТЬЯ.replace('Абзац до.\n\n', 'Абзац до.\n\n\n\n'));
     expect(state.update({changes: {from: конец, insert: '!'}, userEvent: 'input.type'}).state.doc.toString()).toBe(СТАТЬЯ.replace('Абзац до.', 'Абзац до.!'));
+  });
+});
+
+describe('подсветка строки курсора', () => {
+  const активные = (state: EditorState): number[] => {
+    const итог: number[] = [];
+    state.field(активнаяСтрока).between(0, state.doc.length, (from) => { итог.push(from); });
+    return итог;
+  };
+
+  it('строка обычного текста подсвечивается, строка блока целиком — нет: смена класса пересобирала бы виджет', () => {
+    const {from, to} = границы(СТАТЬЯ);
+    expect(активные(состояние(СТАТЬЯ, 0).update({selection: {anchor: ИМПОРТ.length + 2}}).state)).toEqual([ИМПОРТ.length + 2]);
+    expect(активные(состояние(СТАТЬЯ, 0).update({selection: {anchor: from, head: to}}).state)).toEqual([]);
+    expect(активные(состояние(СТАТЬЯ, to + 2).update({selection: {anchor: to + 2}}).state)).toEqual([to + 2]);
   });
 });

@@ -13,6 +13,7 @@ import {useCreate} from './useCreate';
 import type {Field} from './headFields';
 import {makeCoverUpload, makeImageInsert} from './editor/images';
 import {makeVideoInsert, правилоВидео} from './editor/videoInsert';
+import {makeVideoReplace} from './editor/videoReplace';
 import {правилоАнимации} from './editor/imageGuard';
 import {requestJson} from './api';
 import {useDelete} from './useDelete';
@@ -82,6 +83,7 @@ export function App() {
   const признакиОкна = {runSafe, статья: статьяСейчас, заход: открытие, просмотр: просмотрРеф};
   const положитьКартинку = makeImageInsert({...признакиОкна, правилоГифа: правилоАнимации(settings)});
   const положитьВидео = makeVideoInsert({...признакиОкна, правило: правилоВидео(settings)});
+  const сменитьВидео = makeVideoReplace({...признакиОкна, правило: правилоВидео(settings)});
 
   // Пара «тело + шапка» в окне: обычная правка и подстановка целой пары при возврате к версии.
   const {подстановка, вЧерновик, правка, правитьПоля, отметить, положитьПару} = useWindowText({
@@ -265,6 +267,7 @@ export function App() {
               // уничтоженный редактор. Признаки берутся из ref: пока файл ехал, всё могло смениться.
               вставитьКартинку={положитьКартинку}
               вставитьВидео={положитьВидео}
+              заменитьВидео={сменитьВидео}
               загрузить={загрузитьОбложку}
               // Смена формата картинки требует, чтобы файл был ровно тем, что видит человек.
               сохранено={!dirty && состояниеСохранения === 'сохранено' && !конфликтСохранения}
