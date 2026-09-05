@@ -24,11 +24,18 @@ export interface Видеофайл {
 /** Свойство тега, которое панель зовёт названием: оно же читается вслух читателю с экрана. */
 const НАЗВАНИЕ = 'aria-label';
 
+/** Свойства ролика, которые проигрыватель в окне повторяет за тегом: название, без звука, повтор. */
+interface СвойстваРолика {
+  название: string | null;
+  безЗвука: boolean;
+  повтор: boolean;
+}
+
 class VideoFileWidget extends WidgetType {
   constructor(
     private readonly src: string,
     private readonly имяФайла: string,
-    private readonly название: string | null,
+    private readonly свойства: СвойстваРолика,
     private readonly onOpen: ((блок: БлокВОкне) => void) | undefined,
   ) {
     super();
@@ -39,12 +46,17 @@ class VideoFileWidget extends WidgetType {
   // (наблюдение владельца 2026-09-05). Где тег стоит сейчас, ручка узнаёт у редактора в момент
   // нажатия (`posAtDOM`), а не из запомненных при отрисовке чисел.
   eq(другой: VideoFileWidget): boolean {
-    return другой.src === this.src && другой.имяФайла === this.имяФайла && другой.название === this.название;
+    return другой.src === this.src && другой.имяФайла === this.имяФайла
+      && другой.свойства.название === this.свойства.название
+      && другой.свойства.безЗвука === this.свойства.безЗвука && другой.свойства.повтор === this.свойства.повтор;
   }
 
-  // Сменилось только название или имя файла — проигрыватель остаётся, меняется подпись.
+  // Сменились только свойства или имя файла — проигрыватель остаётся тем же узлом со своим
+  // временем и игрой, ему лишь переставляются свойства, а подписи — слова.
   updateDOM(dom: HTMLElement): boolean {
     if (dom.dataset.src !== this.src) return false;
+    const video = dom.querySelector('video');
+    if (video !== null) this.настроить(video);
     this.подписать(dom);
     return true;
   }
@@ -54,14 +66,17 @@ class VideoFileWidget extends WidgetType {
     блок.className = 'md-video-file';
     блок.dataset.src = this.src;
 
-    // Ролик играет по кнопке человека: ни `autoplay`, ни `loop` окну не нужны — оно показывает
-    // место и даёт проверить файл, а не крутит видео само. Кнопки браузера остаются живыми:
-    // нажатия внутри проигрывателя редактор не перехватывает (`ignoreEvent`).
+    // Ролик играет по кнопке человека: `autoplay` окну не нужен — оно показывает место и даёт
+    // проверить файл, а не крутит видео само. «Без звука», «повтор» и название проигрыватель
+    // повторяет за тегом: человек настраивает ролик в панели и видит итог сразу (слово владельца
+    // 2026-09-05). Кнопки браузера остаются живыми: нажатия внутри проигрывателя редактор не
+    // перехватывает (`ignoreEvent`).
     const video = document.createElement('video');
     video.controls = true;
     video.preload = 'metadata';
     video.playsInline = true;
     video.src = this.src;
+    this.настроить(video);
     блок.append(video);
 
     // Подпись — ручка блока: нажатие выделяет тег целиком и открывает его свойства, дальше
@@ -86,6 +101,20 @@ class VideoFileWidget extends WidgetType {
     return блок;
   }
 
+  /** Свойства проигрывателя из тега: без звука, повтор, доступное название (и подсказка) на самом `video`. */
+  private настроить(video: HTMLVideoElement): void {
+    video.muted = this.свойства.безЗвука;
+    video.loop = this.свойства.повтор;
+    const название = this.свойства.название ?? '';
+    if (название === '') {
+      video.removeAttribute('aria-label');
+      video.removeAttribute('title');
+    } else {
+      video.setAttribute('aria-label', название);
+      video.title = название;
+    }
+  }
+
   /** Подпись блока: его имя, название ролика словами человека и имя файла тише. */
   private подписать(блок: HTMLElement): void {
     const низ = блок.querySelector('.md-video-file-caption');
@@ -97,15 +126,16 @@ class VideoFileWidget extends WidgetType {
     подпись.textContent = label('блокВидеофайл');
     низ.append(подпись);
 
-    if (this.название !== null && this.название !== '') {
-      const название = document.createElement('span');
-      название.className = 'md-video-title';
-      название.textContent = this.название;
-      низ.append(название);
+    const название = this.свойства.название;
+    if (название !== null && название !== '') {
+      const слова = document.createElement('span');
+      слова.className = 'md-video-title';
+      слова.textContent = название;
+      низ.append(слова);
     }
 
     const файл = document.createElement('span');
-    файл.className = this.название ? 'md-video-file-name' : 'md-video-title';
+    файл.className = название ? 'md-video-file-name' : 'md-video-title';
     файл.textContent = this.имяФайла;
     низ.append(файл);
   }
@@ -118,11 +148,8 @@ class VideoFileWidget extends WidgetType {
 function роликУзла(view: EditorView, блок: HTMLElement): Видеофайл | null {
   const pos = view.posAtDOM(блок);
   const ролики = видеоТекста(view.state.doc.toString()) as Видеофайл[];
-  const внутри = ролики.find((в) => в.от <= pos && pos <= в.до);
-  if (внутри !== undefined) return внутри;
-  // Положение пришлось на край строки блока: берётся ближайший ролик.
-  return ролики.reduce<Видеофайл | null>((лучший, в) =>
-    (лучший === null || Math.abs(в.от - pos) < Math.abs(лучший.от - pos) ? в : лучший), null);
+  // Только точное попадание в границы тега: догадка «ближайший ролик» могла бы выбрать чужой блок.
+  return ролики.find((в) => в.от <= pos && pos <= в.до) ?? null;
 }
 
 /**
@@ -177,8 +204,13 @@ export function видеофайлыСтатьи(
     // одним правилом на все записи (`adapters/assets.mjs`).
     const src = article === '' ? '' : адресКартинки(article, видео.адрес);
     const имяФайла = видео.адрес.split('/').pop() ?? видео.адрес;
-    const название = свойствоВидео(текст.slice(видео.от, видео.до), НАЗВАНИЕ) as string | null;
-    const widget = new VideoFileWidget(src, имяФайла, название, onБлок);
+    const тег = текст.slice(видео.от, видео.до);
+    const свойства: СвойстваРолика = {
+      название: свойствоВидео(тег, НАЗВАНИЕ) as string | null,
+      безЗвука: свойствоВидео(тег, 'muted') === 'true',
+      повтор: свойствоВидео(тег, 'loop') === 'true',
+    };
+    const widget = new VideoFileWidget(src, имяФайла, свойства, onБлок);
     list.push(Decoration.replace({widget}).range(видео.от, видео.до));
     спрятатьИмпорт(state, текст, код, видео.переменная, импорты);
   }
