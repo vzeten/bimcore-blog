@@ -1,0 +1,92 @@
+---
+title: "Cómo evitar errores en tu proyecto con familias gratuitas de Revit"
+slug: free-revit-families-risks
+description: "¿Qué debes comprobar en una familia gratuita de Revit? Revisa sus dimensiones, parámetros, representación, materiales y otras propiedades necesarias para tu proyecto de interiorismo."
+date: '2026-09-04'
+authors:
+  - ivan
+tags:
+  - revit
+  - families
+  - interior-design
+draft: false
+keywords:
+  - familias gratuitas de Revit
+  - familias paramétricas de Revit
+  - errores en proyectos de Revit
+---
+
+import sofaVideo from './img/sofa-parameters.webm';
+
+Cuando descargues una familia de Revit, comprueba si puedes ajustarla a tu proyecto. No basta con que tenga buen aspecto. La familia puede no ser paramétrica y carecer de los parámetros que necesitas.
+
+Creo familias de Revit para diseñadores de interiores. Para mí, es importante que el modelo tenga buen aspecto y se pueda ajustar con flexibilidad. Por eso las familias de nuestra biblioteca [BIMCORE](https://bimcore.one/) son paramétricas.
+
+![Proyecto de interiorismo en Revit con mobiliario BIMCORE](./img/sofa-interior.jpg)
+
+*Proyecto de interiorismo en Revit con mobiliario BIMCORE.*
+
+<truncate />
+
+## Qué riesgos corres al dejar una familia no paramétrica en el proyecto
+
+Supongamos que descargas un sofá parecido al que has elegido para el proyecto. La forma encaja, pero la anchura y la profundidad son distintas. Si lo dejas tal como está, puedes valorar mal la distribución y la ergonomía. En el plano parece que hay espacio suficiente, pero al colocar el sofá real, el paso puede resultar demasiado estrecho.
+
+Con un armario o una cocina, las consecuencias pueden ser más evidentes. Un mueble más profundo ocupa parte del espacio de paso. Al abrirse, una puerta puede chocar con una mesa o con una luminaria de techo. Es mejor detectar estos problemas en el modelo antes de encargar el mobiliario.
+
+En una familia no paramétrica, no puedes cambiar las dimensiones que necesitas simplemente desde las propiedades. Tendrás que editar la familia o buscar otro modelo. Si ya te has encontrado con este problema, puedes utilizar nuestra [familia de cocina](/es/guides/families/kitchen-for-revit/) para Revit. Ofrece la máxima flexibilidad y garantiza que evitarás estos errores.
+
+## Para qué sirven las familias paramétricas
+
+En una familia paramétrica, las dimensiones y otras propiedades están vinculadas al modelo. Por ejemplo, cambias la anchura de un sofá y su geometría se actualiza según las reglas definidas al crear la familia. Los ajustes disponibles dependen de cada familia y de su desarrollador.
+
+![Cambio de dimensiones de un sofá paramétrico BIMCORE en un interior de Revit](./img/sofa-resize-interior.gif)
+
+*Las dimensiones del sofá cambian mediante los parámetros de la familia directamente en el proyecto de interiorismo.*
+
+Para un proyecto de interiorismo, veo varias ventajas.
+
+**Ajustes rápidos.** Puedes cambiar las dimensiones, los materiales y la configuración mediante parámetros. Esto resulta especialmente útil cuando el cliente pide sustituir un elemento después de aprobar la distribución.
+
+**Comprobación de la ergonomía real.** Al introducir las dimensiones necesarias, puedes ver cuánto espacio ocupa el mobiliario. Puedes medir los pasos y comprobar si cumplen la normativa aplicable.
+
+**Es más fácil detectar interferencias.** En planta y en 3D, puedes comprobar si un mueble se superpone con otro. Si la familia permite abrir las puertas, también puedes comprobar su posición. Esto ayuda a detectar un error y corregirlo rápidamente antes de que se convierta en un problema.
+
+**El modelo se acerca más al interior que se va a realizar.** Cuando las dimensiones, la forma y los materiales corresponden a la solución elegida, al cliente le resulta más fácil entender el resultado que propones. Para ello, importan los materiales y la forma original de la familia. En nuestro [conjunto completo de familias para interiores](https://bimcore.one/products/all-revit-families-set-21), hacemos todo lo posible para que no tengas que seguir buscando familias.
+
+## Una familia gratuita también puede servir
+
+Que un archivo sea gratuito no dice nada por sí solo sobre su calidad. Entre las familias gratuitas hay modelos paramétricos. También hay modelos de fabricantes concretos con dimensiones fijas que pueden servir si utilizas un producto de ese fabricante en el proyecto.
+
+Yo me fijaría en si la familia responde a lo que necesitas. Si sus dimensiones coinciden con las del producto elegido y no necesitas cambiar nada, un modelo fijo puede ser adecuado. Sin embargo, si necesitas sustituirlo por otro, enseguida puedes encontrarte con dificultades para encontrarlo. Por eso ofrecemos familias universales que no están vinculadas a fabricantes concretos.
+
+En nuestro artículo sobre [familias gratuitas de Revit](/es/blog/free-revit-family-websites/) encontrarás fuentes para descargarlas.
+
+## ¿Cómo comprobar cualquier familia después de descargarla?
+
+Antes de utilizarla en tu proyecto de trabajo, carga la familia en un archivo de prueba independiente.
+
+1. Compara la anchura, la profundidad y la altura de la familia con las dimensiones que necesitas en tu proyecto. Comprueba qué incluye cada medida.
+2. Modifica los parámetros que necesitarás en el proyecto. Comprueba si la geometría cambia al modificar las dimensiones.
+3. Observa cómo se comporta la familia en planta, alzado y 3D. Comprueba si su representación es adecuada para tus planos.
+4. Comprueba cómo se comporta la familia con los niveles de detalle Bajo, Medio y Alto. A veces no cambia nada, pero es habitual que tenga una representación simplificada con el nivel de detalle Bajo.
+
+:::tip[Consejo]
+Al introducir dimensiones, ten en cuenta si el fabricante puede fabricar el elemento con esas medidas. Introducir un número cualquiera en el modelo es más fácil que fabricar un objeto de ese tamaño.
+:::
+
+## Nuestro enfoque en BIMCORE
+
+Nuestro conjunto completo de familias para interiores reúne familias paramétricas para trabajar en los interiores de casas y apartamentos. Puedes ajustarlas con flexibilidad al preparar los planos y presentar el proyecto al cliente.
+
+Si trabajas habitualmente en proyectos de interiorismo con Revit, esta biblioteca te permite utilizar las mismas familias en distintos proyectos sin dedicar tiempo a buscar otras nuevas. Puedes probar una categoría de la biblioteca, por ejemplo nuestras [familias de cocina](/es/guides/families/kitchen-for-revit/), y valorar si encajan con tu forma de trabajar.
+
+<video controls muted loop playsInline style={{width: '100%', height: 'auto'}} aria-label="Ajuste de un sofá paramétrico del conjunto BIMCORE">
+  <source src={sofaVideo} type="video/webm" />
+</video>
+
+*Proyecto de Revit con familias del conjunto [Sofás](/es/guides/families/sofas-for-revit/).*
+
+Echa un vistazo a nuestro conjunto para interiores y elige familias que te ayuden a mostrar tu proyecto con mayor precisión y a introducir cambios con más facilidad.
+
+<CTA type="guide" />
