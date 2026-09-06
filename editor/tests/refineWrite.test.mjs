@@ -93,7 +93,10 @@ describe('запись набора изменений', () => {
     expect(ошибка).toBeInstanceOf(АварияОтката);
     expect(ошибка.невосстановлено).toEqual([RU, path.posix.join(path.posix.dirname(RU), 'b.png')]);
     expect(ошибка.message).toContain(RU);
-    expect(ошибка.message).not.toContain('возвращены');
+    expect(ошибка.message).toBe(ошибки['доработкаАвария'].replace('{файлы}', ошибка.невосстановлено.join(', ')));
+    // Авария велит остановиться и позвать сопровождающего; ложного источника (копии медиа в истории) не обещает.
+    expect(ошибка.message).toContain('сопровождающему');
+    expect(ошибка.message).not.toMatch(/возвращены|истори|восстановите/i);
     // Что откатить удалось — откатано (новый файл убран), что нет — так и лежит новым.
     expect(fs.existsSync(path.join(с.dir, 'a.png'))).toBe(false);
     expect(fs.readFileSync(с.файлСтатьи, 'utf8')).toBe(ИЗМЕНЕНИЯ.текст);
