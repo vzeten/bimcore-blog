@@ -104,12 +104,15 @@ describe('короткий контракт процесса', () => {
     expect(change).toContain('ready_for_review');
   });
 
-  it('не завершает ход, пока жив точный процесс Claude', () => {
+  it('завершает ожидание конечным статусом операции, а не закрытием сессии Claude', () => {
     const rules = [read('AGENTS.md'), read('editor/TASKS.md')].join('\n');
 
     expect(rules).toMatch(/operation, branch[\s\S]{0,120}PID/i);
     expect(rules).toMatch(/перезаписывает[\s\S]{0,180}running/i);
-    expect(rules).toMatch(/не отправляет[\s\S]{0,40}финальный ответ[\s\S]{0,40}пока PID жив/i);
+    expect(rules).toMatch(/не отправляет[\s\S]{0,40}финальный ответ[\s\S]{0,60}остаётся `running`/i);
+    expect(rules).toMatch(/`ready_for_review`[\s\S]{0,80}`owner_required`[\s\S]{0,80}`failed`[\s\S]{0,40}завершают ожидание/i);
+    expect(rules).toMatch(/Живой PID после конечного статуса не означает/i);
+    expect(rules).not.toMatch(/пока PID жив/i);
     expect(rules).toMatch(/после ответа Codex[\s\S]{0,100}снова ждёт/i);
     expect(rules).toMatch(/исчезновение PID[\s\S]{0,100}running[\s\S]{0,80}сбоем/i);
   });
