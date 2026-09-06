@@ -17,6 +17,7 @@ import {запомнитьПоказ} from '../src/adapters/pushMemory.mjs';
 import {прочитатьОчередь, записатьОчередь} from '../src/adapters/commitQueue.mjs';
 import {разобратьОчередь} from '../src/adapters/publishRepair.mjs';
 import {взятьЗамок, отпустить} from '../src/adapters/publishLock.mjs';
+import {владелецСсылок} from '../src/adapters/gitCommit.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
 import {EN, RU, СТАТЬЯ, запрос, наСервере, настройкиСервера, сборщик, среда, убратьПесочницы} from './publishHarness.mjs';
 
@@ -35,7 +36,7 @@ const записать = (место) => запрос(publishRoute, место, 
 const показать = (место) => запрос(pushRoute, место, '/api/publish/plan', {path: RU});
 const отправить = (место, sha) => запрос(pushRoute, место, '/api/publish/push', {path: RU, sha, подтверждено: true});
 const очередь = (место) => прочитатьОчередь(место.editorDir, настройкиСервера()).записи;
-const ссылка = (место, sha) => место.git.raw(['rev-parse', '--quiet', '--verify', `refs/editor/publish/${sha}`]).catch(() => '');
+const ссылка = (место, sha) => место.git.raw(['rev-parse', '--quiet', '--verify', `refs/editor/publish/${владелецСсылок(место.editorDir)}/${sha}`]).catch(() => '');
 
 /** Записанный, но не уехавший коммит статьи. Возвращает его полный SHA. */
 async function ожидающийКоммит(место) {
@@ -125,7 +126,7 @@ describe('ожидающий коммит переживает уборку git'
     const место = await среда();
     const sha = await ожидающийКоммит(место);
     // Так выглядит чужая рука: ссылку сняли, уборка стёрла недостижимый коммит.
-    await место.git.raw(['update-ref', '-d', `refs/editor/publish/${sha}`]);
+    await место.git.raw(['update-ref', '-d', `refs/editor/publish/${владелецСсылок(место.editorDir)}/${sha}`]);
     await место.git.raw(['gc', '--prune=now', '--quiet']);
     expect((await место.git.raw(['rev-parse', '--quiet', '--verify', `${sha}^{commit}`]).catch(() => '')).trim()).toBe('');
 
