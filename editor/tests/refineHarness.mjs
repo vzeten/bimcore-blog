@@ -42,6 +42,8 @@ export function jpg(ширина, высота, хвост = 0) {
   ]);
 }
 
+/** Начало WebP: контейнер RIFF с меткой WEBP — так его узнаёт медиаподготовка. */
+export const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.from([16, 0, 0, 0]), Buffer.from('WEBPVP8 '), Buffer.alloc(8)]);
 export const GIF = ГИФ;
 
 /** Рабочая копия без диска: текст и файлы папки статьи. */
@@ -77,15 +79,22 @@ export function репозиторий(файлы) {
   return {repo, editorDir};
 }
 
-/** Настройки с подставной командой медиаподготовки: скрипт на node копирует байты в `.png`. */
-export function настройкиСоСкриптом(repo) {
+/**
+ * Настройки с подставной командой медиаподготовки: скрипт на node копирует заданные байты в `.png`.
+ * Переменные `ПОДМЕНА_ТРОНУТЬ` и `ПОДМЕНА_ТРОНУТЬ_БАЙТЫ` (base64) велят скрипту по ходу работы
+ * изменить названный файл — так проверяется гонка «правка во время image-prep».
+ */
+export function настройкиСоСкриптом(repo, результат) {
   const скрипт = path.join(repo, 'editor', 'подмена-image-prep.mjs');
   fs.writeFileSync(скрипт, [
     "import fs from 'node:fs'; import path from 'node:path';",
     'const dir = process.argv[2];',
+    "if (process.env.ПОДМЕНА_ТРОНУТЬ) fs.writeFileSync(process.env.ПОДМЕНА_ТРОНУТЬ, Buffer.from(process.env.ПОДМЕНА_ТРОНУТЬ_БАЙТЫ, 'base64'));",
     "for (const f of fs.readdirSync(dir)) { if (f.endsWith('.png')) continue; const out = path.join(dir, f.replace(/\\.[^.]+$/, '.png'));",
     "fs.writeFileSync(out, Buffer.from(process.env.ПОДМЕНА_PNG, 'base64')); fs.rmSync(path.join(dir, f)); }",
   ].join('\n'));
+  process.env.ПОДМЕНА_PNG = результат.toString('base64');
+  delete process.env.ПОДМЕНА_ТРОНУТЬ;
   return {...НАСТРОЙКИ, доработка: {...НАСТРОЙКИ['доработка'], команда: {python: process.execPath, скрипт: 'editor/подмена-image-prep.mjs', пределСекунд: 30}}};
 }
 

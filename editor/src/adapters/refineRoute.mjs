@@ -1,11 +1,12 @@
 // Ручки «Доработать»: план (только чтение) и применение выбранных обработчиков одной операцией.
 //
 // Снимок открытой версии читается одним заходом — текст, байты всех файлов, о которых она говорит,
-// и перечень имён её папки — и сворачивается в отпечаток. План отдаёт отпечаток окну, применение
-// требует его назад: изменение снаружи между показом и нажатием даёт 409 без единой записи.
-// Соседние локали не читаются и не пишутся: снимок — это одна папка одной версии.
-//
-// Правил доработки здесь нет: реестр и оркестрация в `core/refine.mjs`, запись — `refineWrite.mjs`.
+// перечень имён её папки — и сворачивается в отпечаток. План отдаёт его окну; применение требует
+// его назад, а после долгих вычислений (скрипт картинок) сверяет снимок ещё раз перед первой
+// записью: изменение снаружи в любой момент даёт 409 без единой постоянной записи.
+// Граница атомарности — файловая операция `refineWrite`; версия до операции создаётся до неё,
+// а черновик и состояние обслуживаются после и сбоем операции не считаются.
+// Правил доработки здесь нет: реестр и оркестрация в `core/refine.mjs`.
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -20,14 +21,12 @@ import {gitAuthor} from './gitFile.mjs';
 import {ApiError, badFields} from './httpBody.mjs';
 import {инструментыМедиа} from './imagePrep.mjs';
 import {loadState, saveState} from './library.mjs';
-import {записатьНабор} from './refineWrite.mjs';
+import {АварияОтката, записатьНабор} from './refineWrite.mjs';
 
 /** Статьи, над которыми применение уже идёт: второе параллельное — гонка на тех же файлах. */
 const занятые = new Set();
 
-export async function refineRoute({
-  req, res, url, repo, editorDir, settings, git, тело, insideRepo, send, фиксировать, последняяПравка,
-}) {
+export async function refineRoute({req, res, url, repo, editorDir, settings, git, тело, insideRepo, send, фиксировать, последняяПравка}) {
   const план = url.pathname === '/api/refine/plan';
   if ((!план && url.pathname !== '/api/refine/apply') || req.method !== 'POST') return false;
 
@@ -52,7 +51,6 @@ export async function refineRoute({
     send(res, 200, {path: rel, отпечаток: снимок.отпечаток, обработчики: отчёт});
     return true;
   }
-
   if (typeof payload['отпечаток'] !== 'string' || payload['отпечаток'] === '') {
     send(res, 400, {error: ошибки['плохойЗапрос']});
     return true;
@@ -63,9 +61,7 @@ export async function refineRoute({
   }
   занятые.add(rel);
   try {
-    await применить({
-      repo, editorDir, settings, git, rel, dir, выбранные, ждали: payload['отпечаток'], send, res, фиксировать, последняяПравка,
-    });
+    await применить({repo, editorDir, settings, git, rel, dir, выбранные, ждали: payload['отпечаток'], send, res, фиксировать, последняяПравка});
   } finally {
     занятые.delete(rel);
   }
@@ -81,32 +77,39 @@ function набор(значение) {
 
 async function применить({repo, editorDir, settings, git, rel, dir, выбранные, ждали, send, res, фиксировать, последняяПравка}) {
   const ошибки = settings['ошибкиСервера'];
-  // Чужая правка файла ложится в историю до записи: она же и есть версия «до операции».
   await фиксировать(rel, true);
-
   const снимок = собратьСнимок(repo, rel, dir);
-  if (снимок.отпечаток !== ждали) {
-    send(res, 409, {error: ошибки['доработкаСнимокУстарел']});
-    return;
-  }
+  if (снимок.отпечаток !== ждали) return send(res, 409, {error: ошибки['доработкаСнимокУстарел']});
 
   const {копия, отчёт, изменения} = await выполнить(снимок, выбранные, settings, инструментыМедиа({repo, settings}));
   if (изменения.текст === null && изменения.файлы.length === 0) {
-    send(res, 200, {path: rel, применено: false, обработчики: отчёт, отпечаток: fingerprint(снимок.текст), предупреждения: []});
-    return;
+    return send(res, 200, {path: rel, применено: false, обработчики: отчёт, отпечаток: fingerprint(снимок.текст), предупреждения: []});
   }
+  // Повторная сверка после скрипта и до первой постоянной записи: статья, имена и байты медиа.
+  if (собратьСнимок(repo, rel, dir).отпечаток !== снимок.отпечаток) return send(res, 409, {error: ошибки['доработкаСнимокУстарел']});
 
+  const автор = (await gitAuthor(git)) ?? settings['реестр']['неизвестныйАвтор'];
+  const сейчас = new Date().toISOString();
+  // Версия до операции обязана лечь в историю раньше первой записи: не легла — записи не будет.
+  try {
+    saveSnapshot(editorDir, settings, rel, снимок.текст, автор, сейчас);
+  } catch (ошибка) {
+    console.error(ошибка);
+    throw new ApiError(500, ошибки['доработкаНеЗаписалась']);
+  }
   try {
     записатьНабор({repo, dir, файлСтатьи: path.join(repo, rel), изменения, снимок, ошибки});
   } catch (ошибка) {
+    if (ошибка instanceof АварияОтката) return send(res, 500, {error: ошибка.message, авария: true, невосстановлено: ошибка.невосстановлено});
     if (ошибка instanceof ApiError) throw ошибка;
     console.error(ошибка);
     throw new ApiError(500, ошибки['доработкаНеЗаписалась']);
   }
 
-  // Служебное после записи — как у сохранения: версия в истории, черновик, готовность.
+  // Файлы записаны. Обслуживание после — версия итога, черновик, готовность: сбой любого шага
+  // называется предупреждением, а не отменой уже применённых файлов.
   const предупреждения = [];
-  const безСрыва = (шаг, код) => {
+  const обслужить = (шаг, код) => {
     try {
       шаг();
     } catch (ошибка) {
@@ -114,20 +117,14 @@ async function применить({repo, editorDir, settings, git, rel, dir, в�
       предупреждения.push(код);
     }
   };
-  const автор = (await gitAuthor(git)) ?? settings['реестр']['неизвестныйАвтор'];
-  const сейчас = new Date().toISOString();
-  безСрыва(() => saveSnapshot(editorDir, settings, rel, копия.текст, автор, сейчас), 'история');
-  безСрыва(() => dropDraft(editorDir, settings, rel), 'черновик');
-  безСрыва(() => saveState(repo, rel, settings, afterEdit(loadState(repo, rel, settings), settings)), 'состояние');
+  обслужить(() => saveSnapshot(editorDir, settings, rel, копия.текст, автор, new Date().toISOString()), 'история');
+  обслужить(() => dropDraft(editorDir, settings, rel), 'черновик');
+  обслужить(() => saveState(repo, rel, settings, afterEdit(loadState(repo, rel, settings), settings)), 'состояние');
   последняяПравка.set(rel, сейчас);
-
-  send(res, 200, {path: rel, применено: true, обработчики: отчёт, отпечаток: fingerprint(копия.текст), предупреждения});
+  return send(res, 200, {path: rel, применено: true, обработчики: отчёт, отпечаток: fingerprint(копия.текст), предупреждения});
 }
 
-/**
- * Снимок одной версии: текст, байты используемых файлов её папки и перечень имён папки
- * (с одним уровнем подпапок — там живут картинки `img/`). Файлы вне папки не читаются.
- */
+/** Снимок одной версии: текст, байты используемых файлов папки, перечень имён (с одним уровнем подпапок). */
 export function собратьСнимок(repo, rel, dir) {
   const байтыТекста = fs.readFileSync(path.join(repo, rel));
   const текст = байтыТекста.toString('utf8');
@@ -137,7 +134,6 @@ export function собратьСнимок(repo, rel, dir) {
     if (место?.есть) файлы.set(имя, fs.readFileSync(место.target));
   }
   const имена = new Set(перечень(dir));
-
   return {путь: rel, текст, байтыТекста, файлы, имена, отпечаток: отпечаток(rel, байтыТекста, файлы, имена)};
 }
 

@@ -1,9 +1,7 @@
 // «Доработать» глазами окна: план, выбор флажков, применение и что делать после.
-//
-// Окно ничего не решает про содержание: список обработчиков, их умолчания и предпросмотр приходят
-// с сервера, флажок только меняет набор и просит план заново — обработчики зависимы по порядку, и
-// предпросмотр переименования честен лишь при известном наборе. До «Применить» ни один запрос
-// ничего не пишет. Смена статьи или новая правка закрывают окно: план описывал другой диск.
+// Содержание решает сервер: список обработчиков, умолчания и предпросмотр приходят из плана; флажок
+// меняет набор сразу и просит план заново (обработчики зависимы по порядку). До «Применить» ни один
+// запрос не пишет. Смена статьи или правка закрывают окно: план описывал другой диск.
 
 import {useEffect, useRef, useState} from 'react';
 import {requestJson} from './api';
@@ -18,29 +16,24 @@ export interface Доработка {
   выбранные: string[];
   итог: ИтогДоработки | null;
   ошибка: string | null;
-  предупреждение: string | null;
+  /** Окно не сумело перечитать статью после записи. */
+  неПеречитана: boolean;
   открыть: () => void;
   закрыть: () => void;
   переключить: (код: string) => void;
   применить: () => Promise<void>;
 }
 
-const post = (тело: unknown): RequestInit => ({
-  method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(тело),
-});
+const post = (тело: unknown): RequestInit => ({method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(тело)});
 
 /** `перечитать` — открыть статью заново с диска; `проверить` — запустить прежние проверки «Доработать». */
-export function useRefine(
-  path: string | null,
-  dirty: boolean,
-  после: {перечитать: (path: string) => Promise<boolean>; проверить: () => void},
-): Доработка {
+export function useRefine(path: string | null, dirty: boolean, после: {перечитать: (path: string) => Promise<boolean>; проверить: () => void}): Доработка {
   const [окно, setОкно] = useState<ОкноДоработки>('закрыто');
   const [план, setПлан] = useState<ПланДоработки | null>(null);
   const [выбранные, setВыбранные] = useState<string[] | null>(null);
   const [итог, setИтог] = useState<ИтогДоработки | null>(null);
   const [ошибка, setОшибка] = useState<string | null>(null);
-  const [предупреждение, setПредупреждение] = useState<string | null>(null);
+  const [неПеречитана, setНеПеречитана] = useState(false);
   // Номер актуальности: ответ с другим номером принадлежит другой статье и не показывается.
   const номер = useRef(0);
 
@@ -51,22 +44,21 @@ export function useRefine(
     setВыбранные(null);
     setИтог(null);
     setОшибка(null);
-    setПредупреждение(null);
+    setНеПеречитана(false);
   };
-
   useEffect(сбросить, [path, dirty]);
 
-  async function планировать(выбранные: string[] | null): Promise<void> {
+  async function планировать(набор: string[] | null): Promise<void> {
     if (path === null) return;
     const мой = номер.current;
     setОкно('план');
     setОшибка(null);
     try {
-      const ответ = await requestJson<ПланДоработки>('/api/refine/plan', post({path, выбранные}));
+      const ответ = await requestJson<ПланДоработки>('/api/refine/plan', post({path, выбранные: набор}));
       if (мой !== номер.current) return;
       setПлан(ответ);
       // Первый план приносит умолчания реестра; дальше набор ведёт окно.
-      if (выбранные === null) setВыбранные(ответ.обработчики.filter((з) => з.выбран).map((з) => з.код));
+      if (набор === null) setВыбранные(ответ.обработчики.filter((з) => з.выбран).map((з) => з.код));
     } catch (error) {
       if (мой === номер.current) setОшибка((error as Error).message);
     } finally {
@@ -75,20 +67,19 @@ export function useRefine(
   }
 
   async function применить(): Promise<void> {
-    if (path === null || план === null) return;
+    if (path === null || план === null || выбранные === null) return;
     const мой = номер.current;
-    const набор = выбранные ?? план.обработчики.filter((з) => з.выбран).map((з) => з.код);
     setОкно('применяю');
     setОшибка(null);
     try {
-      const ответ = await requestJson<ИтогДоработки>('/api/refine/apply', post({path, выбранные: набор, отпечаток: план.отпечаток}));
+      const ответ = await requestJson<ИтогДоработки>('/api/refine/apply', post({path, выбранные, отпечаток: план.отпечаток}));
       if (мой !== номер.current) return;
       setИтог(ответ);
       if (ответ.применено) {
         // Файл на диске новый — окно перечитывает его, затем идут прежние проверки по новому тексту.
         const перечитана = await после.перечитать(path);
         if (мой !== номер.current) return;
-        if (!перечитана) setПредупреждение('неПеречитана');
+        setНеПеречитана(!перечитана);
         после.проверить();
       }
       setОкно('готово');
@@ -100,7 +91,7 @@ export function useRefine(
   }
 
   return {
-    окно, план, итог, ошибка, предупреждение,
+    окно, план, итог, ошибка, неПеречитана,
     выбранные: выбранные ?? [],
     открыть: () => void планировать(null),
     закрыть: сбросить,

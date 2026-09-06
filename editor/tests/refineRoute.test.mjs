@@ -1,5 +1,5 @@
 // Имя каждого теста повторяет формулировку правила.
-// Ручки «Доработать»: план только читает, применение сверяет снимок, пишет одну локаль и её файлы.
+// Ручки «Доработать»: план только читает, применение сверяет снимок дважды, пишет одну локаль и её файлы.
 import {describe, expect, it} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,6 +17,8 @@ const ФАЙЛЫ = () => ({
   [`${path.posix.dirname(EN)}/img/photo.jpg`]: jpg(1200, 800),
 });
 const РЕЗУЛЬТАТ = png(1000, 667, 8);
+const история = (среда) => path.join(среда.editorDir, НАСТРОЙКИ['хранение']['папкаСнимков']);
+const снимков = (среда) => (fs.existsSync(история(среда)) ? fs.readdirSync(история(среда)).flatMap((п) => fs.readdirSync(path.join(история(среда), п))) : []);
 
 describe('план доработки', () => {
   it('план отдаёт перечень обработчиков из реестра с умолчаниями и не пишет ни байта', async () => {
@@ -48,24 +50,24 @@ describe('план доработки', () => {
 });
 
 describe('применение доработки', () => {
-  it('выбранные действия применяются одной операцией: текст, файлы, история, состояние, черновик', async () => {
+  it('выбранные действия применяются одной операцией: версия до и после в истории, состояние, порог черновика', async () => {
     const среда = репозиторий(ФАЙЛЫ());
-    process.env.ПОДМЕНА_PNG = РЕЗУЛЬТАТ.toString('base64');
-    const settings = настройкиСоСкриптом(среда.repo);
+    const settings = настройкиСоСкриптом(среда.repo, РЕЗУЛЬТАТ);
     const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU}, settings);
     const {code, data, последняяПравка} = await запрос(среда, '/api/refine/apply', {path: RU, выбранные: ПО_УМОЛЧАНИЮ, отпечаток: план.отпечаток}, settings);
 
     expect(code).toBe(200);
-    expect(data.применено).toBe(true);
-    expect(data.предупреждения).toEqual([]);
-    const текст = fs.readFileSync(path.join(среда.repo, RU), 'utf8');
-    expect(текст).toBe('---\ntitle: "Розетки"\nslug: /lessons/proba\nsidebar_label: "Розетки"\ndescription: "Описание"\n---\n\n![Розетки: изображение 1](./img/photo.png)\n');
+    expect(data).toMatchObject({применено: true, предупреждения: []});
+    expect(fs.readFileSync(path.join(среда.repo, RU), 'utf8'))
+      .toBe('---\ntitle: "Розетки"\nslug: /lessons/proba\nsidebar_label: "Розетки"\ndescription: "Описание"\n---\n\n![Розетки: изображение 1](./img/photo.png)\n');
     expect(fs.readFileSync(path.join(среда.repo, ПАПКА, 'img', 'photo.png'))).toEqual(РЕЗУЛЬТАТ);
     expect(fs.existsSync(path.join(среда.repo, ПАПКА, 'img', 'photo.jpg'))).toBe(false);
     expect(data.обработчики.find((з) => з.код === 'медиа').изменено[0].стало).toBe('img/photo.png: 1000×667, PNG, 0 КБ');
-    // Версия после операции в истории, готовность вернулась в черновик, порог свежести черновика выставлен.
-    const история = path.join(среда.editorDir, НАСТРОЙКИ['хранение']['папкаСнимков']);
-    expect(fs.readdirSync(история)).toHaveLength(1);
+    // Две версии: текст до операции и текст после; готовность в черновике; порог свежести выставлен.
+    const версии = снимков(среда).sort();
+    expect(версии).toHaveLength(2);
+    const папкаИстории = path.join(история(среда), fs.readdirSync(история(среда))[0]);
+    expect(fs.readFileSync(path.join(папкаИстории, версии[0]), 'utf8')).toBe(ТЕКСТ);
     expect(fs.readFileSync(path.join(среда.repo, ПАПКА, '_state.json'), 'utf8')).toContain('"готовность": "Черновик"');
     expect(последняяПравка.has(RU)).toBe(true);
     expect(fs.readdirSync(path.join(среда.repo, 'editor', '.tmp'))).toEqual([]);
@@ -73,8 +75,7 @@ describe('применение доработки', () => {
 
   it('меняется только открытая локаль и её файлы: соседняя версия побайтово прежняя', async () => {
     const среда = репозиторий(ФАЙЛЫ());
-    process.env.ПОДМЕНА_PNG = РЕЗУЛЬТАТ.toString('base64');
-    const settings = настройкиСоСкриптом(среда.repo);
+    const settings = настройкиСоСкриптом(среда.repo, РЕЗУЛЬТАТ);
     const en = path.join(среда.repo, path.dirname(EN));
     const до = JSON.stringify([fs.readFileSync(path.join(среда.repo, EN), 'utf8'), fs.readFileSync(path.join(en, 'img', 'photo.jpg')).toString('base64')]);
     const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU}, settings);
@@ -84,7 +85,7 @@ describe('применение доработки', () => {
     expect(fs.readdirSync(path.join(en, 'img'))).toEqual(['photo.jpg']);
   });
 
-  it('устаревший снимок (статья или файл изменились после плана) — 409 и ни одного байта на диске', async () => {
+  it('устаревший снимок (файл изменился после плана) — 409 и ни одного байта на диске', async () => {
     const среда = репозиторий(ФАЙЛЫ());
     const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU});
     fs.writeFileSync(path.join(среда.repo, ПАПКА, 'img', 'photo.jpg'), jpg(5, 5));
@@ -97,22 +98,60 @@ describe('применение доработки', () => {
     expect((await запрос(среда, '/api/refine/apply', {path: RU, выбранные: []})).code).toBe(400);
   });
 
+  for (const [что, файл, байты] of [
+    ['статья', RU, Buffer.from(`${ТЕКСТ}\nПравка во время скрипта.\n`)],
+    ['исходное медиа', `${ПАПКА}/img/photo.jpg`, jpg(7, 7)],
+  ]) {
+    it(`правка (${что}) во время image-prep — отказ без постоянных записей, включая историю`, async () => {
+      const среда = репозиторий(ФАЙЛЫ());
+      const settings = настройкиСоСкриптом(среда.repo, РЕЗУЛЬТАТ);
+      const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU}, settings);
+      process.env.ПОДМЕНА_ТРОНУТЬ = path.join(среда.repo, файл);
+      process.env.ПОДМЕНА_ТРОНУТЬ_БАЙТЫ = байты.toString('base64');
+      try {
+        const {code, data} = await запрос(среда, '/api/refine/apply', {path: RU, выбранные: ПО_УМОЛЧАНИЮ, отпечаток: план.отпечаток}, settings);
+        expect(code).toBe(409);
+        expect(data.error).toBe(НАСТРОЙКИ['ошибкиСервера']['доработкаСнимокУстарел']);
+      } finally {
+        delete process.env.ПОДМЕНА_ТРОНУТЬ;
+      }
+      // На диске ровно внешняя правка и ничего от операции: ни png, ни истории, ни состояния.
+      expect(fs.readFileSync(path.join(среда.repo, файл))).toEqual(байты);
+      expect(fs.readdirSync(path.join(среда.repo, ПАПКА, 'img'))).toEqual(['photo.jpg']);
+      expect(снимков(среда)).toEqual([]);
+      expect(fs.readFileSync(path.join(среда.repo, ПАПКА, '_state.json'), 'utf8')).toContain('Готова к публикации');
+      expect(fs.readdirSync(path.join(среда.repo, 'editor', '.tmp'))).toEqual([]);
+    });
+  }
+
   it('сбой медиаподготовки (нет Python или скрипт упал) — 500 словами из настроек и диск прежний', async () => {
     const среда = репозиторий(ФАЙЛЫ());
     const settings = {...НАСТРОЙКИ, доработка: {...НАСТРОЙКИ['доработка'], команда: {python: 'нет-такой-программы-доработки', скрипт: 'scripts/image-prep.py', пределСекунд: 5}}};
     const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU}, settings);
     const до = снимокДиска(среда.repo);
-
     await expect(запрос(среда, '/api/refine/apply', {path: RU, выбранные: ПО_УМОЛЧАНИЮ, отпечаток: план.отпечаток}, settings))
       .rejects.toMatchObject({status: 500, message: НАСТРОЙКИ['ошибкиСервера']['медиаподготовкаНеУдалась']});
     expect(снимокДиска(среда.repo)).toBe(до);
+    expect(снимков(среда)).toEqual([]);
+  });
+
+  it('сбой обслуживания после записи — предупреждение, а файлы применены и остаются', async () => {
+    const среда = репозиторий(ФАЙЛЫ());
+    // На месте файла состояния — папка: записать готовность нельзя, а файловая операция уже прошла.
+    fs.rmSync(path.join(среда.repo, ПАПКА, '_state.json'));
+    fs.mkdirSync(path.join(среда.repo, ПАПКА, '_state.json'));
+    const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU});
+    const {code, data} = await запрос(среда, '/api/refine/apply', {path: RU, выбранные: ['подписиМедиа'], отпечаток: план.отпечаток});
+
+    expect(code).toBe(200);
+    expect(data).toMatchObject({применено: true, предупреждения: ['состояние']});
+    expect(fs.readFileSync(path.join(среда.repo, RU), 'utf8')).toBe(ТЕКСТ.replace('![]', '![Розетки: изображение 1]'));
   });
 
   it('применение одного флажка не трогает остальное: только подписи — файлы и шапка прежние', async () => {
     const среда = репозиторий(ФАЙЛЫ());
     const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU});
     const {code} = await запрос(среда, '/api/refine/apply', {path: RU, выбранные: ['подписиМедиа'], отпечаток: план.отпечаток});
-
     expect(code).toBe(200);
     expect(fs.readFileSync(path.join(среда.repo, RU), 'utf8')).toBe(ТЕКСТ.replace('![]', '![Розетки: изображение 1]'));
     expect(fs.readdirSync(path.join(среда.repo, ПАПКА, 'img'))).toEqual(['photo.jpg']);
@@ -123,7 +162,6 @@ describe('применение доработки', () => {
     const до = снимокДиска(среда.repo);
     const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU});
     const {data} = await запрос(среда, '/api/refine/apply', {path: RU, выбранные: ['подписиМедиа'], отпечаток: план.отпечаток});
-
     expect(data.применено).toBe(false);
     expect(снимокДиска(среда.repo)).toBe(до);
   });
