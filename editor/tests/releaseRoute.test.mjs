@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {releaseRoute} from '../src/adapters/releaseRoute.mjs';
+import {publishRoute} from '../src/adapters/publishRoute.mjs';
 import {запомнитьСборку, зелёнаяСборка} from '../src/adapters/buildMemory.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
 import {EN, ES, RU, СТАТЬЯ, НАСТРОЙКИ, запрос, сборщик, среда, убратьПесочницы} from './publishHarness.mjs';
@@ -121,28 +122,41 @@ describe('план публикации', () => {
     expect(пути).toContain('i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/img/два.jpg');
   });
 
-  it('на сервере появилась чужая работа — план не считается вовсе', async () => {
+  it('на сервере появилась чужая работа — план считается поверх неё, а не отказывает', async () => {
     const место = await среда();
     await чужаяРаботаНаСервере(место);
+    fs.writeFileSync(path.join(место.repo, RU), `${СТАТЬЯ}Ещё строка.\n`, 'utf8');
 
     const {status, payload} = await ручка(место, '/api/release', {path: RU});
 
-    expect(status).toBe(409);
-    expect(payload.код).toBe('ветвиРазошлись');
-    expect(payload.файлы).toBeUndefined();
+    expect(status).toBe(200);
+    expect(payload.можно).toBe(true);
+    expect(payload.файлы.map((файл) => файл.путь)).toEqual([RU]);
   });
 
   it('свой коммит ещё не уехал — новый выпуск не начинается, предлагается доотправить', async () => {
     const место = await среда();
-    fs.writeFileSync(path.join(место.repo, RU), `${СТАТЬЯ}Ещё строка.
-`, 'utf8');
-    await место.git.raw(['add', '--', RU]);
-    await место.git.raw(['commit', '-m', 'правка']);
+    fs.writeFileSync(path.join(место.repo, RU), `${СТАТЬЯ}Ещё строка.\n`, 'utf8');
+    await ручка(место, '/api/release/build', {path: RU}, сборщик());
+    await запрос(publishRoute, место, '/api/publish/commit', {path: RU, подтверждено: true});
 
     const {status, payload} = await ручка(место, '/api/release', {path: RU});
 
     expect(status).toBe(409);
     expect(payload.код).toBe('естьНеотправленное');
+  });
+
+  it('ручной коммит в местной ветке выпуску не мешает: ветка и HEAD не спрашиваются', async () => {
+    const место = await среда();
+    fs.writeFileSync(path.join(место.repo, RU), `${СТАТЬЯ}Ещё строка.\n`, 'utf8');
+    await место.git.raw(['add', '--', RU]);
+    await место.git.raw(['commit', '-m', 'правка']);
+    await место.git.raw(['checkout', '-b', 'своя']);
+
+    const {status, payload} = await ручка(место, '/api/release', {path: RU});
+
+    expect(status).toBe(200);
+    expect(payload.можно).toBe(true);
   });
 
   // Перечень этой ручки станет источником записи в хранилище, поэтому заслон стоит здесь, а не в окне.

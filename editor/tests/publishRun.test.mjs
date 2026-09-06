@@ -58,8 +58,10 @@ describe('публикация от нажатия до сайта', () => {
     // Работа на сервере сайта, и в ней ровно файл статьи.
     const наСайте = await наСервере(с.сервер);
     expect(наСайте).not.toBe(былоНаСервере);
-    expect(наСайте).toBe((await с.git.raw(['rev-parse', 'HEAD'])).trim());
-    const вКоммите = (await с.git.raw(['show', '--name-only', '--format=', 'HEAD']))
+    // Коммит публикации уехал на сайт, а ветка человека осталась на месте.
+    expect(наСайте.startsWith(итог.коммит)).toBe(true);
+    expect((await с.git.raw(['rev-parse', 'HEAD'])).trim()).toBe(былоНаСервере);
+    const вКоммите = (await с.git.raw(['show', '--name-only', '--format=', наСайте]))
       .split(/\r?\n/).map((строка) => строка.trim()).filter(Boolean);
     expect(вКоммите).toEqual([RU]);
   }, ЖДАТЬ_GIT);
@@ -118,21 +120,26 @@ describe('публикация от нажатия до сайта', () => {
     expect(await наСервере(с.сервер)).toBe(былоНаСервере);
   }, ЖДАТЬ_GIT);
 
-  it('впереди чужая работа — публикация статьи останавливается до всякой записи', async () => {
+  it('работа над программой в местной ветке публикации не мешает и на сайт не уезжает', async () => {
     const с = await среда();
+    await с.git.raw(['checkout', '-b', 'feature/editor-proba']);
     fs.mkdirSync(path.join(с.repo, 'editor'), {recursive: true});
     fs.writeFileSync(path.join(с.repo, 'editor/SPEC.md'), 'правила\n', 'utf8');
     await с.git.raw(['add', '--', 'editor/SPEC.md']);
     await с.git.raw(['commit', '-m', 'editor: правила']);
     fs.writeFileSync(path.join(с.repo, RU), `${СТАТЬЯ}\nНовая строка.\n`, 'utf8');
-    const записка = [];
-    const х = ход(дверь(с, записка), []);
-    const былоНаСервере = await наСервере(с.сервер);
+    const х = ход(дверь(с, []), []);
+    const былаГолова = (await с.git.raw(['rev-parse', 'HEAD'])).trim();
 
-    await expect(проверитьИСобрать(RU, false, х)).rejects.toThrow();
+    const вопрос = await проверитьИСобрать(RU, false, х);
+    expect(вопрос.вид).toBe('спрашиваю');
+    const итог = await зафиксироватьИОтправить(RU, х, вопрос.отпечаток, вопрос.отпечатокПодготовки);
 
-    expect(записка.map((шаг) => шаг.адрес)).not.toContain('/api/release/build');
-    expect(await наСервере(с.сервер)).toBe(былоНаСервере);
+    expect(итог.вид).toBe('готово');
+    const наСайте = await наСервере(с.сервер);
+    expect(await с.git.raw(['show', '--name-only', '--format=', наСайте])).not.toContain('editor/SPEC.md');
+    expect((await с.git.raw(['rev-parse', 'HEAD'])).trim()).toBe(былаГолова);
+    expect((await с.git.raw(['rev-parse', '--abbrev-ref', 'HEAD'])).trim()).toBe('feature/editor-proba');
   }, ЖДАТЬ_GIT);
 
   it('правка во время проверок отменяет попытку: до сборки дело не доходит', async () => {

@@ -1,18 +1,23 @@
 // Имя каждого теста повторяет формулировку правила.
-// Что происходит после обрыва: запись состоит из нескольких шагов, и на любом из них может погаснуть
-// компьютер. Проверяется на НАСТОЯЩЕМ git: восстановление целиком построено на вопросах к нему.
+// Что происходит после обрыва: запись и отправка состоят из шагов, и на любом из них может погаснуть
+// компьютер. Разбор очереди против свежей основы сервера различает три исхода — коммит уже на
+// сервере, сервер не изменился, сервер ушёл вперёд — и ни разу не смотрит ни на HEAD, ни на ветку.
+// Проверяется на НАСТОЯЩЕМ git: восстановление целиком построено на вопросах к нему.
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import {simpleGit} from 'simple-git';
 
 import {publishRoute} from '../src/adapters/publishRoute.mjs';
 import {releaseRoute} from '../src/adapters/releaseRoute.mjs';
 import {запомнитьСборку} from '../src/adapters/buildMemory.mjs';
 import {прочитатьОчередь, записатьОчередь} from '../src/adapters/commitQueue.mjs';
-import {времянкаВосстановления, довестиНезаконченное, положитьЕслиНет} from '../src/adapters/publishRepair.mjs';
+import {разобратьОчередь} from '../src/adapters/publishRepair.mjs';
 import {взятьЗамок, замокВзят, отпустить} from '../src/adapters/publishLock.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
-import {EN, ES, RU, СТАТЬЯ, запрос, сборщик, среда, убратьПесочницы, настройкиСервера} from './publishHarness.mjs';
+import {
+  EN, ES, RU, СТАТЬЯ, запрос, наСервере, сборщик, снимокРепозитория, среда, убратьПесочницы, настройкиСервера,
+} from './publishHarness.mjs';
 
 vi.setConfig({testTimeout: ЖДАТЬ_GIT, hookTimeout: ЖДАТЬ_GIT});
 
@@ -25,6 +30,30 @@ afterEach(() => {
 const собрать = (место) => запрос(releaseRoute, место, '/api/release/build', {path: RU}, {запуск: сборщик()});
 const записать = (место) => запрос(publishRoute, место, '/api/publish/commit', {path: RU, подтверждено: true});
 const очередь = (место) => прочитатьОчередь(место.editorDir, настройкиСервера());
+const разобрать = (место, основа = место.основа, git = место.git) => разобратьОчередь({
+  git, editorDir: место.editorDir, settings: настройкиСервера(), основа,
+});
+
+/** Запись очереди о коммите с названным SHA и основой — как её оставила бы запись статьи. */
+const запись = (sha, основа, состояние = 'сделан') => ({
+  sha, пути: [RU], созданные: [], удалённые: [], основа, когда: new Date().toISOString(), состояние,
+});
+
+/** Кто-то другой толкнул в ветку сайта. Возвращает SHA чужого коммита. */
+async function чужаяРаботаНаСервере(место) {
+  const чужой = path.join(место.корень, 'чужой');
+  await simpleGit(место.корень).raw(['clone', место.сервер, чужой]);
+  const другой = simpleGit(чужой);
+  await другой.addConfig('user.name', 'Другой');
+  await другой.addConfig('user.email', 'drugoy@example.com');
+  await другой.addConfig('commit.gpgsign', 'false');
+  fs.writeFileSync(path.join(чужой, 'ЧУЖОЕ.md'), 'чужое\n', 'utf8');
+  await другой.raw(['add', '--', 'ЧУЖОЕ.md']);
+  await другой.raw(['commit', '-m', 'чужое']);
+  await другой.raw(['push', 'origin', 'main']);
+
+  return (await другой.raw(['rev-parse', 'HEAD'])).trim();
+}
 
 describe('замок публикации', () => {
   it('пока идёт запись, вторая не начинается', async () => {
@@ -38,7 +67,7 @@ describe('замок публикации', () => {
 
     expect(status).toBe(409);
     expect(payload.код).toBe('идётЗапись');
-    expect((await место.git.raw(['rev-parse', 'HEAD'])).trim()).toBe(место.основа);
+    expect(очередь(место).записи).toEqual([]);
   });
 
   it('после захода замок отпускается, даже когда заход кончился отказом', async () => {
@@ -59,89 +88,123 @@ describe('пустая запись', () => {
     const {payload} = await записать(место);
 
     expect(payload.код).toBe('нечегоФиксировать');
-    expect((await место.git.raw(['rev-parse', 'HEAD'])).trim()).toBe(место.основа);
-    expect((await место.git.raw(['-c', 'core.quotepath=false', 'diff', '--cached', '--name-only'])).trim()).toBe('');
+    expect(очередь(место).записи).toEqual([]);
   });
 });
 
-describe('обрыв между коммитом и сдвигом ветки', () => {
-  it('намерение без коммита в истории снимается: коммит не состоялся', async () => {
+describe('разбор очереди против свежей основы', () => {
+  it('коммит уже на сервере — запись снимается и называется доехавшей', async () => {
     const место = await среда();
-    записатьОчередь(место.editorDir, настройкиСервера(), [{
-      sha: 'a'.repeat(40),
-      пути: [RU],
-      созданные: [],
-      удалённые: [],
-      основа: место.основа,
-      когда: new Date().toISOString(),
-      состояние: 'намерение',
-    }]);
+    место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
+    await собрать(место);
+    const {payload} = await записать(место);
+    await место.git.raw(['push', 'origin', `${payload.sha}:refs/heads/main`]);
 
-    await довестиНезаконченное({git: место.git, repo: место.repo, editorDir: место.editorDir, settings: настройкиСервера()});
+    const итог = await разобрать(место, await наСервере(место));
 
+    expect(итог.доехавшие).toEqual([payload.sha]);
+    expect(итог.ожидающие).toEqual([]);
     expect(очередь(место).записи).toEqual([]);
   });
 
-  it('оставленное намерение не даёт следующей записи упереться в непустой индекс', async () => {
+  it('сервер не изменился — коммит ждёт повтора отправки, запись остаётся', async () => {
     const место = await среда();
     место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
-    записатьОчередь(место.editorDir, настройкиСервера(), [{
-      sha: 'b'.repeat(40),
-      пути: [RU],
-      созданные: [],
-      удалённые: [],
-      основа: место.основа,
-      когда: new Date().toISOString(),
-      состояние: 'намерение',
-    }]);
+    await собрать(место);
+    const {payload} = await записать(место);
+
+    const итог = await разобрать(место);
+
+    expect(итог.ожидающие.map((своя) => своя.sha)).toEqual([payload.sha]);
+    expect(очередь(место).записи).toHaveLength(1);
+  });
+
+  it('сервер ушёл вперёд — коммит устарел, запись снимается, нужен новый план', async () => {
+    const место = await среда();
+    место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
+    await собрать(место);
+    const {payload} = await записать(место);
+    const чужой = await чужаяРаботаНаСервере(место);
+    // Закрепление основы читает ветку с сервера — вместе с самим чужим коммитом.
+    await место.git.raw(['fetch', '--no-tags', 'origin', 'main']);
+
+    const итог = await разобрать(место, чужой);
+
+    expect(итог.устаревшие).toEqual([payload.sha]);
+    expect(итог.ожидающие).toEqual([]);
+    expect(очередь(место).записи).toEqual([]);
+    // Чужой коммит на сервере цел: разбор ничего не отправляет и не перезаписывает.
+    expect(await наСервере(место)).toBe(чужой);
+  });
+
+  it('намерение без подтверждения снимается: коммит не признан своим до конца', async () => {
+    const место = await среда();
+    записатьОчередь(место.editorDir, настройкиСервера(), [запись('a'.repeat(40), место.основа, 'намерение')]);
+
+    const итог = await разобрать(место);
+
+    expect(итог.недоказанные).toEqual(['a'.repeat(40)]);
+    expect(итог.устаревшие).toEqual([]);
+    expect(очередь(место).записи).toEqual([]);
+  });
+
+  it('оставленное намерение не мешает следующей записи', async () => {
+    const место = await среда();
+    место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
+    записатьОчередь(место.editorDir, настройкиСервера(), [запись('b'.repeat(40), место.основа, 'намерение')]);
     await собрать(место);
 
     expect((await записать(место)).status).toBe(200);
   });
-});
 
-describe('обрыв между сдвигом ветки и записью заглушки на диск', () => {
-  it('созданная заглушка восстанавливается из самого коммита', async () => {
-    const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ}, {вКоммите: [RU, EN]});
+  it('git не смог ответить, где коммит, — отказ, и очередь не трогается вовсе', async () => {
+    const место = await среда();
+    место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
     await собрать(место);
     await записать(место);
+    const было = очередь(место).записи;
 
-    // Так выглядит обрыв: коммит есть, а файла на диске нет.
-    fs.rmSync(path.join(место.repo, ES));
-    expect((await место.git.raw(['status', '--porcelain', '--', ES])).trim()).not.toBe('');
+    // Дверь к git, которая отвечает на всё, кроме вопроса о положении коммита.
+    const немой = {
+      raw: async (аргументы) => {
+        if (аргументы.includes('merge-base')) throw new Error('git молчит');
+        return место.git.raw(аргументы);
+      },
+    };
 
-    await довестиНезаконченное({git: место.git, repo: место.repo, editorDir: место.editorDir, settings: настройкиСервера()});
+    const итог = await разобрать(место, место.основа, немой);
 
-    expect(fs.existsSync(path.join(место.repo, ES))).toBe(true);
-    // Восстановлено ровно опубликованное: дерево снова чистое.
-    expect((await место.git.raw(['status', '--porcelain', '--', ES])).trim()).toBe('');
+    expect(итог.ошибка).toBe('состояниеНеизвестно');
+    expect(очередь(место).записи).toEqual(было);
   });
 
-  it('восстановление не трогает файл, который человек успел написать сам', async () => {
+  it('разбор не зависит от ветки и HEAD: на другой ветке ожидающий коммит по-прежнему ждёт', async () => {
     const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ}, {вКоммите: [RU, EN]});
     await собрать(место);
-    await записать(место);
-    const своё = '---\ntitle: "Prueba"\n---\n\nМой текст.\n';
-    fs.writeFileSync(path.join(место.repo, ES), своё, 'utf8');
+    const {payload} = await записать(место);
+    await место.git.raw(['checkout', '-b', 'другая']);
+    const было = await снимокРепозитория(место);
 
-    await довестиНезаконченное({git: место.git, repo: место.repo, editorDir: место.editorDir, settings: настройкиСервера()});
+    const итог = await разобрать(место);
 
-    expect(fs.readFileSync(path.join(место.repo, ES), 'utf8')).toBe(своё);
+    expect(итог.ожидающие.map((своя) => своя.sha)).toEqual([payload.sha]);
+    // Ни файла в чужом дереве, ни потерянной записи: программа не тронула ничего и ничего не забыла.
+    expect(await снимокРепозитория(место)).toEqual(было);
+    expect(fs.existsSync(path.join(место.repo, ES))).toBe(false);
   });
 
-  it('запись очереди не снимается, пока заглушка не восстановлена', async () => {
-    const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ}, {вКоммите: [RU, EN]});
+  it('местной ветки main нет вовсе — разбор идёт по серверу, а не по местной копии', async () => {
+    const место = await среда();
+    место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
     await собрать(место);
-    await записать(место);
-    fs.rmSync(path.join(место.repo, ES));
+    const {payload} = await записать(место);
+    await место.git.raw(['checkout', '--detach', 'HEAD']);
+    await место.git.raw(['branch', '-D', 'main']);
 
-    const итог = await довестиНезаконченное({
-      git: место.git, repo: место.repo, editorDir: место.editorDir, settings: настройкиСервера(),
-    });
+    const итог = await разобрать(место);
 
-    // Коммит ещё не уехал на сайт: запись о нём остаётся, и именно по ней файл и восстановили.
-    expect(итог.записи).toHaveLength(1);
-    expect(итог.записи[0].состояние).toBe('сделан');
+    expect(итог.ошибка).toBeUndefined();
+    expect(итог.ожидающие.map((своя) => своя.sha)).toEqual([payload.sha]);
   });
 });
 
@@ -152,15 +215,12 @@ describe('настоящий обрыв процесса', () => {
     const место = await среда();
     место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
     await собрать(место);
+    const было = await снимокРепозитория(место);
 
-    const доЗаписи = await место.git.raw(['-c', 'core.quotepath=false', 'diff', '--cached', '--name-only']);
     await записать(место);
-    const послеЗаписи = await место.git.raw(['-c', 'core.quotepath=false', 'diff', '--cached', '--name-only']);
 
-    expect(доЗаписи.trim()).toBe('');
-    // После записи индекс снова чист: он идёт вровень с новой головой, а не отстаёт от неё.
-    expect(послеЗаписи.trim()).toBe('');
-    expect((await место.git.raw(['status', '--porcelain'])).trim()).toBe('');
+    expect(было.индекс).toBe('');
+    expect(await снимокРепозитория(место)).toEqual(было);
   });
 
   it('свой индекс не остаётся мусором на диске', async () => {
@@ -175,93 +235,18 @@ describe('настоящий обрыв процесса', () => {
   });
 });
 
-describe('восстановление на другой ветке', () => {
-  it('человек ушёл на другую ветку — её рабочее дерево не трогается ничем', async () => {
+describe('диск человека сайту не принадлежит', () => {
+  it('на месте соседнего языка лежит папка — публикации это не мешает: диск не трогается', async () => {
     const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ}, {вКоммите: [RU, EN]});
+    fs.mkdirSync(path.join(место.repo, ES), {recursive: true});
+    место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
     await собрать(место);
-    await записать(место);
-    // Другая ветка заведена от основы: опубликованной заглушки на ней нет и быть не должно.
-    await место.git.raw(['checkout', '-b', 'другая', место.основа]);
-    const былоЛи = fs.existsSync(path.join(место.repo, ES));
-
-    const итог = await довестиНезаконченное({
-      git: место.git, repo: место.repo, editorDir: место.editorDir, settings: настройкиСервера(),
-    });
-
-    expect(итог.ошибка).toBe('неТаВетка');
-    // Ни файла в чужом дереве, ни потерянной записи: программа не тронула ничего и ничего не забыла.
-    expect(fs.existsSync(path.join(место.repo, ES))).toBe(былоЛи);
-    expect(очередь(место).записи).toHaveLength(1);
-  });
-});
-
-describe('невосстановленная заглушка', () => {
-  it('на месте заглушки оказалась папка — путь назван невосстановленным', async () => {
-    const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ}, {вКоммите: [RU, EN]});
-    await собрать(место);
-    await записать(место);
-    fs.rmSync(path.join(место.repo, ES));
-    fs.mkdirSync(path.join(место.repo, ES));
-
-    const итог = await довестиНезаконченное({
-      git: место.git, repo: место.repo, editorDir: место.editorDir, settings: настройкиСервера(),
-    });
-
-    expect(итог.невосстановленные).toEqual([ES]);
-    // Запись очереди при этом на месте: по ней и найдут, что дописать.
-    expect(итог.записи).toHaveLength(1);
-  });
-
-  it('пока путь не восстановлен, публиковать эту статью нельзя', async () => {
-    const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ}, {вКоммите: [RU, EN]});
-    await собрать(место);
-    await записать(место);
-    fs.rmSync(path.join(место.repo, ES));
-    fs.mkdirSync(path.join(место.repo, ES));
 
     const {status, payload} = await записать(место);
 
-    expect(status).toBe(409);
-    expect(payload.код).toBe('невосстановлено');
-    expect(payload.чужие).toEqual([ES]);
-  });
-});
-
-// Две границы, на которых неудача прежде выглядела успехом. Обе тихие, и обе стоят статьи на сайте.
-/** Где программа пишет байты до их появления по настоящему адресу: вне содержимого сайта. */
-const времянка = (место) => времянкаВосстановления(место.editorDir, настройкиСервера());
-
-describe('неудача не выдаётся за успех', () => {
-  it('между проверкой и записью на месте заглушки появилась папка — это не восстановление', async () => {
-    const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ}, {вКоммите: [RU, EN]});
-    fs.mkdirSync(path.join(место.repo, ES), {recursive: true});
-
-    // Так выглядит гонка: путь занят, но занят не файлом.
-    expect(положитьЕслиНет(место.repo, ES, Buffer.from('текст\n', 'utf8'), времянка(место))).toBe(false);
-  });
-
-  it('свободный путь записывается и признаётся восстановленным', async () => {
-    const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ}, {вКоммите: [RU, EN]});
-    fs.rmSync(path.join(место.repo, ES), {force: true});
-
-    expect(положитьЕслиНет(место.repo, ES, Buffer.from('текст\n', 'utf8'), времянка(место))).toBe(true);
-    expect(fs.readFileSync(path.join(место.repo, ES), 'utf8')).toBe('текст\n');
-  });
-
-  it('состояние ветки выпуска не прочиталось — отказ, а не разрешение продолжать', async () => {
-    const место = await среда();
-    место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
-    await собрать(место);
-    await записать(место);
-    // Ветки выпуска не стало: спросить, где коммит, нечем.
-    await место.git.raw(['checkout', '--detach', 'HEAD']);
-    await место.git.raw(['branch', '-D', 'main']);
-
-    const итог = await довестиНезаконченное({
-      git: место.git, repo: место.repo, editorDir: место.editorDir, settings: настройкиСервера(),
-    });
-
-    expect(итог.ошибка).toBeTruthy();
-    expect(очередь(место).записи).toHaveLength(1);
+    expect(status).toBe(200);
+    expect(payload.невосстановленные).toBeUndefined();
+    expect(fs.statSync(path.join(место.repo, ES)).isDirectory()).toBe(true);
+    expect(await место.git.raw(['show', `${payload.sha}:${ES}`])).toContain('---');
   });
 });
