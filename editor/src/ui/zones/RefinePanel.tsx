@@ -1,5 +1,5 @@
 import type {Settings} from '../types';
-import type {Доработка} from '../useRefine';
+import {выбран, можноПрименить, можноПроверить, type Доработка} from '../useRefine';
 import type {ЗаписьИтога, ОтчётОбработчика} from '../refineTypes';
 
 type Слова = Settings['доработка'];
@@ -8,41 +8,41 @@ type Слова = Settings['доработка'];
  * Окно «Доработать»: перечень обработчиков из плана сервера, каждый своим флажком с предпросмотром,
  * затем итог применения. Имён обработчиков окно не знает: список и порядок приходят из реестра,
  * подпись берётся из настроек по коду, а код без подписи показывается как есть.
+ * Прежние проверки статьи запускаются отдельной кнопкой и не требуют применения: они ничего не пишут.
  */
 export function RefinePanel(props: {settings: Settings; доработка: Доработка}) {
   const д = props.settings.доработка;
-  const {окно, план, итог, ошибка, неПеречитана, выбранные} = props.доработка;
-  if (окно === 'закрыто') return null;
+  const с = props.доработка;
+  if (с.окно === 'закрыто') return null;
 
-  const готово = окно === 'готово' && итог !== null;
-  const список = (готово ? итог.обработчики : план?.обработчики ?? []).filter((з) => з.применимо);
-  const выбран = (з: ОтчётОбработчика) => (готово ? з.выбран : выбранные.includes(з.код));
-  const естьРабота = список.some((з) => выбран(з) && з.изменено.length > 0);
-  const обслуживание = готово && итог.предупреждения.length > 0
-    ? д.обслуживание.replace('{что}', итог.предупреждения.map((код) => д.шагиОбслуживания[код] ?? код).join(', '))
+  const готово = с.окно === 'готово' && с.итог !== null;
+  const список = (готово ? с.итог!.обработчики : с.план?.обработчики ?? []).filter((з) => з.применимо);
+  const заголовок = готово ? (с.итог!.применено ? д.готово : д.нечегоНеИзменилось) : д.заголовок;
+  const обслуживание = готово && с.итог!.предупреждения.length > 0
+    ? д.обслуживание.replace('{что}', с.итог!.предупреждения.map((код) => д.шагиОбслуживания[код] ?? код).join(', '))
     : null;
 
   return (
     <section className="refine" aria-label={д.заголовок}>
       <div className="prepare-head">
-        <strong>{готово ? (итог.применено ? д.готово : д.нечегоНеИзменилось) : д.заголовок}</strong>
-        <button className="ghost" onClick={props.доработка.закрыть} disabled={окно === 'применяю'}>{готово ? д.закрыть : д.отмена}</button>
+        <strong>{заголовок}</strong>
+        <button className="ghost" onClick={с.закрыть} disabled={с.окно === 'применяю'}>{готово ? д.закрыть : д.отмена}</button>
       </div>
 
-      {ошибка !== null && <p className="refine-error">{ошибка}</p>}
-      {неПеречитана && <p className="refine-error">{д.неПеречитана}</p>}
+      {с.ошибка !== null && <p className="refine-error">{с.ошибка}</p>}
+      {с.неПеречитана && <p className="refine-error">{д.неПеречитана}</p>}
       {обслуживание !== null && <p className="refine-error">{обслуживание}</p>}
-      {окно === 'план' && план === null && <p className="prepare-skipped">{д.смотрю}</p>}
-      {окно === 'применяю' && <p className="prepare-skipped">{д.применяю}</p>}
+      {с.окно === 'план' && <p className="prepare-skipped">{д.смотрю}</p>}
+      {с.окно === 'применяю' && <p className="prepare-skipped">{д.применяю}</p>}
 
-      {план !== null && !готово && (
+      {с.план !== null && !готово && (
         <>
-          <p className="prepare-skipped">{список.length === 0 ? д.нечегоПрименять : д.пояснение}</p>
+          <p className="prepare-skipped">{список.length === 0 ? д.нечегоПрименять : можноПрименить(с) ? д.пояснение : д.нечегоНеИзменилось}</p>
           <ul className="prepare-list">
             {список.map((з) => (
               <li key={з.код} className="refine-item">
                 <label className="refine-label">
-                  <input type="checkbox" checked={выбран(з)} disabled={окно !== 'выбор'} onChange={() => props.доработка.переключить(з.код)} />
+                  <input type="checkbox" checked={выбран(с, з)} disabled={с.окно !== 'выбор'} onChange={() => с.переключить(з.код)} />
                   <span>{д.обработчики[з.код] ?? з.код}</span>
                   <span className="refine-count">{счёт(з, д)}</span>
                 </label>
@@ -50,11 +50,6 @@ export function RefinePanel(props: {settings: Settings; доработка: До
               </li>
             ))}
           </ul>
-          <div className="refine-actions">
-            <button className="ghost ghost-main" disabled={окно !== 'выбор' || !естьРабота} onClick={() => void props.доработка.применить()}>
-              {д.применить}
-            </button>
-          </div>
         </>
       )}
 
@@ -71,6 +66,13 @@ export function RefinePanel(props: {settings: Settings; доработка: До
           ))}
         </ul>
       )}
+
+      <div className="refine-actions">
+        {!готово && (
+          <button className="ghost ghost-main" disabled={!можноПрименить(с)} onClick={() => void с.применить()}>{д.применить}</button>
+        )}
+        <button className="ghost" disabled={!можноПроверить(с)} onClick={с.проверить}>{д.проверитьСтатью}</button>
+      </div>
     </section>
   );
 }
