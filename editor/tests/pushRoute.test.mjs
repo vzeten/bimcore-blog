@@ -57,15 +57,15 @@ describe('показ того, что уедет на сайт', () => {
     expect(await наСервере(место)).toBe(место.основа);
   });
 
-  it('ручной коммит в местной ветке показу не мешает и на сайт не уезжает', async () => {
+  it('ручной коммит в местной ветке на показ не влияет: очередь пуста — «отправлять нечего», не «уже на сайте»', async () => {
     const место = await среда();
     await коммитРуками(место);
 
     const {status, payload} = await показать(место);
 
-    expect(status).toBe(200);
-    expect(payload.уже).toBe(true);
-    expect(payload.коммиты).toEqual([]);
+    expect(status).toBe(409);
+    expect(payload.код).toBe('нечегоОтправлять');
+    expect(payload.уже).toBeUndefined();
     expect(await наСервере(место)).toBe(место.основа);
   });
 

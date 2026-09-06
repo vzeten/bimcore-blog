@@ -97,7 +97,6 @@ describe('публикация от нажатия до сайта', () => {
     expect(записка.map((шаг) => шаг.адрес)).toEqual([
       '/api/prepare',
       '/api/release',
-      '/api/publish/plan',
       '/api/release/build',
       '/api/publish/commit',
       '/api/publish/plan',

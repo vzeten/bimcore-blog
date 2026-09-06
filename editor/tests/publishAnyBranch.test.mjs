@@ -186,7 +186,8 @@ describe('обрыв и повтор', () => {
     const показ = await показать(место);
     const отправка = await отправить(место, запись.sha);
 
-    expect(показ.payload.уже).toBe(true);
+    // Показ честен: досылать нечего. «Уже на сайте» — только про названный коммит, доказанный в ветке.
+    expect(показ.payload.код).toBe('нечегоОтправлять');
     expect(отправка.status).toBe(200);
     expect(отправка.payload.уже).toBe(true);
     expect(отправка.payload.отправлено).toBe(false);
