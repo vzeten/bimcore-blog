@@ -1,7 +1,9 @@
 import {изменениеНеНаСайте, скрытаВОкне, type Field} from '../headFields';
 import {PrepareReport} from './PrepareReport';
 import {PublishPanel} from './PublishPanel';
+import {RefinePanel} from './RefinePanel';
 import {usePrepare} from '../usePrepare';
+import {useRefine} from '../useRefine';
 import {usePublish} from '../usePublish';
 import {useLocaleStart} from '../useLocaleStart';
 import {label} from '../labels';
@@ -65,6 +67,11 @@ export function TopBar(props: {
   // Подготовка живёт рядом со своей кнопкой: она ничего не пишет и никого, кроме отчёта под
   // шапкой, не касается — тянуть её через всю сборку окна незачем.
   const подготовка = usePrepare(props.article?.path ?? null, props.dirty);
+  // «Доработать» — окно выбора автоматизаций; после применения перечитывает статью и зовёт подготовку.
+  const доработка = useRefine(props.article?.path ?? null, props.dirty, {
+    перечитать: async (path) => (await props.onOpen(path)) === true,
+    проверить: () => void подготовка.запустить(),
+  });
   // Публикация живёт рядом: она сама сохраняет, проверяет, собирает и отправляет, поэтому ей нужны
   // и путь версии, и признак несохранённого, и умение записать окно на диск.
   const публикация = usePublish(
@@ -198,9 +205,9 @@ export function TopBar(props: {
             заперто — иначе говорило бы не о том, что человек видит на экране. */}
         <button
           className="ghost"
-          disabled={подготовка.идёт || props.dirty || props.просмотр || !props.article}
+          disabled={подготовка.идёт || доработка.окно !== 'закрыто' || props.dirty || props.просмотр || !props.article}
           title={заперта(props, п)}
-          onClick={() => void подготовка.запустить()}
+          onClick={доработка.открыть}
         >
           {подготовка.идёт ? п.подготовкаИдёт : п.подготовить}
         </button>
@@ -251,6 +258,7 @@ export function TopBar(props: {
       </div>
     </header>
 
+    <RefinePanel settings={props.settings} доработка={доработка} />
     <PrepareReport
       settings={props.settings}
       отчёт={подготовка.отчёт}

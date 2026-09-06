@@ -1,0 +1,22 @@
+/* Окно «Доработать»: стоит под шапкой окна, как отчёт подготовки, и делит с ним общие классы
+   заголовка и списка (.prepare-head, .prepare-list). Свои классы — только для флажков и итога. */
+.refine {
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-soft);
+  padding: 10px 16px;
+  font-size: 13px;
+}
+
+.refine-item { border-left: 3px solid var(--line); padding-left: 10px; }
+.refine-off { color: var(--ink-quiet); }
+.refine-label { display: flex; align-items: baseline; gap: 10px; }
+.refine-label input { flex: 0 0 auto; }
+.refine-label > span:first-of-type { flex: 1; }
+.refine-count { flex: 0 0 auto; color: var(--ink-quiet); font-size: 12px; }
+.refine-details { margin: 4px 0 0 24px; font-size: 12px; }
+.refine-details summary { cursor: pointer; color: var(--ink-quiet); }
+.refine-details ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; }
+.refine-kept, .refine-human { color: var(--ink-quiet); }
+.refine-human { border-left: 2px solid var(--layer-deleted); padding-left: 6px; }
+.refine-actions { margin-top: 10px; display: flex; gap: 8px; }
+.refine-error { margin: 8px 0 0; color: var(--layer-deleted); }

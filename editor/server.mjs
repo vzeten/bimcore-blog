@@ -22,6 +22,7 @@ import {createRoute} from './src/adapters/createRoute.mjs';
 import {localeRoute} from './src/adapters/localeRoute.mjs';
 import {saveRoute} from './src/adapters/saveRoute.mjs';
 import {prepareRoute} from './src/adapters/prepareRoute.mjs';
+import {refineRoute} from './src/adapters/refineRoute.mjs';
 import {releaseRoute} from './src/adapters/releaseRoute.mjs';
 import {publishRoute} from './src/adapters/publishRoute.mjs';
 import {pushRoute} from './src/adapters/pushRoute.mjs';
@@ -134,6 +135,12 @@ async function api(req, res, url) {
   // Сохранение статьи — тоже отдельным модулем. Вместе с файлом человека оно переключает
   // видимость остальных языковых версий: отдельной ручки видимости в программе нет.
   if (await saveRoute({
+    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git,
+    тело, insideRepo, send, фиксировать, последняяПравка,
+  })) return;
+
+  // «Доработать»: план только читает, применение пишет открытую версию и её медиа одной операцией.
+  if (await refineRoute({
     req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git,
     тело, insideRepo, send, фиксировать, последняяПравка,
   })) return;

@@ -1,6 +1,7 @@
 import type {Layer, LayerKind} from '../core/colorize';
 import type {Button} from '../core/commands';
 import type {ОписаниеБлока} from '../core/jsxBlocks';
+import type {НастройкиДоработки} from './refineTypes';
 
 export type {Button, ОписаниеБлока};
 
@@ -271,6 +272,7 @@ export interface Settings {
    * Слова окна подготовки. `находки`, `уровни` и `этапы` — карты по коду находки: код без своей
    * фразы показывается общей фразой вместе с кодом, а не проглатывается.
    */
+  доработка: НастройкиДоработки;
   подготовка: {
     заголовок: string;
     чисто: string;
