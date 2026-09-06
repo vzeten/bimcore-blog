@@ -3,7 +3,8 @@
 import {describe, expect, it} from 'vitest';
 
 import {медиаподготовка, переименование, размерПоСтандарту, размерыКартинки} from '../src/core/refineFiles.mjs';
-import {GIF, WEBP, НАСТРОЙКИ, инструменты, копия, jpg, png} from './refineHarness.mjs';
+import {разница} from '../src/core/refine.mjs';
+import {GIF, WEBM, WEBP, НАСТРОЙКИ, инструменты, копия, jpg, png} from './refineHarness.mjs';
 
 const ШАПКА = '---\ntitle: "Розетки"\nslug: /lessons/proba\n---\n\n';
 const живые = (к) => [...к.файлы.entries()].filter(([, б]) => б !== null).map(([имя]) => имя).sort();
@@ -62,6 +63,19 @@ describe('медиаподготовка', () => {
     const {копия: итог, отчёт} = await медиаподготовка.применить(к, медиаподготовка.анализ(к, НАСТРОЙКИ), инструменты(png(10, 10, 100)));
     expect(итог.файлы.get('a.png')).toEqual(png(10, 10, 100));
     expect(отчёт.изменено).toEqual([{что: 'a.png', было: '10×10, PNG, 0 КБ', стало: 'a.png: 10×10, PNG, 0 КБ'}]);
+  });
+
+  it('WebM из импорта ролика остаётся побайтово прежним и в разницу со снимком не попадает', async () => {
+    const к = копия(`${ШАПКА}import v from './a.webm';
+
+![a](./a.jpg)
+`, {'a.webm': WEBM, 'a.jpg': jpg(10, 10)});
+    const предложение = медиаподготовка.анализ(к, НАСТРОЙКИ);
+    expect(предложение.отчёт.оставлено).toEqual([{что: 'a.webm', причина: 'анимация'}]);
+    const {копия: итог} = await медиаподготовка.применить(к, предложение, инструменты(png(10, 10)));
+    expect(итог.файлы.get('a.webm')).toBe(WEBM);
+    expect(итог.текст).toContain("import v from './a.webm';");
+    expect(разница(к, итог).файлы.map((ф) => ф.имя).sort()).toEqual(['a.jpg', 'a.png']);
   });
 
   it('имя .png, занятое другим файлом папки, не затирается: картинка отдаётся человеку', () => {

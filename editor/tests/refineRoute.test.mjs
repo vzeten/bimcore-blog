@@ -124,6 +124,30 @@ describe('применение доработки', () => {
     });
   }
 
+  it('правка статьи во время чтения автора из git (последний await) — отказ без записей и истории', async () => {
+    const среда = репозиторий(ФАЙЛЫ());
+    const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU});
+    const git = {raw: async () => {
+      fs.appendFileSync(path.join(среда.repo, RU), '\nПравка во время git.\n');
+      return 'Проверка';
+    }};
+    const {code} = await запрос(среда, '/api/refine/apply', {path: RU, выбранные: ['подписиМедиа'], отпечаток: план.отпечаток}, НАСТРОЙКИ, git);
+    expect(code).toBe(409);
+    expect(fs.readFileSync(path.join(среда.repo, RU), 'utf8')).toBe(`${ТЕКСТ}\nПравка во время git.\n`);
+    expect(снимков(среда)).toEqual([]);
+  });
+
+  it('после последней сверки до истории и файлов нет ни одного await (предохранитель по исходнику)', () => {
+    const код = fs.readFileSync(new URL('../src/adapters/refineRoute.mjs', import.meta.url), 'utf8');
+    const от = код.lastIndexOf('\n', код.indexOf('Последняя сверка'));
+    const до = код.indexOf('записатьНабор({', от);
+    expect(от).toBeGreaterThan(0);
+    expect(до).toBeGreaterThan(от);
+    const кодБезКомментариев = код.slice(от, до).split('\n').filter((с) => !с.trim().startsWith('//')).join('\n');
+    expect(кодБезКомментариев).not.toContain('await');
+    expect(код).not.toContain('фиксировать');
+  });
+
   it('сбой медиаподготовки (нет Python или скрипт упал) — 500 словами из настроек и диск прежний', async () => {
     const среда = репозиторий(ФАЙЛЫ());
     const settings = {...НАСТРОЙКИ, доработка: {...НАСТРОЙКИ['доработка'], команда: {python: 'нет-такой-программы-доработки', скрипт: 'scripts/image-prep.py', пределСекунд: 5}}};

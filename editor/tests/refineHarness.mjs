@@ -9,6 +9,7 @@ import {fileURLToPath} from 'node:url';
 
 import {refineRoute} from '../src/adapters/refineRoute.mjs';
 import {ГИФ} from './gifFixture.mjs';
+import {WEBM as ВИДЕО} from './webmFixture.mjs';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const НАСТРОЙКИ = JSON.parse(fs.readFileSync(path.join(EDITOR, 'settings.json'), 'utf8'));
@@ -45,6 +46,7 @@ export function jpg(ширина, высота, хвост = 0) {
 /** Начало WebP: контейнер RIFF с меткой WEBP — так его узнаёт медиаподготовка. */
 export const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.from([16, 0, 0, 0]), Buffer.from('WEBPVP8 '), Buffer.alloc(8)]);
 export const GIF = ГИФ;
+export const WEBM = ВИДЕО;
 
 /** Рабочая копия без диска: текст и файлы папки статьи. */
 export function копия(текст, файлы = {}, путь = RU) {
@@ -99,7 +101,7 @@ export function настройкиСоСкриптом(repo, результат)
 }
 
 /** Один запрос к ручке. Возвращает код ответа и разобранный JSON. */
-export async function запрос({repo, editorDir}, pathname, тело, settings = НАСТРОЙКИ) {
+export async function запрос({repo, editorDir}, pathname, тело, settings = НАСТРОЙКИ, git = {raw: async () => 'Проверка'}) {
   const ответ = {};
   const последняяПравка = new Map();
   const взято = await refineRoute({
@@ -109,14 +111,13 @@ export async function запрос({repo, editorDir}, pathname, тело, settin
     repo,
     editorDir,
     settings,
-    git: {raw: async () => 'Проверка'},
+    git,
     тело: async () => тело,
     insideRepo: (target) => path.resolve(target).startsWith(path.resolve(repo) + path.sep),
     send: (res, code, data) => {
       ответ.code = code;
       ответ.data = data;
     },
-    фиксировать: async () => null,
     последняяПравка,
   });
   return {взято, ...ответ, последняяПравка};

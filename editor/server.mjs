@@ -141,8 +141,7 @@ async function api(req, res, url) {
 
   // «Доработать»: план только читает, применение пишет открытую версию и её медиа одной операцией.
   if (await refineRoute({
-    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git,
-    тело, insideRepo, send, фиксировать, последняяПравка,
+    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, insideRepo, send, последняяПравка,
   })) return;
 
   // Подготовка статьи — отдельным модулем. Ручка только читает: файлы человека она не трогает.
