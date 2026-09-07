@@ -86,7 +86,7 @@ async function articles() {
     расхождениеССайтом(git, publishedRef, settings['контент'].map((root) => root['папка'])),
   ]);
   веткаПрочитана = ветка.известна;
-  return listArticles(REPO, settings, times, ветка.файлы, расхождение === null ? null : new Set(расхождение));
+  return listArticles(REPO, settings, times, ветка.файлы, расхождение === null ? null : new Set(расхождение), ветка.известна);
 }
 
 function send(res, code, data, type = 'application/json; charset=utf-8') {

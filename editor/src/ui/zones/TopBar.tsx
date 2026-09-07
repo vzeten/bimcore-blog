@@ -6,6 +6,8 @@ import {usePrepare} from '../usePrepare';
 import {useRefine} from '../useRefine';
 import {usePublish} from '../usePublish';
 import {useLocaleStart} from '../useLocaleStart';
+import {признакиЛокали, подсказкаЛокали} from '../../core/localeSigns.mjs';
+import {LocaleMark} from './LocaleMark';
 import {label} from '../labels';
 import type {Удаление} from '../useDelete';
 import type {Article, SaveState, Settings} from '../types';
@@ -99,31 +101,36 @@ export function TopBar(props: {
             const state = props.article!.states[code] ?? 'нет';
             const path = props.article!.versions[code];
             const here = path === props.article!.path;
-            // Нет обязательного языка — статьи нет на сайте вовсе. Это ошибка, а не дыра в переводах.
-            const срыв = state === 'нет' && code === props.settings.обязательныйЯзык && props.article!.нетНаСайте;
+            const свод = props.article!.признакиЛокалей?.[code] ?? признакиЛокали(null);
             // Своя версия — по окну, соседние — по диску. Иначе флажок в свойствах и кнопка
             // языка начали бы противоречить друг другу сразу после переключения, до сохранения.
-            const своя = here ? скрыта : props.article!.видимостьВерсий?.[code] === true;
-            const спрятана = state !== 'нет' && своя;
+            const признаки = here ? {...свод, поСсылке: скрыта} : свод;
+            // Нет обязательного языка — статьи нет на сайте вовсе. Это ошибка, а не дыра в переводах.
+            const срыв = !признаки.есть && code === props.settings.обязательныйЯзык && props.article!.нетНаСайте;
 
             // Языка нет — вкладка не заперта, а предлагает его начать. Запертая вкладка была
             // тупиком: человек видел дыру в переводах и ничего не мог с ней сделать в программе.
             // Нажатие только задаёт вопрос — ни одного файла до ответа не появляется.
-            const нет = state === 'нет';
+            const нет = !признаки.есть;
+            // «Правился раньше основной версии» — не состояние выпуска, а сравнение времён правки.
+            // Свой знак у него был и остался: точка у букв, а не над ними, где стоят признаки.
+            const устарела = state === 'устарела';
+            const ещё = устарела ? [props.settings.подписи.версияУстарела] : [];
 
             return (
-              <button
+              <LocaleMark
                 key={code}
-                className={`lang lang-${срыв ? 'срыв' : state}${here ? ' lang-on' : ''}${спрятана ? ' lang-скрыта' : ''}`}
-                title={срыв ? props.settings.реестр.нетНаСайте : подсказка(code, state, спрятана, props.settings)}
+                code={code}
+                признаки={признаки}
+                срыв={срыв}
+                открыта={here}
+                помета={устарела}
+                подсказка={срыв ? props.settings.реестр.нетНаСайте : подсказкаЛокали(code, признаки, props.settings, ещё)}
                 // Просмотр старой версии ничего не пишет: на это время начало версии заперто,
                 // как и остальные пишущие кнопки шапки.
                 disabled={нет && (props.просмотр || началоЛокали.идёт)}
                 onClick={() => (нет ? началоЛокали.спросить(code) : path && props.onOpen(path))}
-              >
-                {code.toUpperCase()}
-                {state === 'устарела' && <span className="lang-mark">•</span>}
-              </button>
+              />
             );
           })}
 
@@ -167,8 +174,11 @@ export function TopBar(props: {
 
         {props.article && (
           <>
-            <span className="status" title={п.готовность}>{props.article.готовность}</span>
-            {/* Видимость — не кнопка: меняется она в свойствах статьи и уезжает на диск обычным
+            {/* Общего слова готовности здесь нет с 2026-09-07: одним словом три независимые
+                языковые версии не описываются, и «Опубликована» прятало правку соседней версии.
+                Состояние каждой версии стоит возле её букв слева (`LocaleMark`).
+
+                Видимость — не кнопка: меняется она в свойствах статьи и уезжает на диск обычным
                 «Сохранить». Здесь только правда о том, что человек получит на сайте, и она
                 про ОТКРЫТУЮ языковую версию: у соседних версий видимость своя (SPEC 2.8). */}
             <span className={скрыта ? 'visibility visibility-off' : 'visibility'} title={п.видимость}>
@@ -281,20 +291,4 @@ function заперта(
   if (props.article && props.dirty) return п.сначалаСохранитеДляПодготовки;
 
   return '';
-}
-
-/**
- * Что сказать про языковую версию при наведении. Признаки складываются, а не заменяют друг друга:
- * версия бывает и устаревшей, и скрытой сразу, и человек должен узнать про оба.
- */
-function подсказка(code: string, state: string, спрятана: boolean, settings: Settings): string {
-  const язык = settings.локали[code] ?? code;
-  if (state === 'нет') return `${язык}: ${settings.подписи.версииНет}`;
-
-  const признаки = [
-    state === 'устарела' ? settings.подписи.версияУстарела : null,
-    спрятана ? settings.видимость.поСсылке : null,
-  ].filter(Boolean);
-
-  return признаки.length === 0 ? язык : `${язык}: ${признаки.join(', ')}`;
 }

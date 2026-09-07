@@ -1,6 +1,7 @@
 import {useMemo, useState} from 'react';
-import {filterArticles, lastEditOf, readinessOf, sortArticles, visibilityOf} from '../../core/registry.mjs';
-import {label} from '../labels';
+import {filterArticles, lastEditOf, sortArticles} from '../../core/registry.mjs';
+import {признакиЛокали, подсказкаЛокали} from '../../core/localeSigns.mjs';
+import {LocaleMark} from './LocaleMark';
 import {NewArticle} from './NewArticle';
 import {SectionTree} from './SectionTree';
 import {TrashPanel} from './TrashPanel';
@@ -153,53 +154,32 @@ function клетка(
 
   if (ключ === 'категория') return article.category;
 
+  // Состояние статьи живёт здесь и только здесь: сводных столбцов «Готовность» и «Видимость»
+  // больше нет — одно слово не описывает три независимые версии (`BUSINESS.md`, 2026-09-07).
+  // Показывается состояние КАЖДОЙ локали возле её же обозначения, тем же компонентом, что и в
+  // шапке открытой статьи, и по тем же признакам из общего свода.
   if (ключ === 'переводы') {
     return (
       <span className="cell-langs">
         {Object.keys(settings.локали).map((code) => {
           const version = article.versions[code];
-          const дыра = !version;
-          const срыв = дыра && code === settings.обязательныйЯзык && article.наСайте;
+          const признаки = признакиЛокали(version ?? null);
+          // Нет обязательного языка — статьи нет на сайте вовсе. Это беда статьи, а не состояние
+          // версии, поэтому она называется своими словами и остаётся заметнее прочего.
+          const срыв = !version && code === settings.обязательныйЯзык && article.наСайте;
 
           return (
-            <button
+            <LocaleMark
               key={code}
-              className={`lang ${срыв ? 'lang-срыв' : дыра ? 'lang-нет' : 'lang-есть'}`}
-              disabled={дыра}
-              title={срыв ? settings.реестр.нетНаСайте : settings.локали[code]}
+              code={code}
+              признаки={признаки}
+              срыв={срыв}
+              disabled={!version}
+              подсказка={срыв ? settings.реестр.нетНаСайте : подсказкаЛокали(code, признаки, settings)}
               onClick={() => version && props.onOpen(version.path)}
-            >
-              {code.toUpperCase()}
-            </button>
+            />
           );
         })}
-      </span>
-    );
-  }
-
-  if (ключ === 'готовность') {
-    const {значение, разное} = readinessOf(article, settings);
-    return <span title={разное ? settings.реестр.разное : ''}>{значение}{разное ? ' *' : ''}</span>;
-  }
-
-  if (ключ === 'видимость') {
-    // Только показ. Переключается видимость внутри открытой статьи, не из общего списка.
-    // Видимость принадлежит версии (SPEC 2.8), поэтому смешанное состояние — не беда и не
-    // звёздочка, а обычная правда: скрытые языки называются по именам.
-    const {скрытые, всего} = visibilityOf(article, settings);
-    const коды = скрытые.map((код) => код.toUpperCase()).join(', ');
-    // Колонка узкая, и перечень не должен её распирать: с какого числа языков показывается
-    // счёт вместо имён, решает настройка, а полный перечень уходит в подсказку.
-    const многоЯзыков = скрытые.length > settings.видимость.порогПеречня;
-
-    if (скрытые.length === 0) return <span className="cell-shown">{settings.видимость.вМеню}</span>;
-    if (скрытые.length === всего) return <span className="cell-hidden">{settings.видимость.поСсылке}</span>;
-
-    return (
-      <span className="cell-hidden" title={многоЯзыков ? коды : ''}>
-        {многоЯзыков
-          ? label('видимостьМногоСкрытых', {сколько: скрытые.length})
-          : label('видимостьСмешанная', {языки: коды})}
       </span>
     );
   }

@@ -5,6 +5,9 @@
   --ink: #111418;
   --ink-quiet: #7c848e;
   --accent: #1257d6;
+  /* Цвет тревоги обозначений локалей: `draft` и неуехавшая правка. Свой, а не цвет слоя истории:
+     слои говорят про текст статьи, а здесь речь о судьбе языковой версии. */
+  --знак-тревоги: #c8102e;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 15px;
   color: var(--ink);
@@ -36,17 +39,45 @@ button { font: inherit; cursor: pointer; }
 .lang-ask { display: flex; align-items: center; gap: 6px; margin-left: 10px; font-size: 12px; }
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
+/* Обозначение языковой версии: буквы и её собственные признаки. Признаки независимы, поэтому
+   у каждого своё место — точки над буквами, значок ссылки под ними, цвет у самих букв. */
 .lang {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
   border: 0;
   background: transparent;
   color: var(--ink-quiet);
   border-radius: 999px;
-  padding: 3px 10px;
+  padding: 2px 10px;
   font-size: 12px;
+  line-height: 1.1;
 }
 
-.lang-on { background: var(--ink); color: #fff; }
-.status { font-size: 12px; color: var(--ink-quiet); }
+/* Строки признаков держат высоту всегда, даже пустые: иначе буквы соседних языков разъезжались
+   бы по вертикали, стоит одной версии обзавестись точкой. */
+.lang-сверху,
+.lang-снизу { display: flex; align-items: center; justify-content: center; gap: 2px; height: 8px; }
+.lang-точка { width: 5px; height: 5px; border-radius: 50%; }
+/* Опубликованный файл есть, но местная версия отличается: правка ещё не уехала на сайт. */
+.lang-точка-изменена { background: var(--знак-тревоги); }
+/* Версия осталась заглушкой перевода: пустая точка — «место занято, текста нет». */
+.lang-точка-заглушка { border: 1px solid var(--ink-quiet); }
+.lang-ссылка { width: 9px; height: 9px; display: block; }
+/* Пометка зовущего у букв: своя, потому что говорит не о выпуске версии, а о времени её правки.
+   Цвет у неё тоже свой, а не цвет букв: покрасься она заодно с красным черновиком, рядом с красной
+   точкой состояния она читалась бы вторым знаком выпуска, которым не является. */
+.lang-mark { margin-left: 3px; font-size: 9px; vertical-align: 2px; color: var(--ink-quiet); }
+
+/* Цвет букв. Признаки спорят за него по порядку из ядра (`цветЛокали`), поэтому классов ровно
+   столько, сколько исходов спора, и ни один из них не гасит точки и значок ссылки. */
+.lang-цвет-обычная { color: var(--ink-quiet); }
+.lang-цвет-новая { color: var(--accent); }
+.lang-цвет-черновик { color: var(--знак-тревоги); }
+.lang-цвет-нет { opacity: 0.35; cursor: default; }
+
+/* Открытая версия отмечается оправой, а не заливкой: заливка съела бы цвет её собственных букв. */
+.lang-on { background: var(--bg-soft); box-shadow: inset 0 0 0 1px var(--line); font-weight: 600; }
 
 /* Видимость: надпись, а не кнопка. Меняется она в свойствах статьи, поэтому нажимать здесь
    нечего, и вид у неё спокойный — это правда о статье, а не орган управления. */
@@ -256,12 +287,6 @@ button { font: inherit; cursor: pointer; }
 
 
 .side-foreign { color: var(--layer-deleted); }
-.lang-нет { opacity: 0.35; cursor: default; }
-.lang-устарела { color: var(--layer-prevAi); }
-/* Скрытая языковая версия: приглушена, но не заперта — открыть её можно, и видимость у неё своя.
-   Отличается от «версии нет» тем, что остаётся нажимаемой и не гаснет так сильно. */
-.lang-скрыта { opacity: 0.55; font-style: italic; }
-.lang-mark { margin-left: 3px; font-size: 9px; vertical-align: 2px; }
 
 /* Создание статьи: небольшое окно поверх реестра. Появляется по кнопке и уходит по «Отмена». */
 .newarticle { position: fixed; inset: 0; background: rgba(17, 20, 24, 0.35); display: flex; align-items: center; justify-content: center; z-index: 20; }

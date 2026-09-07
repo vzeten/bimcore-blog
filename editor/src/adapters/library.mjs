@@ -6,6 +6,8 @@ import path from 'node:path';
 
 import {readField, splitArticle} from '../core/articleFile.mjs';
 import {isUnlisted} from '../core/frontmatterRules.mjs';
+import {черновикСайта} from '../core/localeSigns.mjs';
+import {этоЗаглушка} from '../core/stubText.mjs';
 import {groupArticles} from '../core/articles.mjs';
 import {готовностьВерсии, readState, путьФайлаСостояния, writeState} from '../core/articleState.mjs';
 import {ФОРМАТ, parseGitLog, parseGitStatus} from '../core/gitLog.mjs';
@@ -159,14 +161,17 @@ export async function editTimes(repo, git, editorDir, settings) {
 /**
  * Все файлы статей со всем, что о них известно с диска.
  * `расходится` — пути, отличающиеся от опубликованной ветки; `null` — сравнение не удалось.
+ * `веткаИзвестна` — удалось ли прочитать саму ветку: не удалось, и про публикацию версии не
+ * известно НИЧЕГО, а это не то же самое, что «не публиковалась» (тем же порядком живёт
+ * `publishFacts`). Обозначения локалей на такой разнице и держатся.
  */
-export function listFiles(repo, settings, times = new Map(), published = new Set(), расходится = null) {
+export function listFiles(repo, settings, times = new Map(), published = new Set(), расходится = null, веткаИзвестна = true) {
   const items = [];
 
   for (const root of settings['контент']) {
     for (const file of walk(path.join(repo, root['папка']))) {
       const rel = path.relative(repo, file).split(path.sep).join('/');
-      const {frontmatterRaw} = splitArticle(fs.readFileSync(file, 'utf8'));
+      const {frontmatterRaw, body} = splitArticle(fs.readFileSync(file, 'utf8'));
       const edit = times.get(rel) ?? {когда: 0, правил: null};
 
       items.push({
@@ -180,7 +185,13 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
         скрыта: isUnlisted(frontmatterRaw),
         // Лежит ли файл в опубликованной ветке. Готовности для этого мало: её человек может
         // менять руками, а вопрос «вышла ли статья на сайт» решает только сама ветка.
-        опубликован: published.has(rel),
+        опубликован: веткаИзвестна ? published.has(rel) : null,
+        // Отличие от ветки и наличие в ней — разные признаки (SPEC 4.5.2), и версия показывает
+        // оба: «опубликована, но правка ещё не уехала» иначе выглядело бы как «опубликована».
+        отличается: расходится instanceof Set ? расходится.has(rel) : null,
+        // Заглушка узнаётся тем же текстом, которым программа её и пишет (`stubText.mjs`).
+        заглушка: этоЗаглушка(body, settings),
+        черновикСайта: черновикСайта(frontmatterRaw),
         готовность: readinessOf(repo, rel, settings, published, расходится),
         правил: edit.правил,
         когда: edit.когда,
@@ -191,8 +202,8 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
   return items;
 }
 
-export function listArticles(repo, settings, times, published, расходится = null) {
-  return groupArticles(listFiles(repo, settings, times, published, расходится), settings);
+export function listArticles(repo, settings, times, published, расходится = null, веткаИзвестна = true) {
+  return groupArticles(listFiles(repo, settings, times, published, расходится, веткаИзвестна), settings);
 }
 
 /**
