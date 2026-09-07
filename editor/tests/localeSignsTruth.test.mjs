@@ -10,9 +10,9 @@ import {fileURLToPath} from 'node:url';
 import {simpleGit} from 'simple-git';
 
 import {listArticles, опубликованные} from '../src/adapters/library.mjs';
-import {расхождениеССайтом} from '../src/adapters/gitFile.mjs';
+import {видимостьВВетке, расхождениеССайтом} from '../src/adapters/gitFile.mjs';
 import {articleFacts} from '../src/adapters/articleFacts.mjs';
-import {признакиЛокали} from '../src/core/localeSigns.mjs';
+import {признакиЛокали, путиЗаВидимостью} from '../src/core/localeSigns.mjs';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const НАСТРОЙКИ = JSON.parse(fs.readFileSync(path.join(EDITOR, 'settings.json'), 'utf8'));
@@ -70,11 +70,11 @@ async function среда({шапкаRu = '', шапкаEs = ''} = {}) {
 async function свод(repo, git) {
   const ветка = await опубликованные(git, 'origin/main');
   const расхождение = await расхождениеССайтом(git, 'origin/main', НАСТРОЙКИ['контент'].map((root) => root['папка']));
+  const расходятся = расхождение === null ? null : new Set(расхождение);
+  const скрытыеВВетке = await видимостьВВетке(git, 'origin/main', путиЗаВидимостью(ветка.файлы, расходятся));
 
   return listArticles(
-    repo, НАСТРОЙКИ, new Map(), ветка.файлы,
-    расхождение === null ? null : new Set(расхождение),
-    ветка.известна,
+    repo, НАСТРОЙКИ, new Map(), ветка.файлы, расходятся, ветка.известна, new Set(), скрытыеВВетке,
   );
 }
 
@@ -186,4 +186,69 @@ describe('состояние каждой локали видно у RU, EN и E
     // Заглушка от git не зависит и остаётся видна.
     expect(признаки.es.заглушка).toBe(true);
   }, ЖДАТЬ_GIT);
+});
+
+/**
+ * Четыре состояния значка «только по ссылке» на настоящем временном git. Проверяется именно то,
+ * что видит владелец: значок обещает поведение ЖИВОЙ страницы, а не будущую настройку в файле.
+ * Русская версия переписывается уже ПОСЛЕ выпуска — так и выглядит местная правка до публикации.
+ */
+describe('значок ссылки означает опубликованную версию, скрытую на сайте', () => {
+  const переписатьRu = (repo, шапка) => положить(repo, ПУТИ.ru, статья(шапка, 'Русский текст.'));
+
+  it('опубликована с unlisted: true и не менялась — значок есть', async () => {
+    const {repo, git} = await среда({шапкаRu: 'unlisted: true\n'});
+    const признаки = признакиРеестра(await свод(repo, git));
+
+    expect(признаки.ru.поСсылке).toBe(true);
+    expect(признаки.ru.изменена).toBe(false);
+  }, ЖДАТЬ_GIT);
+
+  it('опубликована обычной и не менялась — значка нет', async () => {
+    const {repo, git} = await среда();
+    const признаки = признакиРеестра(await свод(repo, git));
+
+    expect(признаки.ru.поСсылке).toBe(false);
+    expect(признаки.ru.изменена).toBe(false);
+  }, ЖДАТЬ_GIT);
+
+  it('опубликована скрытой, а локально флаг снят — значок остаётся до публикации', async () => {
+    const {repo, git} = await среда({шапкаRu: 'unlisted: true\n'});
+    переписатьRu(repo, '');
+
+    const статьи = await свод(repo, git);
+    const признаки = признакиРеестра(статьи);
+
+    // Сайт по-прежнему прячет страницу: снятый флаг там ещё не был.
+    expect(признаки.ru.поСсылке).toBe(true);
+    // А сама неуехавшая правка видна красной точкой — тем признаком, который для неё и заведён.
+    expect(признаки.ru.изменена).toBe(true);
+    expect(articleFacts(статьи, ПУТИ.ru, НАСТРОЙКИ).признакиЛокалей).toEqual(признаки);
+  }, ЖДАТЬ_GIT);
+
+  it('опубликована обычной, а локально флаг поставлен — значка до публикации нет', async () => {
+    const {repo, git} = await среда();
+    переписатьRu(repo, 'unlisted: true\n');
+
+    const статьи = await свод(repo, git);
+    const признаки = признакиРеестра(статьи);
+
+    // Местная настройка сайту ещё ничего не сказала, поэтому значка нет...
+    expect(признаки.ru.поСсылке).toBe(false);
+    // ...а показывает её та же красная точка неопубликованной правки.
+    expect(признаки.ru.изменена).toBe(true);
+    // Соседние версии чужая правка не задела.
+    expect(признаки.en.поСсылке).toBe(false);
+    expect(признаки.es.поСсылке).toBe(false);
+    expect(articleFacts(статьи, ПУТИ.ru, НАСТРОЙКИ).признакиЛокалей).toEqual(признаки);
+  }, ЖДАТЬ_GIT);
+
+  it('сервер собирает свод тем же чтением опубликованной шапки, что и проверка', () => {
+    // Предохранитель от расхождения (SPEC 5.2.1): забудь сервер спросить ветку — реестр вернулся
+    // бы к местному `unlisted`, а тесты выше остались бы зелёными на своей сборке свода.
+    const сервер = fs.readFileSync(path.join(EDITOR, 'server.mjs'), 'utf8');
+
+    expect(сервер).toContain('видимостьВВетке');
+    expect(сервер).toContain('путиЗаВидимостью');
+  });
 });

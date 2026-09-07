@@ -166,8 +166,10 @@ export async function editTimes(repo, git, editorDir, settings) {
  * `publishFacts`). Обозначения локалей на такой разнице и держатся.
  * `черновики` — пути версий, чья работа лежит в подтверждённом черновике автосохранения
  * (`черновыеПравки`): для сайта это такое же неопубликованное изменение, как правка файла.
+ * `скрытыеВВетке` — видимость, прочитанная у самой опубликованной ветки (`видимостьВВетке`) по
+ * путям, которые назвало правило: локальная шапка про сайт не отвечает.
  */
-export function listFiles(repo, settings, times = new Map(), published = new Set(), расходится = null, веткаИзвестна = true, черновики = new Set()) {
+export function listFiles(repo, settings, times = new Map(), published = new Set(), расходится = null, веткаИзвестна = true, черновики = new Set(), скрытыеВВетке = new Map()) {
   const items = [];
 
   for (const root of settings['контент']) {
@@ -185,6 +187,10 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
         // Пустое название не подменяется здесь: чем его заменить — правило статьи, а не адаптера.
         title: readField(frontmatterRaw, 'title'),
         скрыта: isUnlisted(frontmatterRaw),
+        // Видимость ОПУБЛИКОВАННОЙ версии — отдельный факт от местной шапки выше, и путать их
+        // нельзя: первая описывает живую страницу, вторая — то, что человек получит после
+        // публикации. `null` — у ветки не спрашивали или спросить не удалось.
+        скрытаВВетке: скрытыеВВетке.has(rel) ? скрытыеВВетке.get(rel) : null,
         // Лежит ли файл в опубликованной ветке. Готовности для этого мало: её человек может
         // менять руками, а вопрос «вышла ли статья на сайт» решает только сама ветка.
         опубликован: веткаИзвестна ? published.has(rel) : null,
@@ -208,8 +214,11 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
   return items;
 }
 
-export function listArticles(repo, settings, times, published, расходится = null, веткаИзвестна = true, черновики = new Set()) {
-  return groupArticles(listFiles(repo, settings, times, published, расходится, веткаИзвестна, черновики), settings);
+export function listArticles(repo, settings, times, published, расходится = null, веткаИзвестна = true, черновики = new Set(), скрытыеВВетке = new Map()) {
+  return groupArticles(
+    listFiles(repo, settings, times, published, расходится, веткаИзвестна, черновики, скрытыеВВетке),
+    settings,
+  );
 }
 
 /**

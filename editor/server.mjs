@@ -26,7 +26,8 @@ import {refineRoute} from './src/adapters/refineRoute.mjs';
 import {releaseRoute} from './src/adapters/releaseRoute.mjs';
 import {publishRoute} from './src/adapters/publishRoute.mjs';
 import {pushRoute} from './src/adapters/pushRoute.mjs';
-import {detectPublishedRef, расхождениеССайтом} from './src/adapters/gitFile.mjs';
+import {detectPublishedRef, видимостьВВетке, расхождениеССайтом} from './src/adapters/gitFile.mjs';
+import {путиЗаВидимостью} from './src/core/localeSigns.mjs';
 import {дверьGit} from './src/adapters/gitEnv.mjs';
 import {фиксироватьВнешнюю} from './src/adapters/externalVersion.mjs';
 
@@ -89,9 +90,16 @@ async function articles() {
   // Черновики автосохранения — часть свода, а не отдельное знание окна: работа, принятая сервером,
   // для сайта такое же неопубликованное изменение версии, как правка самого файла.
   const черновики = черновыеПравки(REPO, EDITOR_DIR, settings);
+  const расходятся = расхождение === null ? null : new Set(расхождение);
+  // Видимость на сайте берётся у самой ветки, а не у файла на диске: значок «только по ссылке»
+  // обещает поведение живой страницы, и местная смена `unlisted` до публикации его не касается.
+  // Кого об этом спрашивать, решает правило: у версии, совпадающей с веткой, ответ уже на диске,
+  // поэтому чтений здесь столько, сколько версий сейчас расходится с сайтом, а не сколько статей.
+  const скрытыеВВетке = await видимостьВВетке(git, publishedRef, путиЗаВидимостью(ветка.файлы, расходятся));
+
   return listArticles(
     REPO, settings, times, ветка.файлы,
-    расхождение === null ? null : new Set(расхождение), ветка.известна, черновики,
+    расходятся, ветка.известна, черновики, скрытыеВВетке,
   );
 }
 
