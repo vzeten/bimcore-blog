@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {readField, splitArticle} from '../core/articleFile.mjs';
+import {nothingChanged, readField, splitArticle} from '../core/articleFile.mjs';
 import {isUnlisted} from '../core/frontmatterRules.mjs';
 import {черновикСайта} from '../core/localeSigns.mjs';
 import {этоЗаглушка} from '../core/stubText.mjs';
@@ -12,7 +12,7 @@ import {groupArticles} from '../core/articles.mjs';
 import {готовностьВерсии, readState, путьФайлаСостояния, writeState} from '../core/articleState.mjs';
 import {ФОРМАТ, parseGitLog, parseGitStatus} from '../core/gitLog.mjs';
 import {авторПравки} from '../core/externalEdit.mjs';
-import {latestSnapshot} from './draftStore.mjs';
+import {latestSnapshot, listDrafts} from './draftStore.mjs';
 import {файлСтатьи, путьВерсии} from '../core/articles.mjs';
 import {ИМЯ_КАТЕГОРИИ} from '../core/articleKind.mjs';
 import {articlePlace} from '../core/frontmatterRules.mjs';
@@ -164,8 +164,10 @@ export async function editTimes(repo, git, editorDir, settings) {
  * `веткаИзвестна` — удалось ли прочитать саму ветку: не удалось, и про публикацию версии не
  * известно НИЧЕГО, а это не то же самое, что «не публиковалась» (тем же порядком живёт
  * `publishFacts`). Обозначения локалей на такой разнице и держатся.
+ * `черновики` — пути версий, чья работа лежит в подтверждённом черновике автосохранения
+ * (`черновыеПравки`): для сайта это такое же неопубликованное изменение, как правка файла.
  */
-export function listFiles(repo, settings, times = new Map(), published = new Set(), расходится = null, веткаИзвестна = true) {
+export function listFiles(repo, settings, times = new Map(), published = new Set(), расходится = null, веткаИзвестна = true, черновики = new Set()) {
   const items = [];
 
   for (const root of settings['контент']) {
@@ -189,6 +191,10 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
         // Отличие от ветки и наличие в ней — разные признаки (SPEC 4.5.2), и версия показывает
         // оба: «опубликована, но правка ещё не уехала» иначе выглядело бы как «опубликована».
         отличается: расходится instanceof Set ? расходится.has(rel) : null,
+        // Работа человека, уже надёжно сохранённая программой, но ещё не в самом файле.
+        // Файл и черновик — разные места хранения одной и той же неопубликованной правки
+        // (решение владельца 2026-09-07), поэтому признак стоит рядом с `отличается`, а не вместо.
+        правкаВЧерновике: черновики.has(rel),
         // Заглушка узнаётся тем же текстом, которым программа её и пишет (`stubText.mjs`).
         заглушка: этоЗаглушка(body, settings),
         черновикСайта: черновикСайта(frontmatterRaw),
@@ -202,8 +208,34 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
   return items;
 }
 
-export function listArticles(repo, settings, times, published, расходится = null, веткаИзвестна = true) {
-  return groupArticles(listFiles(repo, settings, times, published, расходится, веткаИзвестна), settings);
+export function listArticles(repo, settings, times, published, расходится = null, веткаИзвестна = true, черновики = new Set()) {
+  return groupArticles(listFiles(repo, settings, times, published, расходится, веткаИзвестна, черновики), settings);
+}
+
+/**
+ * Версии, чья работа уже надёжно лежит у программы, но ещё не в файле статьи: подтверждённый
+ * сервером черновик автосохранения, отличающийся от файла. Ни окно, ни набранный, но не отправленный
+ * текст сюда не попадают — только то, что сервер принял и положил на диск.
+ *
+ * Сравнение — тем же правилом, каким его делает само автосохранение: разные переводы строк
+ * изменением не считаются (SPEC 3.6), иначе точка загоралась бы у файла, равного черновику.
+ * Черновик без своего файла пропускается: статью удалили или переименовали, и правкой версии,
+ * которой нет, он не является. Путь берётся из самого черновика, поэтому проверяется, что он
+ * ведёт внутрь репозитория.
+ */
+export function черновыеПравки(repo, editorDir, settings) {
+  const пути = new Set();
+
+  for (const draft of listDrafts(editorDir, settings)) {
+    const rel = draft['path'];
+    const file = path.resolve(repo, rel);
+    if (!file.startsWith(path.resolve(repo) + path.sep) || !fs.existsSync(file)) continue;
+
+    const текущий = splitArticle(fs.readFileSync(file, 'utf8'));
+    if (!nothingChanged(текущий, {body: draft['body'], frontmatterRaw: draft['frontmatterRaw']})) пути.add(rel);
+  }
+
+  return пути;
 }
 
 /**

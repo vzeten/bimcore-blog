@@ -47,6 +47,30 @@ function прочитатьЧерновик(file, rel) {
   }
 }
 
+/**
+ * Все черновики, что лежат у программы: по одному на языковую версию. Нужны своду — работа,
+ * подтверждённая автосохранением, для сайта такое же неопубликованное изменение, как правка файла.
+ * Битый или чужой файл пропускается молча: работой человека он не считается, а падать своду нельзя.
+ */
+export function listDrafts(editorDir, settings) {
+  const dir = draftsDir(editorDir, settings);
+  if (!fs.existsSync(dir)) return [];
+
+  return fs.readdirSync(dir)
+    .map((имя) => прочитатьЛюбой(path.join(dir, имя)))
+    .filter((draft) => draft !== null);
+}
+
+/** Черновик без вопроса о том, какой статье он должен принадлежать: путь берётся из него самого. */
+function прочитатьЛюбой(file) {
+  try {
+    const draft = readDraft(fs.readFileSync(file, 'utf8'));
+    return draft !== null && typeof draft['path'] === 'string' && draft['path'] !== '' ? draft : null;
+  } catch {
+    return null; // файл занят или нечитаем — считаем, что черновика нет
+  }
+}
+
 /** Записать черновик. Папка создаётся при первой записи и закрыта от git через .gitignore. */
 export function saveDraft(editorDir, settings, draft) {
   const dir = draftsDir(editorDir, settings);

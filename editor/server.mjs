@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {createServer as createVite} from 'vite';
 
 import {обложкаСайта} from './src/core/siteConfig.mjs';
-import {editTimes, listArticles, опубликованные} from './src/adapters/library.mjs';
+import {editTimes, listArticles, опубликованные, черновыеПравки} from './src/adapters/library.mjs';
 import {errorResponse, readBody} from './src/adapters/httpBody.mjs';
 import {draftRoute} from './src/adapters/draftRoute.mjs';
 import {assetRoute} from './src/adapters/assets.mjs';
@@ -86,7 +86,13 @@ async function articles() {
     расхождениеССайтом(git, publishedRef, settings['контент'].map((root) => root['папка'])),
   ]);
   веткаПрочитана = ветка.известна;
-  return listArticles(REPO, settings, times, ветка.файлы, расхождение === null ? null : new Set(расхождение), ветка.известна);
+  // Черновики автосохранения — часть свода, а не отдельное знание окна: работа, принятая сервером,
+  // для сайта такое же неопубликованное изменение версии, как правка самого файла.
+  const черновики = черновыеПравки(REPO, EDITOR_DIR, settings);
+  return listArticles(
+    REPO, settings, times, ветка.файлы,
+    расхождение === null ? null : new Set(расхождение), ветка.известна, черновики,
+  );
 }
 
 function send(res, code, data, type = 'application/json; charset=utf-8') {
