@@ -131,6 +131,20 @@ describe('карточка товара в статье с роликом WebM',
     expect(вызовы[2].body).toMatchObject({article: 'editor/sandbox/proba/index.mdx', src: './img-02.jpg'});
   });
 
+  it('исключение при самой правке после укладки — картинка забирается обратно, ошибка доходит до человека', async () => {
+    const вызовы = stubПоАдресам(ОТВЕТЫ);
+    const view = живоеОкно(СТАТЬЯ, КУРСОР);
+    view.dispatch.mockImplementationOnce(() => {
+      throw new RangeError('Selection points outside of document');
+    });
+
+    await expect(вставитьТовар(вход(view))).rejects.toThrow('Selection points outside of document');
+
+    expect(view.state.doc.toString()).toBe(СТАТЬЯ);
+    expect(вызовы.map((в) => в.url)).toEqual(['/api/product/image', '/api/asset/place', '/api/asset/withdraw']);
+    expect(вызовы[2].body).toMatchObject({src: './img-02.jpg'});
+  });
+
   it('без ролика карточка встаёт как раньше: импорт в самом начале текста', async () => {
     stubПоАдресам(ОТВЕТЫ);
     const текст = 'Первый абзац.\n\nВторой абзац.';
