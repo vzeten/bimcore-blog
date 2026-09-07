@@ -7,7 +7,7 @@ import path from 'node:path';
 import {readField, splitArticle} from '../core/articleFile.mjs';
 import {isUnlisted} from '../core/frontmatterRules.mjs';
 import {groupArticles} from '../core/articles.mjs';
-import {initialReadiness, readState, путьФайлаСостояния, writeState} from '../core/articleState.mjs';
+import {готовностьВерсии, readState, путьФайлаСостояния, writeState} from '../core/articleState.mjs';
 import {ФОРМАТ, parseGitLog, parseGitStatus} from '../core/gitLog.mjs';
 import {авторПравки} from '../core/externalEdit.mjs';
 import {latestSnapshot} from './draftStore.mjs';
@@ -89,13 +89,22 @@ export async function опубликованные(git, ref) {
 }
 
 /**
- * Готовность версии. Свой файл состояния главнее всего.
- * Файла нет — готовность выводится из факта публикации, а не назначается «Черновик» вслепую.
+ * Совпадает ли версия с опубликованной веткой: путь там есть И содержимое не расходится с диском.
+ * `расходится` — перечень путей, отличающихся от ветки (общий путь сравнения `расхождениеССайтом`);
+ * `null` — сравнить не удалось, и тогда совпадение не доказано, а не «совпало».
  */
-export function readinessOf(repo, rel, settings, published) {
-  const raw = readStateRaw(repo, rel, settings);
-  if (raw.trim() !== '') return readState(raw, settings)['готовность'];
-  return initialReadiness(published.has(rel), settings);
+function совпадаетСПубликацией(rel, published, расходится) {
+  if (!published.has(rel)) return false;
+  return расходится instanceof Set ? !расходится.has(rel) : null;
+}
+
+/** Готовность версии. Само правило — в ядре; здесь только факты с диска и от git. */
+export function readinessOf(repo, rel, settings, published, расходится = null) {
+  return готовностьВерсии(
+    readStateRaw(repo, rel, settings),
+    совпадаетСПубликацией(rel, published, расходится),
+    settings,
+  );
 }
 
 export function saveState(repo, rel, settings, state) {
@@ -147,8 +156,11 @@ export async function editTimes(repo, git, editorDir, settings) {
   return times;
 }
 
-/** Все файлы статей со всем, что о них известно с диска. */
-export function listFiles(repo, settings, times = new Map(), published = new Set()) {
+/**
+ * Все файлы статей со всем, что о них известно с диска.
+ * `расходится` — пути, отличающиеся от опубликованной ветки; `null` — сравнение не удалось.
+ */
+export function listFiles(repo, settings, times = new Map(), published = new Set(), расходится = null) {
   const items = [];
 
   for (const root of settings['контент']) {
@@ -169,7 +181,7 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
         // Лежит ли файл в опубликованной ветке. Готовности для этого мало: её человек может
         // менять руками, а вопрос «вышла ли статья на сайт» решает только сама ветка.
         опубликован: published.has(rel),
-        готовность: readinessOf(repo, rel, settings, published),
+        готовность: readinessOf(repo, rel, settings, published, расходится),
         правил: edit.правил,
         когда: edit.когда,
       });
@@ -179,8 +191,8 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
   return items;
 }
 
-export function listArticles(repo, settings, times, published) {
-  return groupArticles(listFiles(repo, settings, times, published), settings);
+export function listArticles(repo, settings, times, published, расходится = null) {
+  return groupArticles(listFiles(repo, settings, times, published, расходится), settings);
 }
 
 /**

@@ -26,7 +26,7 @@ import {refineRoute} from './src/adapters/refineRoute.mjs';
 import {releaseRoute} from './src/adapters/releaseRoute.mjs';
 import {publishRoute} from './src/adapters/publishRoute.mjs';
 import {pushRoute} from './src/adapters/pushRoute.mjs';
-import {detectPublishedRef} from './src/adapters/gitFile.mjs';
+import {detectPublishedRef, расхождениеССайтом} from './src/adapters/gitFile.mjs';
 import {дверьGit} from './src/adapters/gitEnv.mjs';
 import {фиксироватьВнешнюю} from './src/adapters/externalVersion.mjs';
 
@@ -72,15 +72,21 @@ const фиксировать = (rel, обязательно) => фиксиров
 // про публикацию должно быть одно на всю программу.
 let веткаПрочитана = true;
 
-/** Весь свод статей: файлы с диска, собранные в статьи, с временами правок и фактом публикации. */
+/**
+ * Весь свод статей: файлы с диска, собранные в статьи, с временами правок и фактом публикации.
+ * Готовность «Опубликована» доказывается совпадением содержимого с опубликованной веткой
+ * (SPEC 4.5.2), и спрашивается оно тем же путём сравнения, что и у публикации, одним заходом по
+ * корням контента; не удалось спросить — `null`, и совпадение не считается доказанным.
+ */
 async function articles() {
   const settings = readSettings();
-  const [times, ветка] = await Promise.all([
+  const [times, ветка, расхождение] = await Promise.all([
     editTimes(REPO, git, EDITOR_DIR, settings),
     опубликованные(git, publishedRef),
+    расхождениеССайтом(git, publishedRef, settings['контент'].map((root) => root['папка'])),
   ]);
   веткаПрочитана = ветка.известна;
-  return listArticles(REPO, settings, times, ветка.файлы);
+  return listArticles(REPO, settings, times, ветка.файлы, расхождение === null ? null : new Set(расхождение));
 }
 
 function send(res, code, data, type = 'application/json; charset=utf-8') {
