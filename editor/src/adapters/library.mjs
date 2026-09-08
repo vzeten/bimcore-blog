@@ -13,7 +13,7 @@ import {готовностьВерсии, readState, путьФайлаСост�
 import {ФОРМАТ, parseGitLog, parseGitStatus} from '../core/gitLog.mjs';
 import {авторПравки} from '../core/externalEdit.mjs';
 import {latestSnapshot, listDrafts} from './draftStore.mjs';
-import {файлСтатьи, путьВерсии} from '../core/articles.mjs';
+import {версияОтличается, служебноеИмя, файлСтатьи, путьВерсии} from '../core/articles.mjs';
 import {ИМЯ_КАТЕГОРИИ} from '../core/articleKind.mjs';
 import {articlePlace} from '../core/frontmatterRules.mjs';
 
@@ -42,7 +42,7 @@ export function walk(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
 
   for (const entry of fs.readdirSync(dir, {withFileTypes: true})) {
-    if (entry.name.startsWith('_') || entry.name.startsWith('.')) continue;
+    if (служебноеИмя(entry.name)) continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) walk(full, out);
     else if (файлСтатьи(entry.name)) out.push(full);
@@ -171,44 +171,61 @@ export async function editTimes(repo, git, editorDir, settings) {
  */
 export function listFiles(repo, settings, times = new Map(), published = new Set(), расходится = null, веткаИзвестна = true, черновики = new Set(), скрытыеВВетке = new Map()) {
   const items = [];
+  const файлы = [];
 
   for (const root of settings['контент']) {
     for (const file of walk(path.join(repo, root['папка']))) {
-      const rel = path.relative(repo, file).split(path.sep).join('/');
-      const {frontmatterRaw, body} = splitArticle(fs.readFileSync(file, 'utf8'));
-      const edit = times.get(rel) ?? {когда: 0, правил: null};
-
-      items.push({
-        path: rel,
-        // Один факт с диска для правила вида: остальное решает ядро.
-        категорияРядом: категорияРядом(repo, rel, settings),
-        вКорнеРода: !articlePlace(rel, settings['контент']).inside.includes('/'),
-        адресКорня: String(readField(frontmatterRaw, 'slug') ?? '').trim().replace(/^["']|["']$/g, '') === '/',
-        // Пустое название не подменяется здесь: чем его заменить — правило статьи, а не адаптера.
-        title: readField(frontmatterRaw, 'title'),
-        скрыта: isUnlisted(frontmatterRaw),
-        // Видимость ОПУБЛИКОВАННОЙ версии — отдельный факт от местной шапки выше, и путать их
-        // нельзя: первая описывает живую страницу, вторая — то, что человек получит после
-        // публикации. `null` — у ветки не спрашивали или спросить не удалось.
-        скрытаВВетке: скрытыеВВетке.has(rel) ? скрытыеВВетке.get(rel) : null,
-        // Лежит ли файл в опубликованной ветке. Готовности для этого мало: её человек может
-        // менять руками, а вопрос «вышла ли статья на сайт» решает только сама ветка.
-        опубликован: веткаИзвестна ? published.has(rel) : null,
-        // Отличие от ветки и наличие в ней — разные признаки (SPEC 4.5.2), и версия показывает
-        // оба: «опубликована, но правка ещё не уехала» иначе выглядело бы как «опубликована».
-        отличается: расходится instanceof Set ? расходится.has(rel) : null,
-        // Работа человека, уже надёжно сохранённая программой, но ещё не в самом файле.
-        // Файл и черновик — разные места хранения одной и той же неопубликованной правки
-        // (решение владельца 2026-09-07), поэтому признак стоит рядом с `отличается`, а не вместо.
-        правкаВЧерновике: черновики.has(rel),
-        // Заглушка узнаётся тем же текстом, которым программа её и пишет (`stubText.mjs`).
-        заглушка: этоЗаглушка(body, settings),
-        черновикСайта: черновикСайта(frontmatterRaw),
-        готовность: readinessOf(repo, rel, settings, published, расходится),
-        правил: edit.правил,
-        когда: edit.когда,
-      });
+      файлы.push({file, rel: path.relative(repo, file).split(path.sep).join('/')});
     }
+  }
+
+  // Лежит ли в папке версии (или ниже) ещё одна статья — единственный факт, который правилу
+  // «что принадлежит версии» нужен с диска. В отсортированном перечне все пути одной папки идут
+  // подряд, поэтому достаточно посмотреть на соседей, а не обходить весь реестр каждой версией.
+  const пути = файлы.map((свой) => свой.rel).sort();
+  const место = new Map(пути.map((rel, i) => [rel, i]));
+  const соседВПапке = (rel) => {
+    const папка = rel.replace(/[^/]*$/, '');
+    const i = место.get(rel);
+
+    return (i > 0 && пути[i - 1].startsWith(папка)) || (i + 1 < пути.length && пути[i + 1].startsWith(папка));
+  };
+
+  for (const {file, rel} of файлы) {
+    const {frontmatterRaw, body} = splitArticle(fs.readFileSync(file, 'utf8'));
+    const edit = times.get(rel) ?? {когда: 0, правил: null};
+
+    items.push({
+      path: rel,
+      // Один факт с диска для правила вида: остальное решает ядро.
+      категорияРядом: категорияРядом(repo, rel, settings),
+      вКорнеРода: !articlePlace(rel, settings['контент']).inside.includes('/'),
+      адресКорня: String(readField(frontmatterRaw, 'slug') ?? '').trim().replace(/^["']|["']$/g, '') === '/',
+      // Пустое название не подменяется здесь: чем его заменить — правило статьи, а не адаптера.
+      title: readField(frontmatterRaw, 'title'),
+      скрыта: isUnlisted(frontmatterRaw),
+      // Видимость ОПУБЛИКОВАННОЙ версии — отдельный факт от местной шапки выше, и путать их
+      // нельзя: первая описывает живую страницу, вторая — то, что человек получит после
+      // публикации. `null` — у ветки не спрашивали или спросить не удалось.
+      скрытаВВетке: скрытыеВВетке.has(rel) ? скрытыеВВетке.get(rel) : null,
+      // Лежит ли файл в опубликованной ветке. Готовности для этого мало: её человек может
+      // менять руками, а вопрос «вышла ли статья на сайт» решает только сама ветка.
+      опубликован: веткаИзвестна ? published.has(rel) : null,
+      // Отличие от ветки и наличие в ней — разные признаки (SPEC 4.5.2), и версия показывает
+      // оба: «опубликована, но правка ещё не уехала» иначе выглядело бы как «опубликована».
+      // Что считать отличием версии — правило ядра: её файл и её картинки, а не только текст.
+      отличается: версияОтличается(rel, расходится, соседВПапке(rel)),
+      // Работа человека, уже надёжно сохранённая программой, но ещё не в самом файле.
+      // Файл и черновик — разные места хранения одной и той же неопубликованной правки
+      // (решение владельца 2026-09-07), поэтому признак стоит рядом с `отличается`, а не вместо.
+      правкаВЧерновике: черновики.has(rel),
+      // Заглушка узнаётся тем же текстом, которым программа её и пишет (`stubText.mjs`).
+      заглушка: этоЗаглушка(body, settings),
+      черновикСайта: черновикСайта(frontmatterRaw),
+      готовность: readinessOf(repo, rel, settings, published, расходится),
+      правил: edit.правил,
+      когда: edit.когда,
+    });
   }
 
   return items;
