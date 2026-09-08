@@ -3,6 +3,7 @@ import {Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type
 import {syntaxTree} from '@codemirror/language';
 import {Annotation, StateEffect, StateField, type Range} from '@codemirror/state';
 import {РАЗБОР_КАРТИНКИ, shownAlt} from '../../core/commands';
+import {знакиЖирногоВидны} from './boldMarks';
 import {знакМаркера, уровеньСписка} from './listMarker';
 import {адресКартинки} from './assetSrc';
 
@@ -245,6 +246,13 @@ function build(view: EditorView, article: string, onImage?: (картинка: �
         if (name === 'Emphasis') return void mark(node.from, node.to, 'md-em');
         if (name === 'InlineCode') return void mark(node.from, node.to, 'md-code');
         if (name === 'Link') return void mark(node.from, node.to, 'md-link');
+
+        // Знаки жирного прячутся и на строке под курсором: правило — `boldMarks.ts`.
+        if (name === 'EmphasisMark' && node.node.parent?.name === 'StrongEmphasis') {
+          const кусок = node.node.parent;
+          if (!знакиЖирногоВидны(кусок, view.state.selection.ranges)) hide(node.from, node.to);
+          return;
+        }
 
         if ((name === 'EmphasisMark' || name === 'CodeMark' || name === 'QuoteMark') && !raw(node.from)) {
           hide(node.from, node.to);
