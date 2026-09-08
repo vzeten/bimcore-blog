@@ -48,6 +48,7 @@ const версия = (path: string, ещё: Partial<ArticleVersion> = {}): Artic
   правкаВЧерновике: false,
   заглушка: false,
   черновикСайта: false,
+  черновикВВетке: false,
   правил: null,
   когда: 0,
   ...ещё,

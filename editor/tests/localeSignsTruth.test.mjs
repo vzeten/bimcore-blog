@@ -2,89 +2,16 @@
 // Наблюдение владельца на настоящем временном git: RU опубликована и не изменена, EN опубликована
 // и локально изменена, ES — заглушка. Признаки каждой версии считаются по одному своду, реестр и
 // шапка берут их оттуда же, а общего слова «Опубликована» о статье больше нет.
-import {afterEach, describe, expect, it} from 'vitest';
+import {describe, expect, it} from 'vitest';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {simpleGit} from 'simple-git';
 
-import {listArticles, опубликованные} from '../src/adapters/library.mjs';
-import {видимостьВВетке, расхождениеССайтом} from '../src/adapters/gitFile.mjs';
 import {articleFacts} from '../src/adapters/articleFacts.mjs';
-import {признакиЛокали, путиЗаВидимостью} from '../src/core/localeSigns.mjs';
+import {признакиЛокали} from '../src/core/localeSigns.mjs';
+import {ЖДАТЬ_GIT, НАСТРОЙКИ, ПУТИ, положить, признакиРеестра, свод, среда, статья} from './localeSignsHarness.mjs';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const НАСТРОЙКИ = JSON.parse(fs.readFileSync(path.join(EDITOR, 'settings.json'), 'utf8'));
-const ЖДАТЬ_GIT = 30_000;
-
-const ПУТИ = {
-  ru: 'i18n/ru/docusaurus-plugin-content-blog/proba/index.mdx',
-  en: 'blog/proba/index.mdx',
-  es: 'i18n/es/docusaurus-plugin-content-blog/proba/index.mdx',
-};
-
-const статья = (шапка, тело) => `---\ntitle: "Проба"\ndescription: "Про пробу."\n${шапка}---\n\n${тело}\n`;
-const ЗАГЛУШКА_ES = НАСТРОЙКИ['заглушкиПеревода']['es']['тело'];
-
-const папки = [];
-
-afterEach(() => {
-  while (папки.length > 0) fs.rmSync(папки.pop(), {recursive: true, force: true, maxRetries: 10, retryDelay: 100});
-});
-
-function положить(repo, rel, текст) {
-  fs.mkdirSync(path.join(repo, path.dirname(rel)), {recursive: true});
-  fs.writeFileSync(path.join(repo, rel), текст, 'utf8');
-}
-
-/**
- * Репозиторий с тремя языковыми версиями одной статьи. Все три уехали в `origin/main`, после чего
- * английская изменена на диске: ровно то сочетание, которое владелец увидел одним словом.
- */
-async function среда({шапкаRu = '', шапкаEs = ''} = {}) {
-  const корень = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-signs-'));
-  папки.push(корень);
-  const repo = path.join(корень, 'работа');
-  const сервер = path.join(корень, 'сайт.git');
-
-  await simpleGit(корень).raw(['init', '--bare', '--initial-branch=main', сервер]);
-  положить(repo, ПУТИ.ru, статья(шапкаRu, 'Русский текст.'));
-  положить(repo, ПУТИ.en, статья('', 'English text.'));
-  положить(repo, ПУТИ.es, статья(шапкаEs, ЗАГЛУШКА_ES));
-
-  const git = simpleGit(repo);
-  await git.init(['--initial-branch=main']);
-  await git.addConfig('user.name', 'Проверка');
-  await git.addConfig('user.email', 'proverka@example.com');
-  await git.addConfig('commit.gpgsign', 'false');
-  await git.raw(['remote', 'add', 'origin', сервер]);
-  await git.raw(['add', '--', ...Object.values(ПУТИ)]);
-  await git.raw(['commit', '-m', 'все три версии на сайте']);
-  await git.raw(['push', 'origin', 'main']);
-
-  return {repo, git};
-}
-
-/** Свод тем же порядком, каким его собирает сервер. */
-async function свод(repo, git) {
-  const ветка = await опубликованные(git, 'origin/main');
-  const расхождение = await расхождениеССайтом(git, 'origin/main', НАСТРОЙКИ['контент'].map((root) => root['папка']));
-  const расходятся = расхождение === null ? null : new Set(расхождение);
-  const скрытыеВВетке = await видимостьВВетке(git, 'origin/main', путиЗаВидимостью(ветка.файлы, расходятся));
-
-  return listArticles(
-    repo, НАСТРОЙКИ, new Map(), ветка.файлы, расходятся, ветка.известна, new Set(), скрытыеВВетке,
-  );
-}
-
-/** Признаки каждой локали так, как их берёт реестр: из свода, правилом ядра. */
-const признакиРеестра = (статьи) => {
-  const своя = статьи.find((item) => Object.values(item.versions).some((v) => v.path === ПУТИ.ru));
-  return Object.fromEntries(
-    Object.keys(НАСТРОЙКИ['локали']).map((код) => [код, признакиЛокали(своя.versions[код] ?? null)]),
-  );
-};
 
 describe('состояние каждой локали видно у RU, EN и ES', () => {
   it('RU опубликована и не изменена, EN изменена, ES заглушка — у каждой версии свои признаки', async () => {
@@ -263,7 +190,96 @@ describe('значок ссылки означает опубликованну�
     // бы к местному `unlisted`, а тесты выше остались бы зелёными на своей сборке свода.
     const сервер = fs.readFileSync(path.join(EDITOR, 'server.mjs'), 'utf8');
 
-    expect(сервер).toContain('видимостьВВетке');
-    expect(сервер).toContain('путиЗаВидимостью');
+    expect(сервер).toContain('шапкиВВетке');
+    expect(сервер).toContain('путиЗаОпубликованнойШапкой');
   });
+});
+
+/**
+ * Четыре состояния красных букв на настоящем временном git — теми же парами, что и у значка
+ * ссылки. Цвет обещает поведение ЖИВОЙ страницы: сборка сайта её не выпускает. Будущая правка
+ * доступности до публикации цвета не касается, её показывает красная точка.
+ */
+describe('красные буквы означают draft: true в опубликованной версии', () => {
+  const переписатьRu = (repo, шапка) => положить(repo, ПУТИ.ru, статья(шапка, 'Русский текст.'));
+
+  it('опубликована с draft: true и не менялась — буквы красные', async () => {
+    const {repo, git} = await среда({шапкаRu: 'draft: true\n'});
+    const признаки = признакиРеестра(await свод(repo, git));
+
+    expect(признаки.ru.черновик).toBe(true);
+    expect(признаки.ru.изменена).toBe(false);
+  }, ЖДАТЬ_GIT);
+
+  it('опубликована обычной и не менялась — буквы не красные', async () => {
+    const {repo, git} = await среда();
+    const признаки = признакиРеестра(await свод(repo, git));
+
+    expect(признаки.ru.черновик).toBe(false);
+    expect(признаки.ru.изменена).toBe(false);
+  }, ЖДАТЬ_GIT);
+
+  it('опубликована черновиком, а локально снят — буквы остаются красными до публикации', async () => {
+    const {repo, git} = await среда({шапкаRu: 'draft: true\n'});
+    переписатьRu(repo, '');
+
+    const статьи = await свод(repo, git);
+    const признаки = признакиРеестра(статьи);
+
+    // Сайт по-прежнему не выпускает страницу: снятого поля там ещё не было.
+    expect(признаки.ru.черновик).toBe(true);
+    // Саму неуехавшую правку показывает красная точка — тот признак, который для неё и заведён.
+    expect(признаки.ru.изменена).toBe(true);
+    expect(articleFacts(статьи, ПУТИ.ru, НАСТРОЙКИ).признакиЛокалей).toEqual(признаки);
+  }, ЖДАТЬ_GIT);
+
+  it('опубликована обычной, а локально поставлен — красноты до публикации нет', async () => {
+    const {repo, git} = await среда();
+    переписатьRu(repo, 'draft: true\n');
+
+    const статьи = await свод(repo, git);
+    const признаки = признакиРеестра(статьи);
+
+    expect(признаки.ru.черновик).toBe(false);
+    expect(признаки.ru.изменена).toBe(true);
+    // Соседние языки чужая правка не задела.
+    expect(признаки.en.черновик).toBe(false);
+    expect(признаки.es.черновик).toBe(false);
+    expect(признаки.en.изменена).toBe(false);
+    expect(articleFacts(статьи, ПУТИ.ru, НАСТРОЙКИ).признакиЛокалей).toEqual(признаки);
+  }, ЖДАТЬ_GIT);
+
+  it('опубликованный draft: false равнозначен отсутствию поля', async () => {
+    const {repo, git} = await среда({шапкаRu: 'draft: false\n'});
+
+    expect(признакиРеестра(await свод(repo, git)).ru.черновик).toBe(false);
+  }, ЖДАТЬ_GIT);
+
+  it('локальная смена доступности не трогает ни цвет, ни значок соседних локалей', async () => {
+    // Опубликовано так: RU черновиком, ES по ссылке. Локально у RU снимают черновик.
+    const {repo, git} = await среда({шапкаRu: 'draft: true\n', шапкаEs: 'unlisted: true\n'});
+    переписатьRu(repo, 'unlisted: true\n');
+
+    const признаки = признакиРеестра(await свод(repo, git));
+
+    // У RU обещание сайта не изменилось ни в цвете, ни в значке — изменилась только точка.
+    expect(признаки.ru.черновик).toBe(true);
+    expect(признаки.ru.поСсылке).toBe(false);
+    expect(признаки.ru.изменена).toBe(true);
+    // ES осталась при своём значке, EN — при своём отсутствии признаков.
+    expect(признаки.es.поСсылке).toBe(true);
+    expect(признаки.es.черновик).toBe(false);
+    expect(признаки.en.черновик).toBe(false);
+    expect(признаки.en.поСсылке).toBe(false);
+    expect(признаки.en.изменена).toBe(false);
+  }, ЖДАТЬ_GIT);
+
+  it('git недоступен — красных букв нет, даже когда draft стоит в файле', async () => {
+    const {repo, git} = await среда({шапкаRu: 'draft: true\n'});
+    fs.rmSync(path.join(repo, '.git'), {recursive: true, force: true, maxRetries: 10, retryDelay: 100});
+
+    const признаки = признакиРеестра(await свод(repo, git));
+
+    for (const код of Object.keys(НАСТРОЙКИ['локали'])) expect(признаки[код].черновик).toBe(false);
+  }, ЖДАТЬ_GIT);
 });

@@ -166,10 +166,10 @@ export async function editTimes(repo, git, editorDir, settings) {
  * `publishFacts`). Обозначения локалей на такой разнице и держатся.
  * `черновики` — пути версий, чья работа лежит в подтверждённом черновике автосохранения
  * (`черновыеПравки`): для сайта это такое же неопубликованное изменение, как правка файла.
- * `скрытыеВВетке` — видимость, прочитанная у самой опубликованной ветки (`видимостьВВетке`) по
+ * `вВетке` — опубликованная шапка, прочитанная у самой ветки (`шапкиВВетке`) по
  * путям, которые назвало правило: локальная шапка про сайт не отвечает.
  */
-export function listFiles(repo, settings, times = new Map(), published = new Set(), расходится = null, веткаИзвестна = true, черновики = new Set(), скрытыеВВетке = new Map()) {
+export function listFiles(repo, settings, times = new Map(), published = new Set(), расходится = null, веткаИзвестна = true, черновики = new Set(), вВетке = new Map()) {
   const items = [];
   const файлы = [];
 
@@ -207,7 +207,7 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
       // Видимость ОПУБЛИКОВАННОЙ версии — отдельный факт от местной шапки выше, и путать их
       // нельзя: первая описывает живую страницу, вторая — то, что человек получит после
       // публикации. `null` — у ветки не спрашивали или спросить не удалось.
-      скрытаВВетке: скрытыеВВетке.has(rel) ? скрытыеВВетке.get(rel) : null,
+      скрытаВВетке: вВетке.has(rel) ? вВетке.get(rel)['скрыта'] : null,
       // Лежит ли файл в опубликованной ветке. Готовности для этого мало: её человек может
       // менять руками, а вопрос «вышла ли статья на сайт» решает только сама ветка.
       опубликован: веткаИзвестна ? published.has(rel) : null,
@@ -221,7 +221,10 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
       правкаВЧерновике: черновики.has(rel),
       // Заглушка узнаётся тем же текстом, которым программа её и пишет (`stubText.mjs`).
       заглушка: этоЗаглушка(body, settings),
+      // Черновик МЕСТНОЙ шапки — то, что человек готовит; красный цвет обещает другое, поэтому
+      // рядом стоит и черновик опубликованной версии. Путать их нельзя, как и у видимости.
       черновикСайта: черновикСайта(frontmatterRaw),
+      черновикВВетке: вВетке.has(rel) ? вВетке.get(rel)['черновик'] : null,
       готовность: readinessOf(repo, rel, settings, published, расходится),
       правил: edit.правил,
       когда: edit.когда,
@@ -231,9 +234,9 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
   return items;
 }
 
-export function listArticles(repo, settings, times, published, расходится = null, веткаИзвестна = true, черновики = new Set(), скрытыеВВетке = new Map()) {
+export function listArticles(repo, settings, times, published, расходится = null, веткаИзвестна = true, черновики = new Set(), вВетке = new Map()) {
   return groupArticles(
-    listFiles(repo, settings, times, published, расходится, веткаИзвестна, черновики, скрытыеВВетке),
+    listFiles(repo, settings, times, published, расходится, веткаИзвестна, черновики, вВетке),
     settings,
   );
 }
