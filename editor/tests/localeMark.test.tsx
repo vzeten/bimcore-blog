@@ -6,10 +6,15 @@
 // с красной точкой правки и читалась вторым состоянием выпуска, которым не является.
 import {describe, expect, it} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 
 import {LocaleMark} from '../src/ui/zones/LocaleMark';
 import {признакиЛокали} from '../src/core/localeSigns.mjs';
 import type {ПризнакиЛокали} from '../src/ui/articleTypes';
+
+const UI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'ui');
 
 /** Версия в своде: по умолчанию опубликована и совпадает с веткой. */
 const версия = (ещё: Record<string, unknown> = {}) => ({
@@ -84,5 +89,62 @@ describe('обозначение языковой версии', () => {
     expect(точки(html)).toEqual([]);
     expect(html).toContain('lang-цвет-нет');
     expect(html).not.toContain('lang-ссылка');
+  });
+});
+
+describe('точка принадлежит своей локали, а не строке реестра', () => {
+  // Наблюдение владельца 2026-09-08: при трёх изменённых локалях точки читались отдельным рядом
+  // над столбцом и переставали однозначно принадлежать конкретным буквам.
+
+  it('у локали не больше одной точки ни в одном сочетании признаков', () => {
+    const состояния = [
+      версия(),
+      версия({отличается: true}),
+      версия({отличается: true, заглушка: true}),
+      версия({отличается: true, скрыта: true}),
+      версия({отличается: true, черновикСайта: true}),
+      версия({опубликован: false}),
+      версия({опубликован: false, отличается: true}),
+    ];
+
+    for (const состояние of состояния) {
+      expect(точки(нарисовать(признакиЛокали(состояние))).length).toBeLessThanOrEqual(1);
+    }
+    // И появляется она ровно у той версии, чья работа не уехала: точка — про местное отличие.
+    expect(точки(нарисовать(признакиЛокали(версия({отличается: true}))))).toEqual(['lang-точка-изменена']);
+    expect(точки(нарисовать(признакиЛокали(версия())))).toEqual([]);
+  });
+
+  it('точка лежит ВНУТРИ метки своей локали, перед её же буквами', () => {
+    // Не рядом со строкой и не в общем контейнере: метка уезжает при любой ширине вместе с точкой.
+    const html = нарисовать(признакиЛокали(версия({отличается: true})), 'ru');
+
+    expect(html).toMatch(
+      /<button[^>]*class="lang [^"]*"[^>]*>\s*<span class="lang-сверху"><span class="lang-точка lang-точка-изменена"><\/span><\/span><span class="lang-код">RU<\/span>/,
+    );
+  });
+
+  it('точку никто не рисует мимо общего обозначения локали', () => {
+    // Предохранитель от второй разметки (SPEC 5.2.1): реестр и шапка обязаны звать один компонент.
+    const зоны = fs.readdirSync(path.join(UI, 'zones'));
+    const чужие = зоны.filter((имя) => имя !== 'LocaleMark.tsx'
+      && fs.readFileSync(path.join(UI, 'zones', имя), 'utf8').includes('lang-точка'));
+
+    expect(чужие).toEqual([]);
+    for (const зона of ['Registry.tsx', 'TopBar.tsx']) {
+      expect(fs.readFileSync(path.join(UI, 'zones', зона), 'utf8')).toContain('<LocaleMark');
+    }
+  });
+
+  it('точка держится своей меткой, а не выставляется относительно строки или таблицы', () => {
+    // Абсолютное позиционирование привязало бы точку к ближайшему предку с координатами — строке
+    // или таблице, — и при изменении ширины она поехала бы отдельно от своих букв.
+    const стили = fs.readFileSync(path.join(UI, 'styles.css'), 'utf8');
+    const блок = стили.slice(стили.indexOf('.lang {'), стили.indexOf('.lang-цвет-обычная'));
+
+    expect(блок).not.toContain('position: absolute');
+    expect(блок).toContain('flex-direction: column');
+    // Точка прижата к своим буквам снизу своей строки: «своё» ближе, чем «чужое».
+    expect(блок).toContain('.lang-сверху { align-items: flex-end; }');
   });
 });

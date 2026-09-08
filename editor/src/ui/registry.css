@@ -22,8 +22,10 @@
 .cell-title { border: 0; background: transparent; font: inherit; text-align: left; padding: 0; cursor: pointer; }
 .cell-title:hover { text-decoration: underline; }
 .cell-foreign { color: var(--layer-deleted); }
-.cell-langs { display: inline-flex; gap: 4px; }
-.cell-langs .lang { padding: 1px 5px; font-size: 10px; }
+/* Просвет между метками заметно больше отступов внутри метки: так точка читается частью своей
+   локали, а не отдельным рядом над столбцом (наблюдение владельца 2026-09-08). */
+.cell-langs { display: inline-flex; gap: 16px; }
+.cell-langs .lang { padding: 1px 2px; font-size: 10px; }
 /* Обязательного языка нет, а статья на сайте: это беда самой статьи, а не состояние версии,
    поэтому она перебивает бледный цвет отсутствующей локали и видна издалека. */
 .lang-срыв { background: var(--layer-deleted); opacity: 1; }
