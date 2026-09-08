@@ -30,11 +30,22 @@ import {detectPublishedRef, видимостьВВетке, расхождени
 import {путиЗаВидимостью} from './src/core/localeSigns.mjs';
 import {дверьGit} from './src/adapters/gitEnv.mjs';
 import {фиксироватьВнешнюю} from './src/adapters/externalVersion.mjs';
+import {материалыВладельца} from './src/adapters/materialSource.mjs';
 
 const EDITOR_DIR = path.dirname(fileURLToPath(import.meta.url));
-const REPO = path.resolve(EDITOR_DIR, '..');
 // Настройки читаются заново на каждый запрос: поправили settings.json — обновили страницу, готово.
 const readSettings = () => JSON.parse(fs.readFileSync(path.join(EDITOR_DIR, 'settings.json'), 'utf8'));
+// Материалы владельца лежат там, где их назвали настройки, а не рядом с кодом: код бывает запущен
+// из копии рабочей ветки, а статьи, картинки и переводы у владельца одни. Настройка неверна —
+// программа не стартует и говорит причину словами, вместо тихой работы не над теми файлами.
+// Само правило и его отказы живут в ядре и в своём адаптере (SPEC 4.3).
+let REPO;
+try {
+  REPO = материалыВладельца(readSettings());
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
 const PORT = readSettings()['сервер']['порт'];
 // Дверь к git одна на всю программу, и среду ей чистит одно правило: переменные вроде
 // GIT_PAGER или GIT_CONFIG_GLOBAL либо роняют команду, либо молча меняют её ответ, а на этих
