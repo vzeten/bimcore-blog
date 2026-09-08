@@ -1,0 +1,270 @@
+// Имя каждого теста повторяет формулировку правила.
+// Одноразовая команда «забрать хранилище»: годность доводов, точные коды завершения, отказы вместо
+// нулей и поимённый перечень спорного и оставшегося (SPEC 7.1.5).
+import {afterEach, describe, expect, it} from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+
+import {
+  ИСТОЧНИК_НЕ_АБСОЛЮТНЫЙ, КОРЕНЬ_НЕГОДЕН, НЕЧИТАЕМО, НЕ_ДВА_ДОВОДА, НЕ_ХРАНИЛИЩЕ, НЕТ_ИСТОЧНИКА,
+  ТОТ_ЖЕ_ИСТОЧНИК, доводы, забратьХранилище,
+} from '../scripts/adoptRules.mjs';
+import {loadDraft} from '../src/adapters/draftStore.mjs';
+import {draftName, newDraft, writeDraft, староеИмяЧерновика} from '../src/core/drafts.mjs';
+import {historyFolder, snapshotName} from '../src/core/history.mjs';
+
+const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REL = 'i18n/ru/docusaurus-plugin-content-docs/current/beds-for-revit/index.mdx';
+const НАСТРОЙКИ = {
+  хранение: {
+    папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', снимковНаВерсию: 50,
+  },
+  контент: [{папка: 'docs', наСайте: true}, {папка: 'editor/sandbox', наСайте: false}],
+  материалы: {отказы: {переносЧтение: 'серверный текст, команде не годится'}},
+  ошибкиСервера: {споренЧерновик: 'Разные старые черновики. Папка {папка}'},
+};
+
+const песочницы = [];
+function песочница(имя) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), имя));
+  песочницы.push(dir);
+  return dir;
+}
+
+afterEach(() => {
+  while (песочницы.length > 0) fs.rmSync(песочницы.pop(), {recursive: true, force: true});
+});
+
+/** Корень материалов: годным его делает наличие папки контента из настроек. */
+function материалы() {
+  const корень = песочница('editor-repo-');
+  fs.mkdirSync(path.join(корень, 'docs'), {recursive: true});
+  return корень;
+}
+
+const запись = (тело) => writeDraft(newDraft({
+  path: REL, frontmatterRaw: 'title: Кровати', body: тело, отпечатокБазы: 'ОТП', когда: '2026-09-07T22:28:28.000Z',
+}));
+
+function положить(база, папка, имя, текст) {
+  const dir = path.join(база, папка);
+  fs.mkdirSync(dir, {recursive: true});
+  fs.writeFileSync(path.join(dir, имя), текст, 'utf8');
+}
+
+/** Старое хранилище чужой рабочей копии: один черновик и один снимок. */
+function источник(тело = 'незавершённый текст владельца') {
+  const dir = песочница('editor-code-');
+  положить(dir, '.drafts', draftName(REL), запись(тело));
+  положить(dir, path.join('.history', historyFolder(REL)), snapshotName('2026-09-06T10:00:00.000Z', 'Хозяин'), 'состояние');
+  return dir;
+}
+
+const забрать = (src, корень, диск = fs) => забратьХранилище({источник: src, корень, settings: НАСТРОЙКИ, диск});
+const вПапке = (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir).sort() : []);
+
+describe('доводы команды', () => {
+  it('ровно два довода: угадывать пропущенный путь нельзя', () => {
+    expect(доводы(['C:/один'])['отказ']).toBe(НЕ_ДВА_ДОВОДА);
+    expect(доводы(['C:/один', 'C:/два', 'C:/три'])['отказ']).toBe(НЕ_ДВА_ДОВОДА);
+  });
+
+  it('пустой довод отказ, а не подстановка корня владельца', () => {
+    expect(доводы(['C:/один', '   '])['отказ']).toBe(НЕ_ДВА_ДОВОДА);
+  });
+
+  it('два непустых пути разбираются в источник и корень', () => {
+    expect(доводы(['C:/старое', 'C:/материалы'])).toEqual({источник: 'C:/старое', корень: 'C:/материалы'});
+  });
+});
+
+describe('годность источника и корня', () => {
+  it('относительный путь источника отклоняется', () => {
+    expect(забрать('editor/.drafts', материалы())['отказ']).toBe(ИСТОЧНИК_НЕ_АБСОЛЮТНЫЙ);
+  });
+
+  it('отсутствующий источник — отказ, а не пустой перенос', () => {
+    expect(забрать(path.join(песочница('editor-нет-'), 'нету'), материалы())['отказ']).toBe(НЕТ_ИСТОЧНИКА);
+  });
+
+  it('папка без черновиков и истории — не хранилище, а не «работы там нет»', () => {
+    expect(забрать(песочница('editor-пусто-'), материалы())['отказ']).toBe(НЕ_ХРАНИЛИЩЕ);
+  });
+
+  it('относительный корень назначения отклоняется', () => {
+    const итог = забрать(источник(), 'материалы');
+    expect([итог['отказ'], итог['причина']]).toEqual([КОРЕНЬ_НЕГОДЕН, 'неАбсолютный']);
+  });
+
+  it('корень без папок контента отклоняется', () => {
+    const итог = забрать(источник(), песочница('editor-чужое-'));
+    expect([итог['отказ'], итог['причина']]).toEqual([КОРЕНЬ_НЕГОДЕН, 'неМатериалы']);
+  });
+
+  it('источник, совпавший с общим хранилищем, — отказ, а не отчёт с нулями', () => {
+    const корень = материалы();
+    положить(корень, path.join('editor', '.drafts'), draftName(REL), запись('работа хранилища'));
+
+    expect(забрать(path.join(корень, 'editor'), корень)['отказ']).toBe(ТОТ_ЖЕ_ИСТОЧНИК);
+  });
+
+  it('чужой корень не считается испытательным и перенос не отменяет', () => {
+    const корень = материалы();
+
+    const итог = забрать(источник(), корень);
+
+    // Корень заведомо не владельческий: молчаливые нули тут и были бы ложным успехом.
+    expect([итог['перенос'], итог['черновиков'], итог['снимков']]).toEqual([true, 1, 1]);
+    expect(loadDraft(корень, НАСТРОЙКИ, REL)['body']).toBe('незавершённый текст владельца');
+  });
+});
+
+describe('перенос по явному источнику', () => {
+  it('повтор ничего не добавляет и считается совпавшим', () => {
+    const корень = материалы();
+    const src = источник();
+    забрать(src, корень);
+
+    const второй = забрать(src, корень);
+
+    expect([второй['черновиков'], второй['снимков'], второй['совпало']]).toEqual([0, 0, 2]);
+  });
+
+  it('источник после переноса цел байт в байт', () => {
+    const корень = материалы();
+    const src = источник();
+    const было = вПапке(path.join(src, '.drafts')).map((имя) => fs.readFileSync(path.join(src, '.drafts', имя)));
+
+    забрать(src, корень);
+
+    const стало = вПапке(path.join(src, '.drafts')).map((имя) => fs.readFileSync(path.join(src, '.drafts', имя)));
+    expect(стало.map((б) => б.toString('base64'))).toEqual(было.map((б) => б.toString('base64')));
+  });
+
+  it('разные тексты одной статьи дают спор поимённо, и обе версии целы', () => {
+    const корень = материалы();
+    положить(корень, path.join('editor', '.drafts'), draftName(REL), запись('работа общего хранилища'));
+    const src = песочница('editor-code-');
+    положить(src, '.drafts', староеИмяЧерновика(REL), запись('другая незаписанная работа'));
+
+    const итог = забрать(src, корень);
+
+    expect(итог['споров']).toBe(1);
+    expect(итог['спорные'][0]['статья']).toBe(REL);
+    expect(итог['спорные'][0]['вариант']).toMatch(/\.json$/);
+    expect(loadDraft(корень, НАСТРОЙКИ, REL)['body']).toBe('работа общего хранилища');
+    const отложено = вПапке(path.join(корень, 'editor', '.drafts-споры'));
+    expect(отложено).toEqual([итог['спорные'][0]['вариант']]);
+  });
+
+  it('снимок с посторонним именем назван поимённо и остаётся в источнике', () => {
+    const корень = материалы();
+    const src = песочница('editor-code-');
+    const папка = historyFolder(REL);
+    положить(корень, path.join('editor', '.history', папка), 'заметка.txt', 'своё');
+    положить(src, path.join('.history', папка), 'заметка.txt', 'чужое');
+
+    const итог = забрать(src, корень);
+
+    expect(итог['пропущено']).toEqual([`${папка}/заметка.txt`]);
+    expect(fs.readFileSync(path.join(src, '.history', папка, 'заметка.txt'), 'utf8')).toBe('чужое');
+  });
+
+  it('нечитаемый источник — отказ с путём и причиной, а не пустота', () => {
+    const корень = материалы();
+    const src = источник();
+    const жертва = path.join(src, '.drafts');
+    const диск = {
+      ...fs,
+      readdirSync: (путь, ...прочее) => {
+        if (path.resolve(String(путь)) === path.resolve(жертва)) {
+          throw Object.assign(new Error('EACCES: доступ'), {code: 'EACCES', path: жертва});
+        }
+        return fs.readdirSync(путь, ...прочее);
+      },
+    };
+
+    const итог = забрать(src, корень, диск);
+
+    expect(итог['отказ']).toBe(НЕЧИТАЕМО);
+    expect(path.resolve(итог['значение'])).toBe(path.resolve(жертва));
+    expect(итог['причина']).toBe('EACCES');
+    expect(вПапке(path.join(корень, 'editor', '.drafts'))).toEqual([]);
+  });
+
+  it('нечитаемая сама папка источника — отказ, а не «папки нет»', () => {
+    const корень = материалы();
+    const src = источник();
+    const диск = {
+      ...fs,
+      statSync: (путь, ...прочее) => {
+        if (path.resolve(String(путь)) === path.resolve(src)) {
+          throw Object.assign(new Error('EPERM: доступ'), {code: 'EPERM', path: src});
+        }
+        return fs.statSync(путь, ...прочее);
+      },
+    };
+
+    expect(забрать(src, корень, диск)['отказ']).toBe(НЕЧИТАЕМО);
+  });
+});
+
+describe('команда целиком', () => {
+  /** Запуск настоящей команды: коды завершения проверяются только так. */
+  function команда(доводы) {
+    try {
+      const вывод = execFileSync(process.execPath, [path.join(EDITOR, 'scripts', 'adoptStore.mjs'), ...доводы], {
+        encoding: 'utf8', cwd: EDITOR,
+      });
+      return {код: 0, вывод};
+    } catch (беда) {
+      return {код: беда.status, вывод: `${беда.stdout ?? ''}${беда.stderr ?? ''}`};
+    }
+  }
+
+  /** Корень с настоящими настройками программы: у неё папки контента свои. */
+  function настоящийКорень() {
+    const корень = песочница('editor-repo-');
+    const настройки = JSON.parse(fs.readFileSync(path.join(EDITOR, 'settings.json'), 'utf8'));
+    for (const root of настройки['контент'].filter((к) => к['наСайте'])) {
+      fs.mkdirSync(path.join(корень, root['папка']), {recursive: true});
+    }
+    return корень;
+  }
+
+  it('оба пути печатаются до записи, итог с числами, код 0', () => {
+    const корень = настоящийКорень();
+    const src = источник();
+
+    const {код, вывод} = команда([src, корень]);
+
+    expect(вывод).toContain(`источник:   ${src}`);
+    expect(вывод).toContain(path.join(корень, 'editor'));
+    expect(вывод).toContain('перенесено черновиков: 1');
+    expect(вывод).toContain('перенесено снимков: 1');
+    expect(код).toBe(0);
+  });
+
+  it('спор даёт код 2 и называет статью и файл варианта', () => {
+    const корень = настоящийКорень();
+    положить(корень, path.join('editor', '.drafts'), draftName(REL), запись('работа общего хранилища'));
+    const src = источник('другая незаписанная работа');
+
+    const {код, вывод} = команда([src, корень]);
+
+    expect(код).toBe(2);
+    expect(вывод).toContain('споров: 1');
+    expect(вывод).toContain(REL);
+  });
+
+  it('негодный довод даёт код 1 и образец вызова, а не нулевой отчёт', () => {
+    const {код, вывод} = команда([источник()]);
+
+    expect(код).toBe(1);
+    expect(вывод).toContain('editor:adopt');
+    expect(вывод).not.toContain('перенесено черновиков');
+  });
+});
