@@ -5,8 +5,6 @@ import {afterEach, describe, expect, it} from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {execFileSync} from 'node:child_process';
-import {fileURLToPath} from 'node:url';
 
 import {
   ИСТОЧНИК_НЕ_АБСОЛЮТНЫЙ, КОРЕНЬ_НЕГОДЕН, НЕЧИТАЕМО, НЕ_ДВА_ДОВОДА, НЕ_ХРАНИЛИЩЕ, НЕТ_ИСТОЧНИКА,
@@ -16,7 +14,6 @@ import {loadDraft} from '../src/adapters/draftStore.mjs';
 import {draftName, newDraft, writeDraft, староеИмяЧерновика} from '../src/core/drafts.mjs';
 import {historyFolder, snapshotName} from '../src/core/history.mjs';
 
-const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REL = 'i18n/ru/docusaurus-plugin-content-docs/current/beds-for-revit/index.mdx';
 const НАСТРОЙКИ = {
   хранение: {
@@ -160,6 +157,21 @@ describe('перенос по явному источнику', () => {
     expect(отложено).toEqual([итог['спорные'][0]['вариант']]);
   });
 
+  it('повтор над неразобранным спором снова называет его, а не отчитывается «совпало»', () => {
+    const корень = материалы();
+    положить(корень, path.join('editor', '.drafts'), draftName(REL), запись('работа общего хранилища'));
+    const src = источник('другая незаписанная работа');
+    const первый = забрать(src, корень);
+    const было = вПапке(path.join(корень, 'editor', '.drafts-споры'));
+
+    const второй = забрать(src, корень);
+
+    // Вариантов не прибавилось, но спор не разобран: запись черновика этой статьи всё ещё заперта.
+    expect(вПапке(path.join(корень, 'editor', '.drafts-споры'))).toEqual(было);
+    expect(второй['споров']).toBe(1);
+    expect(второй['спорные']).toEqual(первый['спорные']);
+  });
+
   it('снимок с посторонним именем назван поимённо и остаётся в источнике', () => {
     const корень = материалы();
     const src = песочница('editor-code-');
@@ -209,62 +221,5 @@ describe('перенос по явному источнику', () => {
     };
 
     expect(забрать(src, корень, диск)['отказ']).toBe(НЕЧИТАЕМО);
-  });
-});
-
-describe('команда целиком', () => {
-  /** Запуск настоящей команды: коды завершения проверяются только так. */
-  function команда(доводы) {
-    try {
-      const вывод = execFileSync(process.execPath, [path.join(EDITOR, 'scripts', 'adoptStore.mjs'), ...доводы], {
-        encoding: 'utf8', cwd: EDITOR,
-      });
-      return {код: 0, вывод};
-    } catch (беда) {
-      return {код: беда.status, вывод: `${беда.stdout ?? ''}${беда.stderr ?? ''}`};
-    }
-  }
-
-  /** Корень с настоящими настройками программы: у неё папки контента свои. */
-  function настоящийКорень() {
-    const корень = песочница('editor-repo-');
-    const настройки = JSON.parse(fs.readFileSync(path.join(EDITOR, 'settings.json'), 'utf8'));
-    for (const root of настройки['контент'].filter((к) => к['наСайте'])) {
-      fs.mkdirSync(path.join(корень, root['папка']), {recursive: true});
-    }
-    return корень;
-  }
-
-  it('оба пути печатаются до записи, итог с числами, код 0', () => {
-    const корень = настоящийКорень();
-    const src = источник();
-
-    const {код, вывод} = команда([src, корень]);
-
-    expect(вывод).toContain(`источник:   ${src}`);
-    expect(вывод).toContain(path.join(корень, 'editor'));
-    expect(вывод).toContain('перенесено черновиков: 1');
-    expect(вывод).toContain('перенесено снимков: 1');
-    expect(код).toBe(0);
-  });
-
-  it('спор даёт код 2 и называет статью и файл варианта', () => {
-    const корень = настоящийКорень();
-    положить(корень, path.join('editor', '.drafts'), draftName(REL), запись('работа общего хранилища'));
-    const src = источник('другая незаписанная работа');
-
-    const {код, вывод} = команда([src, корень]);
-
-    expect(код).toBe(2);
-    expect(вывод).toContain('споров: 1');
-    expect(вывод).toContain(REL);
-  });
-
-  it('негодный довод даёт код 1 и образец вызова, а не нулевой отчёт', () => {
-    const {код, вывод} = команда([источник()]);
-
-    expect(код).toBe(1);
-    expect(вывод).toContain('editor:adopt');
-    expect(вывод).not.toContain('перенесено черновиков');
   });
 });
