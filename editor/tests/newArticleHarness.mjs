@@ -22,9 +22,9 @@ export const НАСТРОЙКИ = {
     es: {заголовок: 'Marcador de traducción:', тело: 'Marcador.', описание: 'Página marcador.'},
   },
   поляСоздания: {
-    docs: {порядок: ['title', 'slug', 'sidebar_label', 'sidebar_position', 'description', 'image', 'unlisted'], значения: {description: ''}},
-    blog: {порядок: ['title', 'slug', 'description', 'date', 'authors', 'tags', 'keywords', 'image', 'unlisted'], значения: {description: '', authors: '[ivan]', tags: '[]', keywords: '[]'}},
-    проба: {порядок: ['title', 'slug', 'unlisted'], значения: {}},
+    docs: {порядок: ['title', 'slug', 'sidebar_label', 'sidebar_position', 'description', 'image', 'draft', 'unlisted'], значения: {description: ''}},
+    blog: {порядок: ['title', 'slug', 'description', 'date', 'authors', 'tags', 'keywords', 'image', 'draft', 'unlisted'], значения: {description: '', authors: '[ivan]', tags: '[]', keywords: '[]'}},
+    проба: {порядок: ['title', 'slug', 'draft', 'unlisted'], значения: {}},
   },
   контент: [
     {локаль: 'en', род: 'docs', папка: EN, наСайте: true},

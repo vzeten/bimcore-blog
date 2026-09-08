@@ -519,6 +519,7 @@
     "tags": "Метки",
     "authors": "Авторы",
     "keywords": "Ключевые слова",
+    "draft": "Черновик: не выпускать на сайт",
     "unlisted": "Только по ссылке",
     "date": "Дата"
   },
@@ -906,6 +907,7 @@
         "description",
         "keywords",
         "image",
+        "draft",
         "unlisted"
       ],
       "значения": {}
@@ -920,6 +922,7 @@
         "tags",
         "keywords",
         "image",
+        "draft",
         "unlisted"
       ],
       "значения": {
@@ -934,6 +937,7 @@
         "sidebar_position",
         "description",
         "image",
+        "draft",
         "unlisted"
       ],
       "значения": {}

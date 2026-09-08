@@ -12,10 +12,8 @@
 
 import {readField} from './articleFile.mjs';
 import {файлСтатьи} from './articles.mjs';
+import {ПОЛЕ_ЧЕРНОВИКА} from './frontmatterFields.mjs';
 import {скрытоеЗначение} from './frontmatterRules.mjs';
-
-/** Поле Docusaurus: страницу с `draft: true` сборка сайта не выпускает вовсе. */
-export const ПОЛЕ_ЧЕРНОВИКА = 'draft';
 
 /**
  * Стоит ли в шапке версии `draft: true`. Логическое значение читается тем же правилом, что и
