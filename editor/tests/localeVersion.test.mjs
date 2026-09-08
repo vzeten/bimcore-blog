@@ -4,6 +4,9 @@ import {describe, expect, it} from 'vitest';
 import matter from 'gray-matter';
 
 import {планЛокали} from '../src/core/localeVersion.mjs';
+import {splitArticle} from '../src/core/articleFile.mjs';
+import {readFields} from '../src/core/frontmatterFields.mjs';
+import {ПО_ССЫЛКЕ, режимДоступности} from '../src/core/siteAccess.mjs';
 import {ES, EN, RU, НАСТРОЙКИ} from './newArticleHarness.mjs';
 
 const СТАТЬЯ = `${RU}/lessons/uskorit-revit/index.mdx`;
@@ -41,6 +44,13 @@ describe('начало языковой версии', () => {
     expect(шапка.data.title).toBe('Marcador de traducción: Как ускорить Revit');
     expect(шапка.data.description).toBe('Página marcador.');
     expect(text).toContain('Marcador.');
+  });
+
+  it('начатая языковая версия рождается доступной по ссылке', () => {
+    // То же состояние, что и у новой статьи, и то же, которое окно называет «По ссылке».
+    const шапка = splitArticle(план().text).frontmatterRaw;
+
+    expect(режимДоступности(readFields(шапка, план().path, НАСТРОЙКИ.контент))).toBe(ПО_ССЫЛКЕ);
   });
 
   it('версия начинается вместе со своим состоянием: половины работы не остаётся', () => {

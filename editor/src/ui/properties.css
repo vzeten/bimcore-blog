@@ -32,15 +32,17 @@
    ввода получалась бы вторая подпись. */
 .props-locked { font-size: 11px; color: var(--ink-quiet); line-height: 1.35; font-style: italic; }
 
-/* Видимость — флажок, а не строка ввода. Он не растягивается на всю ячейку: галочка во всю
-   ширину поля выглядела бы как ошибка вёрстки и в неё труднее попасть, чем в маленькую. */
-.props-grid .props-flag {
-  width: 16px;
-  height: 16px;
-  align-self: flex-start;
-  margin: 4px 0;
-  padding: 0;
-  border-radius: 3px;
+/* Доступность на сайте — выбор из трёх, а не пара флажков: двумя флажками человек собрал бы
+   сочетание, которого сайт не принимает. Вид тот же, что у строк ввода рядом, иначе поле
+   читалось бы чужим элементом посреди свойств статьи. */
+.props-grid .props-режим {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 13px;
+  background: var(--bg);
+  color: inherit;
 }
 
 /* Обложка: картинка, слова о ней и выбор файла. Рамки нет: поле сверху уже в рамке,

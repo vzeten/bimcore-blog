@@ -3,6 +3,9 @@
 import {describe, expect, it} from 'vitest';
 import matter from 'gray-matter';
 import {адресГоден, адресИзНазвания, планСоздания, языкиРаздела} from '../src/core/newArticle.mjs';
+import {splitArticle} from '../src/core/articleFile.mjs';
+import {readFields} from '../src/core/frontmatterFields.mjs';
+import {ПО_ССЫЛКЕ, режимДоступности} from '../src/core/siteAccess.mjs';
 
 import {НАСТРОЙКИ} from './newArticleHarness.mjs';
 
@@ -242,6 +245,15 @@ describe('план создания статьи', () => {
       .toBe('Placeholder page.');
     expect(matter(файлы.find((файл) => файл.локаль === 'es').text).data.description)
       .toBe('Página marcador.');
+  });
+
+  it('новая статья и её заглушки рождаются доступными по ссылке', () => {
+    // Файлы попадают в репозиторий сразу, и недописанная статья не должна оказаться в меню.
+    // Это то же самое состояние, которое окно называет «По ссылке»: правило одно на программу.
+    for (const файл of план().файлы) {
+      const шапка = splitArticle(файл.text).frontmatterRaw;
+      expect(режимДоступности(readFields(шапка, файл.path, НАСТРОЙКИ.контент)), файл.path).toBe(ПО_ССЫЛКЕ);
+    }
   });
 
   it('название с кавычками и слешем даёт разбираемую шапку, а не сломанный YAML', () => {
