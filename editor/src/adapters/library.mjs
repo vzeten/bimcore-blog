@@ -82,6 +82,10 @@ export function loadState(repo, rel, settings) {
  * за неопубликованную. Поэтому чтение ветки здесь одно на всю программу.
  */
 export async function опубликованные(git, ref) {
+  // Опубликованной ветки нет — «не известна». Ответ пустым перечнем при `известна: true` объявил бы
+  // все версии никогда не публиковавшимися, а это такая же неправда, как и подмена местной веткой.
+  if (!ref) return {известна: false, файлы: new Set()};
+
   try {
     const raw = await git.raw(['-c', 'core.quotepath=false', 'ls-tree', '-r', '--name-only', ref]);
     return {известна: true, файлы: new Set(raw.split('\n').map((line) => line.trim()).filter(Boolean))};

@@ -10,7 +10,7 @@ import {fileURLToPath} from 'node:url';
 import {simpleGit} from 'simple-git';
 
 import {listArticles, опубликованные} from '../src/adapters/library.mjs';
-import {расхождениеССайтом, шапкиВВетке} from '../src/adapters/gitFile.mjs';
+import {detectPublishedRef, расхождениеССайтом, шапкиВВетке} from '../src/adapters/gitFile.mjs';
 import {articleFacts} from '../src/adapters/articleFacts.mjs';
 import {признакиЛокали, путиЗаОпубликованнойШапкой} from '../src/core/localeSigns.mjs';
 
@@ -66,12 +66,17 @@ export async function среда({шапкаRu = '', шапкаEs = ''} = {}) {
   return {repo, git};
 }
 
-/** Свод тем же порядком, каким его собирает сервер. */
+/**
+ * Свод тем же порядком, каким его собирает сервер, — включая то, КАКУЮ ветку он считает
+ * опубликованной. Подставь сюда `origin/main` строкой, и проверки перестали бы видеть случай,
+ * когда её прочитать нельзя: именно там подмена местной веткой и давала ложные признаки.
+ */
 export async function свод(repo, git) {
-  const ветка = await опубликованные(git, 'origin/main');
-  const расхождение = await расхождениеССайтом(git, 'origin/main', НАСТРОЙКИ['контент'].map((root) => root['папка']));
+  const ref = await detectPublishedRef(git);
+  const ветка = await опубликованные(git, ref);
+  const расхождение = await расхождениеССайтом(git, ref, НАСТРОЙКИ['контент'].map((root) => root['папка']));
   const расходятся = расхождение === null ? null : new Set(расхождение);
-  const вВетке = await шапкиВВетке(git, 'origin/main', путиЗаОпубликованнойШапкой(ветка.файлы, расходятся));
+  const вВетке = await шапкиВВетке(git, ref, путиЗаОпубликованнойШапкой(ветка.файлы, расходятся));
 
   return listArticles(
     repo, НАСТРОЙКИ, new Map(), ветка.файлы, расходятся, ветка.известна, new Set(), вВетке,
