@@ -9,7 +9,7 @@ import {historyLayers} from '../src/adapters/layerChain.mjs';
 import {historyFolder, snapshotName} from '../src/core/history.mjs';
 
 const НАСТРОЙКИ = {
-  хранение: {папкаЧерновиков: '.drafts', папкаСнимков: '.history', слоёвИстории: 3, снимковНаВерсию: 50},
+  хранение: {папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', слоёвИстории: 3, снимковНаВерсию: 50},
   слоиПоАвторам: {Claude: 'prevAi'},
 };
 
@@ -28,14 +28,14 @@ afterEach(() => {
 });
 
 /** Снимок статьи: шапка и тело складываются в файл, как это делает сама программа. */
-function снимок(editorDir, {время, автор, шапка = 'title: A', тело}) {
-  const папка = path.join(editorDir, НАСТРОЙКИ['хранение']['папкаСнимков'], historyFolder(REL));
+function снимок(repo, {время, автор, шапка = 'title: A', тело}) {
+  const папка = path.join(repo, 'editor', НАСТРОЙКИ['хранение']['папкаСнимков'], historyFolder(REL));
   fs.mkdirSync(папка, {recursive: true});
   fs.writeFileSync(path.join(папка, snapshotName(время, автор)), `---\n${шапка}\n---\n${тело}`, 'utf8');
 }
 
-const слои = (editorDir, публикацияОт = null) => historyLayers({
-  editorDir, settings: НАСТРОЙКИ, rel: REL, публикацияОт, ктоЯ: Я,
+const слои = (repo, публикацияОт = null) => historyLayers({
+  repo, settings: НАСТРОЙКИ, rel: REL, публикацияОт, ктоЯ: Я,
 });
 
 describe('слои цвета из истории', () => {
@@ -91,7 +91,7 @@ describe('слои цвета из истории', () => {
     снимок(dir, {время: '2026-08-06T11:00:00.000Z', автор: Я, шапка: 'title: A\nunlisted: true', тело: '\nтекст ИИ\n'});
 
     const однимСлоем = historyLayers({
-      editorDir: dir,
+      repo: dir,
       settings: {...НАСТРОЙКИ, хранение: {...НАСТРОЙКИ['хранение'], слоёвИстории: 1}},
       rel: REL,
       публикацияОт: null,

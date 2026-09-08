@@ -9,7 +9,7 @@ import {draftRoute} from '../src/adapters/draftRoute.mjs';
 import {loadDraft} from '../src/adapters/draftStore.mjs';
 
 const НАСТРОЙКИ = {
-  хранение: {папкаЧерновиков: '.drafts', папкаСнимков: '.history', черновикЖивётДней: 14, снимковНаВерсию: 50},
+  хранение: {папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', черновикЖивётДней: 14, снимковНаВерсию: 50},
   ошибкиСервера: {плохойЗапрос: 'неверный запрос', нетСтатьи: 'нет такой статьи'},
 };
 
@@ -30,10 +30,9 @@ afterEach(() => {
 
 function среда() {
   const repo = песочница('editor-repo-');
-  const editorDir = песочница('editor-store-');
   fs.mkdirSync(path.join(repo, path.dirname(REL)), {recursive: true});
   fs.writeFileSync(path.join(repo, REL), ФАЙЛ, 'utf8');
-  return {repo, editorDir};
+  return {repo};
 }
 
 /** Один запрос к ручке черновика. Возвращает ответ сервера. */
@@ -45,7 +44,6 @@ async function запрос(с, payload, последняяПравка = new Ma
     res: {},
     url: {pathname: '/api/draft'},
     repo: с.repo,
-    editorDir: с.editorDir,
     settings: НАСТРОЙКИ,
     тело: async () => payload,
     insideRepo: () => true,
@@ -72,7 +70,7 @@ describe('автосохранение черновика', () => {
     }).then((ответ) => {
       expect(ответ.code).toBe(200);
       expect(ответ.data['совпадаетСФайлом']).toBe(true);
-      expect(loadDraft(с.editorDir, НАСТРОЙКИ, REL)).toBeNull();
+      expect(loadDraft(с.repo, НАСТРОЙКИ, REL)).toBeNull();
     });
   });
 
@@ -87,7 +85,7 @@ describe('автосохранение черновика', () => {
       правкаОт: '2026-08-06T10:00:00.000Z',
     }).then((ответ) => {
       expect(ответ.data['автосохранено']).toBeTruthy();
-      expect(loadDraft(с.editorDir, НАСТРОЙКИ, REL)['body']).toBe('\nдругой текст\n');
+      expect(loadDraft(с.repo, НАСТРОЙКИ, REL)['body']).toBe('\nдругой текст\n');
     });
   });
 
@@ -96,7 +94,7 @@ describe('автосохранение черновика', () => {
 
     return запрос(с, null).then((ответ) => {
       expect(ответ.code).toBe(400);
-      expect(loadDraft(с.editorDir, НАСТРОЙКИ, REL)).toBeNull();
+      expect(loadDraft(с.repo, НАСТРОЙКИ, REL)).toBeNull();
     });
   });
 
@@ -109,7 +107,7 @@ describe('автосохранение черновика', () => {
       .then(() => запрос(с, {...общее, body: '\nстарая\n', правкаОт: '2026-08-06T10:00:01.000Z'}, память))
       .then((ответ) => {
         expect(ответ.data['устарел']).toBe(true);
-        expect(loadDraft(с.editorDir, НАСТРОЙКИ, REL)['body']).toBe('\nсвежая\n');
+        expect(loadDraft(с.repo, НАСТРОЙКИ, REL)['body']).toBe('\nсвежая\n');
       });
   });
 });

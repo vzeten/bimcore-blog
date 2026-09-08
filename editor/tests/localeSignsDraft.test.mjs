@@ -47,7 +47,6 @@ async function среда() {
   const корень = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-draft-signs-'));
   папки.push(корень);
   const repo = path.join(корень, 'работа');
-  const editorDir = path.join(корень, 'редактор');
   const сервер = path.join(корень, 'сайт.git');
 
   await simpleGit(корень).raw(['init', '--bare', '--initial-branch=main', сервер]);
@@ -65,11 +64,11 @@ async function среда() {
   await git.raw(['commit', '-m', 'все три версии на сайте']);
   await git.raw(['push', 'origin', 'main']);
 
-  return {repo, git, editorDir};
+  return {repo, git};
 }
 
 /** Свод тем же порядком, каким его собирает сервер: с ветки и с черновиков автосохранения. */
-async function свод({repo, git, editorDir}) {
+async function свод({repo, git}) {
   const ветка = await опубликованные(git, 'origin/main');
   const расхождение = await расхождениеССайтом(git, 'origin/main', НАСТРОЙКИ['контент'].map((root) => root['папка']));
 
@@ -77,7 +76,7 @@ async function свод({repo, git, editorDir}) {
     repo, НАСТРОЙКИ, new Map(), ветка.файлы,
     расхождение === null ? null : new Set(расхождение),
     ветка.известна,
-    черновыеПравки(repo, editorDir, НАСТРОЙКИ),
+    черновыеПравки(repo, НАСТРОЙКИ),
   );
 }
 
@@ -90,7 +89,7 @@ const признакиРеестра = (статьи) => {
 };
 
 /** Настоящее автосохранение: тот же обработчик, что отвечает окну на `/api/draft`. */
-async function автосохранить({repo, editorDir}, rel, текст, правкаОт = new Date().toISOString()) {
+async function автосохранить({repo}, rel, текст, правкаОт = new Date().toISOString()) {
   const ответы = [];
   // Шапку окно шлёт ту же, что открыло: правится в этой пробе только тело статьи.
   const файл = path.join(repo, rel);
@@ -101,7 +100,6 @@ async function автосохранить({repo, editorDir}, rel, текст, п
     res: {},
     url: {pathname: '/api/draft'},
     repo,
-    editorDir,
     settings: НАСТРОЙКИ,
     тело: async () => ({path: rel, body: текст, frontmatterRaw: шапка, правкаОт}),
     insideRepo: () => true,
@@ -155,7 +153,7 @@ describe('красная точка означает сохранённую пр
 
     // Человек печатает, запрос ещё не ушёл: на диске ни файла с правкой, ни черновика.
     expect(признакиРеестра(await свод(с)).en.изменена).toBe(false);
-    expect(loadDraft(с.editorDir, НАСТРОЙКИ, ПУТИ.en)).toBe(null);
+    expect(loadDraft(с.repo, НАСТРОЙКИ, ПУТИ.en)).toBe(null);
   }, ЖДАТЬ_GIT);
 
   it('автосохранение не удалось — точки нет, ложного обещания сайту не появляется', async () => {
@@ -178,7 +176,7 @@ describe('красная точка означает сохранённую пр
 
     // Отклонённая правка не подменяет собой уже записанную: точка осталась от принятой работы.
     expect(ответ.data['устарел']).toBe(true);
-    expect(loadDraft(с.editorDir, НАСТРОЙКИ, ПУТИ.en)['body']).toBe('English text, edited.');
+    expect(loadDraft(с.repo, НАСТРОЙКИ, ПУТИ.en)['body']).toBe('English text, edited.');
     expect(признакиРеестра(await свод(с)).en.изменена).toBe(true);
   }, ЖДАТЬ_GIT);
 
@@ -189,7 +187,7 @@ describe('красная точка означает сохранённую пр
     const своё = splitArticle(fs.readFileSync(path.join(с.repo, ПУТИ.en), 'utf8')).body;
     await автосохранить(с, ПУТИ.en, своё);
 
-    expect(loadDraft(с.editorDir, НАСТРОЙКИ, ПУТИ.en)).toBe(null);
+    expect(loadDraft(с.repo, НАСТРОЙКИ, ПУТИ.en)).toBe(null);
     expect(признакиРеестра(await свод(с)).en.изменена).toBe(false);
   }, ЖДАТЬ_GIT);
 
@@ -199,7 +197,7 @@ describe('красная точка означает сохранённую пр
     // Ручное сохранение убирает черновик и кладёт работу в файл: место хранения другое, знак тот же.
     fs.appendFileSync(path.join(с.repo, ПУТИ.en), 'Local edit.\n', 'utf8');
 
-    expect(черновыеПравки(с.repo, с.editorDir, НАСТРОЙКИ).size).toBe(0);
+    expect(черновыеПравки(с.repo, НАСТРОЙКИ).size).toBe(0);
     expect(признакиРеестра(await свод(с)).en.изменена).toBe(true);
   }, ЖДАТЬ_GIT);
 
@@ -208,7 +206,7 @@ describe('красная точка означает сохранённую пр
     await автосохранить(с, ПУТИ.en, 'English text, edited.');
     fs.rmSync(path.join(с.repo, ПУТИ.en));
 
-    expect(черновыеПравки(с.repo, с.editorDir, НАСТРОЙКИ).size).toBe(0);
+    expect(черновыеПравки(с.repo, НАСТРОЙКИ).size).toBe(0);
     expect(признакиРеестра(await свод(с)).en.есть).toBe(false);
   }, ЖДАТЬ_GIT);
 });

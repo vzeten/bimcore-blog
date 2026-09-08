@@ -91,7 +91,7 @@ export function исполнитьУдаление({repo, editorDir, settings, �
   if (решение.режим === 'корзина') {
     let состав;
     try {
-      состав = составАрхива({repo, editorDir, settings, решение});
+      состав = составАрхива({repo, settings, решение});
       const запись = вКорзину({repo, editorDir, settings, статья: {...статья, пути: решение.пути, языки: решение.языки, папки: решение.папки}, состав});
       return {удалено: решение.пути, режим: 'корзина', корзина: запись.id, удаленоКогда: запись.удалено};
     } catch (error) {
@@ -121,8 +121,8 @@ export function исполнитьУдаление({repo, editorDir, settings, �
   const предупреждения = [];
   for (const версия of решение.пути) {
     try {
-      dropDraft(editorDir, settings, версия);
-      dropHistory(editorDir, settings, версия);
+      dropDraft(repo, settings, версия);
+      dropHistory(repo, settings, версия);
     } catch (error) {
       console.error(error);
       предупреждения.push(settings['ошибкиУдаления']['остатки']);

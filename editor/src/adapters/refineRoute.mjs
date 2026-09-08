@@ -27,7 +27,7 @@ import {АварияОтката, записатьНабор} from './refineWrit
 /** Статьи, над которыми применение уже идёт: второе параллельное — гонка на тех же файлах. */
 const занятые = new Set();
 
-export async function refineRoute({req, res, url, repo, editorDir, settings, git, тело, insideRepo, send, последняяПравка}) {
+export async function refineRoute({req, res, url, repo, settings, git, тело, insideRepo, send, последняяПравка}) {
   const план = url.pathname === '/api/refine/plan';
   if ((!план && url.pathname !== '/api/refine/apply') || req.method !== 'POST') return false;
 
@@ -62,7 +62,7 @@ export async function refineRoute({req, res, url, repo, editorDir, settings, git
   }
   занятые.add(rel);
   try {
-    await применить({repo, editorDir, settings, git, rel, dir, выбранные, ждали: payload['отпечаток'], send, res, последняяПравка});
+    await применить({repo, settings, git, rel, dir, выбранные, ждали: payload['отпечаток'], send, res, последняяПравка});
   } finally {
     занятые.delete(rel);
   }
@@ -76,7 +76,7 @@ function набор(значение) {
   return значение.filter((код) => известные.has(код));
 }
 
-async function применить({repo, editorDir, settings, git, rel, dir, выбранные, ждали, send, res, последняяПравка}) {
+async function применить({repo, settings, git, rel, dir, выбранные, ждали, send, res, последняяПравка}) {
   const ошибки = settings['ошибкиСервера'];
   const снимок = собратьСнимок(repo, rel, dir);
   if (снимок.отпечаток !== ждали) return send(res, 409, {error: ошибки['доработкаСнимокУстарел']});
@@ -92,7 +92,7 @@ async function применить({repo, editorDir, settings, git, rel, dir, в�
   if (собратьСнимок(repo, rel, dir).отпечаток !== снимок.отпечаток) return send(res, 409, {error: ошибки['доработкаСнимокУстарел']});
   // Версия до операции обязана лечь в историю раньше первой записи: не легла — записи не будет.
   try {
-    saveSnapshot(editorDir, settings, rel, снимок.текст, автор, сейчас);
+    saveSnapshot(repo, settings, rel, снимок.текст, автор, сейчас);
   } catch (ошибка) {
     console.error(ошибка);
     throw new ApiError(500, ошибки['доработкаНеЗаписалась']);
@@ -117,8 +117,8 @@ async function применить({repo, editorDir, settings, git, rel, dir, в�
       предупреждения.push(код);
     }
   };
-  обслужить(() => saveSnapshot(editorDir, settings, rel, копия.текст, автор, new Date().toISOString()), 'история');
-  обслужить(() => dropDraft(editorDir, settings, rel), 'черновик');
+  обслужить(() => saveSnapshot(repo, settings, rel, копия.текст, автор, new Date().toISOString()), 'история');
+  обслужить(() => dropDraft(repo, settings, rel), 'черновик');
   обслужить(() => saveState(repo, rel, settings, afterEdit(loadState(repo, rel, settings), settings)), 'состояние');
   последняяПравка.set(rel, сейчас);
   return send(res, 200, {path: rel, применено: true, обработчики: отчёт, отпечаток: fingerprint(копия.текст), предупреждения});

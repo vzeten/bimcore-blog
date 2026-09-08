@@ -15,7 +15,7 @@ vi.setConfig({testTimeout: ЖДАТЬ_GIT, hookTimeout: ЖДАТЬ_GIT});
 
 
 const НАСТРОЙКИ = {
-  хранение: {папкаЧерновиков: '.drafts', папкаСнимков: '.history', черновикЖивётДней: 14, снимковНаВерсию: 50},
+  хранение: {папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', черновикЖивётДней: 14, снимковНаВерсию: 50},
   реестр: {неизвестныйАвтор: 'Неизвестный'},
   ошибкиСервера: {неУдалосьЗаписатьВерсию: 'версия не записана', плохойЗапрос: 'неверный запрос', неверныйАдрес: 'неверный адрес', нетСтатьи: 'нет такой статьи'},
 };
@@ -41,7 +41,6 @@ afterEach(() => {
 /** Настоящий репозиторий с одной закоммиченной статьёй и пустым хранилищем редактора. */
 async function подготовить(текст = СТАТЬЯ) {
   const repo = песочница('editor-repo-');
-  const editorDir = песочница('editor-store-');
   const git = simpleGit(repo);
 
   await git.init();
@@ -53,18 +52,18 @@ async function подготовить(текст = СТАТЬЯ) {
   await git.add('.');
   await git.commit('первая версия');
 
-  return {repo, editorDir, git, файл: path.join(repo, REL)};
+  return {repo, git, файл: path.join(repo, REL)};
 }
 
 const фиксировать = (среда, обязательно = false) => фиксироватьВнешнюю({
-  editorDir: среда.editorDir, repo: среда.repo, settings: НАСТРОЙКИ, git: среда.git, ref: 'HEAD', rel: REL, обязательно,
+  repo: среда.repo, settings: НАСТРОЙКИ, git: среда.git, ref: 'HEAD', rel: REL, обязательно,
 });
 
-const снимков = (среда) => countSnapshots(среда.editorDir, НАСТРОЙКИ, REL);
+const снимков = (среда) => countSnapshots(среда.repo, НАСТРОЙКИ, REL);
 
 function последний(среда) {
-  const снимок = latestSnapshot(среда.editorDir, НАСТРОЙКИ, REL);
-  return снимок === null ? null : {...снимок, текст: snapshotText(среда.editorDir, НАСТРОЙКИ, REL, снимок['имя'])};
+  const снимок = latestSnapshot(среда.repo, НАСТРОЙКИ, REL);
+  return снимок === null ? null : {...снимок, текст: snapshotText(среда.repo, НАСТРОЙКИ, REL, снимок['имя'])};
 }
 
 describe('версия при изменении файла снаружи', () => {
@@ -169,10 +168,10 @@ describe('версия при изменении файла снаружи', () 
     fs.writeFileSync(path.join(среда.repo, новая), СТАТЬЯ, 'utf8');
 
     await фиксироватьВнешнюю({
-      editorDir: среда.editorDir, repo: среда.repo, settings: НАСТРОЙКИ, git: среда.git, ref: 'HEAD', rel: новая,
+      repo: среда.repo, settings: НАСТРОЙКИ, git: среда.git, ref: 'HEAD', rel: новая,
     });
 
-    expect(countSnapshots(среда.editorDir, НАСТРОЙКИ, новая)).toBe(1);
+    expect(countSnapshots(среда.repo, НАСТРОЙКИ, новая)).toBe(1);
   });
 
   it('фиксация версии не меняет файл статьи', async () => {
@@ -197,7 +196,8 @@ describe('сбой хранилища версий', () => {
   /** Хранилище, куда нельзя записать: на месте папки снимков лежит файл. */
   async function сломанное() {
     const среда = await подготовить();
-    fs.writeFileSync(path.join(среда.editorDir, НАСТРОЙКИ['хранение']['папкаСнимков']), 'не папка', 'utf8');
+    fs.mkdirSync(path.join(среда.repo, 'editor'), {recursive: true});
+    fs.writeFileSync(path.join(среда.repo, 'editor', НАСТРОЙКИ['хранение']['папкаСнимков']), 'не папка', 'utf8');
     fs.writeFileSync(среда.файл, `${СТАТЬЯ}дописал ИИ\n`, 'utf8');
     return среда;
   }

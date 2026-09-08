@@ -24,7 +24,7 @@ import {gitAuthor} from './gitFile.mjs';
  * Путь новой версии сервер считает сам из существующей статьи и настройки «контент». Принимать его
  * готовым от окна нельзя: тогда запись пошла бы туда, куда скажет клиент.
  */
-export async function localeRoute({req, res, url, repo, editorDir, settings, git, тело, send}) {
+export async function localeRoute({req, res, url, repo, settings, git, тело, send}) {
   if (url.pathname !== '/api/article/locale' || req.method !== 'POST') return false;
 
   const payload = await тело(req);
@@ -99,7 +99,7 @@ export async function localeRoute({req, res, url, repo, editorDir, settings, git
   // «Неизвестный» — автора он берёт из git, а незакоммиченный файл git ещё не знает.
   try {
     const автор = (await gitAuthor(git)) ?? settings['реестр']['неизвестныйАвтор'];
-    saveSnapshot(editorDir, settings, план.path, план.text, автор, new Date().toISOString());
+    saveSnapshot(repo, settings, план.path, план.text, автор, new Date().toISOString());
   } catch (error) {
     // История — служебный шаг: версия уже создана, и отменять её из-за этого нельзя.
     console.error(error);

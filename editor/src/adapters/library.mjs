@@ -127,7 +127,7 @@ export function saveState(repo, rel, settings, state) {
  * и такая подпись приписывала бы владельцу правки ИИ. История спрашивается только по тем путям,
  * которые действительно изменены, поэтому при тысяче статей она не читается тысячу раз.
  */
-export async function editTimes(repo, git, editorDir, settings) {
+export async function editTimes(repo, git, settings) {
   const times = new Map();
 
   try {
@@ -148,7 +148,7 @@ export async function editTimes(repo, git, editorDir, settings) {
       const правил = авторПравки({
         файлГрязный: true,
         авторКоммита: null,
-        снимок: latestSnapshot(editorDir, settings, rel),
+        снимок: latestSnapshot(repo, settings, rel),
         времяФайла,
         неизвестный: settings['реестр']['неизвестныйАвтор'],
       });
@@ -256,10 +256,10 @@ export function listArticles(repo, settings, times, published, расходит�
  * которой нет, он не является. Путь берётся из самого черновика, поэтому проверяется, что он
  * ведёт внутрь репозитория.
  */
-export function черновыеПравки(repo, editorDir, settings) {
+export function черновыеПравки(repo, settings) {
   const пути = new Set();
 
-  for (const draft of listDrafts(editorDir, settings)) {
+  for (const draft of listDrafts(repo, settings)) {
     const rel = draft['path'];
     const file = path.resolve(repo, rel);
     if (!file.startsWith(path.resolve(repo) + path.sep) || !fs.existsSync(file)) continue;

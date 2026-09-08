@@ -31,6 +31,7 @@ import {путиЗаОпубликованнойШапкой} from './src/core/l
 import {дверьGit} from './src/adapters/gitEnv.mjs';
 import {фиксироватьВнешнюю} from './src/adapters/externalVersion.mjs';
 import {ПЕРЕКЛЮЧАТЕЛЬ, версияКода, материалыВладельца, строкиЗапуска} from './src/adapters/materialSource.mjs';
+import {перенестиХранилище, строкиПереноса} from './src/adapters/draftMigrate.mjs';
 
 const EDITOR_DIR = path.dirname(fileURLToPath(import.meta.url));
 // Настройки читаются заново на каждый запрос: поправили settings.json — обновили страницу, готово.
@@ -80,7 +81,7 @@ const последняяПравка = new Map();
 
 /** Фиксация внешней правки: одна дверь на все три места, где программа читает и пишет статью. */
 const фиксировать = (rel, обязательно) => фиксироватьВнешнюю({
-  editorDir: EDITOR_DIR, repo: REPO, settings: readSettings(), git, ref: publishedRef, rel, обязательно,
+  repo: REPO, settings: readSettings(), git, ref: publishedRef, rel, обязательно,
 });
 
 // Удалось ли прочитать опубликованную ветку при последней сборке свода. Держится рядом со
@@ -97,14 +98,14 @@ let веткаПрочитана = true;
 async function articles() {
   const settings = readSettings();
   const [times, ветка, расхождение] = await Promise.all([
-    editTimes(REPO, git, EDITOR_DIR, settings),
+    editTimes(REPO, git, settings),
     опубликованные(git, publishedRef),
     расхождениеССайтом(git, publishedRef, settings['контент'].map((root) => root['папка'])),
   ]);
   веткаПрочитана = ветка.известна;
   // Черновики автосохранения — часть свода, а не отдельное знание окна: работа, принятая сервером,
   // для сайта такое же неопубликованное изменение версии, как правка самого файла.
-  const черновики = черновыеПравки(REPO, EDITOR_DIR, settings);
+  const черновики = черновыеПравки(REPO, settings);
   const расходятся = расхождение === null ? null : new Set(расхождение);
   // Признаки выпуска берутся у самой ветки, а не у файла на диске: и значок «только по ссылке»,
   // и красные буквы обещают поведение живой страницы, а местная смена доступности до публикации
@@ -145,11 +146,11 @@ async function api(req, res, url) {
   if (url.pathname === '/api/articles') return send(res, 200, await articles());
 
   // Лента версий и содержимое одной версии — тоже отдельным модулем, по той же причине.
-  if (await versionsRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), insideRepo, send})) return;
+  if (await versionsRoute({req, res, url, repo: REPO, settings: readSettings(), insideRepo, send})) return;
 
   // Создание статьи — отдельным модулем, как и остальные ручки.
-  if (await createRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, send})) return;
-  if (await localeRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, send})) return;
+  if (await createRoute({req, res, url, repo: REPO, settings: readSettings(), git, тело, send})) return;
+  if (await localeRoute({req, res, url, repo: REPO, settings: readSettings(), git, тело, send})) return;
 
   // Удаление статьи — тоже отдельным модулем. Опубликованную ветку ручка получает функцией:
   // на момент запуска сервера она ещё не определена, а к запросу уже известна.
@@ -163,20 +164,20 @@ async function api(req, res, url) {
 
   // Открытие статьи — отдельным модулем: сервер иначе выходит за лимит размера файла.
   if (await articleRoute({
-    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, publishedRef,
+    req, res, url, repo: REPO, settings: readSettings(), git, publishedRef,
     insideRepo, send, фиксировать, articles, веткаИзвестна: () => веткаПрочитана,
   })) return;
 
   // Сохранение статьи — тоже отдельным модулем. Вместе с файлом человека оно переключает
   // видимость остальных языковых версий: отдельной ручки видимости в программе нет.
   if (await saveRoute({
-    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git,
+    req, res, url, repo: REPO, settings: readSettings(), git,
     тело, insideRepo, send, фиксировать, последняяПравка,
   })) return;
 
   // «Доработать»: план только читает, применение пишет открытую версию и её медиа одной операцией.
   if (await refineRoute({
-    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, insideRepo, send, последняяПравка,
+    req, res, url, repo: REPO, settings: readSettings(), git, тело, insideRepo, send, последняяПравка,
   })) return;
 
   // Подготовка статьи — отдельным модулем. Ручка только читает: файлы человека она не трогает.
@@ -202,7 +203,7 @@ async function api(req, res, url) {
 
   // Автосохранение — отдельным модулем: сервер иначе выходит за лимит размера файла.
   if (await draftRoute({
-    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(),
+    req, res, url, repo: REPO, settings: readSettings(),
     тело, insideRepo, send, последняяПравка,
   })) return;
 
@@ -234,6 +235,24 @@ publishedRef = await detectPublishedRef(git);
 // Версия кода спрашивается у дерева КОДА, а не материалов: с этой правки они разные, и в первых
 // строках запуска надо назвать именно ту копию программы, которая сейчас поднялась.
 const версияЭтогоКода = await версияКода(дверьGit(EDITOR_DIR), readSettings());
+
+// Черновик и снимки лежат при МАТЕРИАЛАХ, а не при коде, поэтому работа, оставшаяся в хранилище
+// этой копии кода от прежних правил, переносится в общее. Перенос идёт ДО открытия сервера: иначе
+// окно успело бы писать черновик мимо ещё не перенесённой работы. Старое хранилище только
+// читается. Сорвался перенос — сервер не поднимается: работать над черновиком, судьба которого
+// неизвестна, хуже отказа запуститься.
+let переносХранилища;
+try {
+  переносХранилища = перенестиХранилище({
+    repo: REPO,
+    кодDir: EDITOR_DIR,
+    settings: readSettings(),
+    испытательный: ИСТОЧНИК['испытательный'],
+  });
+} catch (error) {
+  console.error(error);
+  process.exit(1);
+}
 
 // Ожидаемую ошибку (нет статьи, битый запрос) отдаём с её кодом и текстом.
 // Внутреннюю — пишем стек в консоль сервера, а интерфейсу даём спокойный общий текст из настроек без стека.
@@ -270,4 +289,7 @@ http
       адрес: `http://localhost:${PORT}`,
       ветка: publishedRef ?? readSettings()['материалы']['запуск']['веткаНеизвестна'],
     })) console.log(строка);
+    // Где лежит незаписанная работа — такая же обязательная строка запуска: по ней видно, что
+    // экземпляр смотрит в общее хранилище материалов, а не в папку своей копии кода.
+    for (const строка of строкиПереноса(переносХранилища, readSettings())) console.log(строка);
   });
