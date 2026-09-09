@@ -7,7 +7,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 import {НЕТ_ПАПКИ, НЕ_АБСОЛЮТНЫЙ, НЕ_МАТЕРИАЛЫ, ПАПКА_ВЛАДЕЛЬЦА, выборКорня} from '../src/core/materialRoot.mjs';
-import {ВЕТКА_ПРИНЯТОГО, ПОРТ_ВЛАДЕЛЬЦА, опознание} from '../src/core/runtimeIdentity.mjs';
+import {ВЕТКА_ПРИНЯТОГО, ПАПКА_ПРИНЯТОГО, ПОРТ_ВЛАДЕЛЬЦА, опознание} from '../src/core/runtimeIdentity.mjs';
 import {ПЕРЕКЛЮЧАТЕЛЬ, материалыВладельца, строкиЗапуска} from '../src/adapters/materialSource.mjs';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -88,7 +88,7 @@ describe('чужой корень возможен только явным ис�
   });
 
   it('испытательный запуск называет себя иначе, чем обычный, и оба зовут корень, код и адрес', () => {
-    const общее = {код: 'C:/копия/editor', коммит: '1234abc', порт: ПОРТ_ВЛАДЕЛЬЦА};
+    const общее = {код: ПАПКА_ПРИНЯТОГО, коммит: '1234abc', чисто: true, порт: ПОРТ_ВЛАДЕЛЬЦА};
     const позвать = (о) => строкиЗапуска({settings: настройки(), опознание: о, наСайте: 'origin/main'});
     const обычный = позвать(опознание({
       ...общее, корень: ПАПКА_ВЛАДЕЛЬЦА, испытательный: false, ветка: ВЕТКА_ПРИНЯТОГО,
@@ -100,7 +100,7 @@ describe('чужой корень возможен только явным ис�
 
     for (const строки of [обычный, испытание]) {
       const текст = строки.join('\n');
-      expect(текст).toContain('C:/копия/editor');
+      expect(текст).toContain(ПАПКА_ПРИНЯТОГО);
       expect(текст).toContain('1234abc');
       expect(текст).toContain('http://localhost:4780');
     }
