@@ -54,10 +54,68 @@ describe('ярлык доверяет git, а не словам сервера �
 });
 
 describe('новый ярлык включается только тогда, когда это уже безопасно', () => {
-  it('до переноса в editor установка отказывается: принятый код ещё не отвечает о себе', () => {
-    expect(УСТАНОВКА).toContain("$server -notmatch '/api/identity'");
+  it('установка спрашивает живой ответ работающего сервера, а не строку в исходнике', () => {
+    // Найденный дефект: установка искала `/api/identity` в тексте `server.mjs`. Файл на диске
+    // бывает уже новым, когда на `4780` работает прежний сервер и отвечает 404. Ярлык, заменённый
+    // в этот миг, отказался бы открывать вполне рабочее окно — привычный запуск ломался бы.
+    expect(УСТАНОВКА).toContain("$адрес = \"http://localhost:$порт/api/identity\"");
+    expect(УСТАНОВКА).toContain('Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 $адрес');
+    expect(УСТАНОВКА).not.toContain("Join-Path $кодDir 'server.mjs'");
+    expect(УСТАНОВКА).not.toContain("$server -notmatch");
+  });
+
+  it('молчание, старый ответ без ручки и мусор вместо опознания — три отдельных отказа', () => {
+    expect(УСТАНОВКА).toContain('про себя молчит (код $код)');
+    expect(УСТАНОВКА).toContain('никто не отвечает');
+    expect(УСТАНОВКА).toContain('не разобрать: это не опознание редактора');
+  });
+
+  it('ожидаемая личность берётся у git принятой копии: ветка, короткий коммит и чистота', () => {
     expect(УСТАНОВКА).toContain('branch --show-current');
     expect(УСТАНОВКА).toContain('status --porcelain');
+    expect(УСТАНОВКА).toContain('rev-parse --short HEAD');
+    expect(УСТАНОВКА).toContain('if ($и.commit -ne $коммит)');
+    expect(УСТАНОВКА).toContain('if ($и.branch -ne $ветка)');
+  });
+
+  it('установка сверяет тот же набор полей, что и сам ярлык: разойтись им нельзя', () => {
+    // Оба места решают один вопрос «это ли мой редактор». Выпади поле в одном из них — ярлык и
+    // установка стали бы отвечать по-разному, и подмена прошла бы там, где открывать нельзя.
+    for (const [вЯрлыке, вУстановке] of [
+      ["$i.role -eq 'owner'", "$и.role -ne 'owner'"],
+      ['$i.accepted -eq $true', '$и.accepted -ne $true'],
+      ['$i.clean -eq $true', '$и.clean -ne $true'],
+      ["$i.branch -eq 'editor'", '$и.branch -ne $ветка'],
+      ["$i.commit -eq '%EDITOR_COMMIT%'", '$и.commit -ne $коммит'],
+      ['[int]$i.port -eq 4780', '[int]$и.port -ne $порт'],
+      ["$same $i.code '%EDITOR_DIR%'", 'ПутьРавен $и.code $кодDir'],
+      ["$same $i.materials '%EDITOR_MATERIALS%'", 'ПутьРавен $и.materials $материалы'],
+    ]) {
+      expect(ЯРЛЫК).toContain(вЯрлыке);
+      expect(УСТАНОВКА).toContain(вУстановке);
+    }
+  });
+
+  it('ни один отказ не трогает ни ярлык, ни его резерв: подмена идёт последней', () => {
+    const проба = УСТАНОВКА.indexOf('Invoke-WebRequest');
+    const сверка = УСТАНОВКА.indexOf('$несовпадения.Count -gt 0');
+    const резерв = УСТАНОВКА.indexOf('Copy-Item -LiteralPath $ярлык -Destination $резерв');
+    const подмена = УСТАНОВКА.indexOf('Move-Item -LiteralPath $временный');
+
+    expect(проба).toBeGreaterThan(0);
+    expect(сверка).toBeGreaterThan(проба);
+    expect(резерв).toBeGreaterThan(сверка);
+    expect(подмена).toBeGreaterThan(резерв);
+    expect(УСТАНОВКА).toContain('Ничего не изменено: ни ярлык, ни его резерв.');
+  });
+
+  it('отказ называет выполнимый порядок: обновить копию, запустить её, проверить, установить', () => {
+    for (const шаг of [
+      'обновить принятую копию accepted-editor',
+      'запустить её прямым способом',
+      'проверить, что $адрес отвечает',
+      'запустить эту установку снова',
+    ]) expect(УСТАНОВКА).toContain(шаг);
   });
 
   it('прежний ярлык сохраняется, а подмена идёт одним движением, а не записью поверх', () => {
