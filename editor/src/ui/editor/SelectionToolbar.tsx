@@ -7,7 +7,7 @@ import * as act from '../../core/commands';
 import {sectionOf} from '../../core/articles.mjs';
 import {границыСоветов, оформлениеСовета, советы} from '../../core/tipBlock';
 import {видСписка, преобразованиеСписка, type Окружение, type ПравкаСписка} from '../../core/listConvert';
-import {КОСАЯ_ПЕРЕНОСА, блокВнеРазбора, внутриОграды} from '../livePreview/softBreak';
+import {КОСАЯ_ПЕРЕНОСА, блокВнеРазбора, внутриОграды, переносыАбзацев} from '../livePreview/softBreak';
 import {названиеСоветаСтатьи} from '../livePreview/tip';
 import {вставкаБлока, значениеПоРазделу, новыйТег} from '../../core/jsxBlocks';
 import type {Button, Settings} from '../types';
@@ -232,7 +232,12 @@ function decide(
   props: {settings: Settings; articlePath: string; шапка?: Record<string, string>},
 ): act.Edit | null {
   if (button.команда === 'заголовок') return act.heading(doc, at, button.уровень ?? 2);
-  if (button.команда === 'обернуть') return act.wrap(doc, at, button.знак ?? '**');
+  // Знаки разметки ищутся по всему абзацу, а не по строкам выделения: мягкий перенос пару не рвёт.
+  // Что продолжает абзац, знает одно правило программы — здесь оно только спрашивается.
+  if (button.команда === 'обернуть') {
+    const {мягкие, жёсткие} = переносыАбзацев(doc.split('\n'));
+    return act.wrap(doc, at, button.знак ?? '**', new Set([...мягкие, ...жёсткие]));
+  }
   if (button.команда === 'ссылка') {
     return act.link(doc, at, {текст: props.settings.подписи.ссылкаТекст});
   }

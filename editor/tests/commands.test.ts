@@ -3,6 +3,9 @@
 import {describe, expect, it} from 'vitest';
 import {heading, wrap, link, table, tableRow, imageAlt, imageSrc, shownAlt, type Edit, type Selection} from '../src/core/commands';
 
+/** Однострочный текст: склеивать нечего. Абзац через перенос проверяется в `wrapToggle.test.ts`. */
+const БЕЗ_ПЕРЕНОСОВ: ReadonlySet<number> = new Set();
+
 /** Применяет правку к тексту так же, как это делает редактор. */
 function apply(text: string, edit: Edit): string {
   return text.slice(0, edit.from) + edit.insert + text.slice(edit.to);
@@ -30,21 +33,21 @@ describe('команды правки текста', () => {
 
   it('жирный оборачивает выделение в двойные звёздочки', () => {
     const text = 'слово';
-    expect(apply(text, wrap(text, всё(text), '**'))).toBe('**слово**');
+    expect(apply(text, wrap(text, всё(text), '**', БЕЗ_ПЕРЕНОСОВ))).toBe('**слово**');
   });
 
   it('курсив оборачивает выделение в одну звёздочку', () => {
     const text = 'слово';
-    expect(apply(text, wrap(text, всё(text), '*'))).toBe('*слово*');
+    expect(apply(text, wrap(text, всё(text), '*', БЕЗ_ПЕРЕНОСОВ))).toBe('*слово*');
   });
 
   it('код оборачивает выделение в обратные кавычки', () => {
     const text = 'слово';
-    expect(apply(text, wrap(text, всё(text), '`'))).toBe('`слово`');
+    expect(apply(text, wrap(text, всё(text), '`', БЕЗ_ПЕРЕНОСОВ))).toBe('`слово`');
   });
 
   it('оборачивание без выделения ставит пустые знаки и курсор между ними', () => {
-    const edit = wrap('', {from: 0, to: 0}, '**');
+    const edit = wrap('', {from: 0, to: 0}, '**', БЕЗ_ПЕРЕНОСОВ);
     expect(apply('', edit)).toBe('****');
     expect(edit.caret).toBe(2);
   });
