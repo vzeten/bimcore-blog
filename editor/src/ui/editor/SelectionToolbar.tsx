@@ -7,6 +7,7 @@ import * as act from '../../core/commands';
 import {sectionOf} from '../../core/articles.mjs';
 import {границыСоветов, оформлениеСовета, советы} from '../../core/tipBlock';
 import {видСписка, преобразованиеСписка, type Окружение, type ПравкаСписка} from '../../core/listConvert';
+import {курсорПоставленКнопкой} from '../livePreview/boldMarks';
 import {КОСАЯ_ПЕРЕНОСА, блокВнеРазбора, внутриОграды, переносыАбзацев} from '../livePreview/softBreak';
 import {названиеСоветаСтатьи} from '../livePreview/tip';
 import {вставкаБлока, значениеПоРазделу, новыйТег} from '../../core/jsxBlocks';
@@ -216,11 +217,17 @@ function run(
   const edit = decide(button, doc, at, props);
   if (!edit) return;
 
+  const курсор = edit.from + (edit.caret ?? edit.insert.length);
+  // Кнопка знаков разметки говорит, куда поставила курсор: за закрывающими знаками клик человека
+  // их открывает, а свежая правка кнопкой — нет, и различить эти два случая больше нечем.
+  const пометка = button.команда === 'обернуть' && !edit.select ? [курсорПоставленКнопкой.of(курсор)] : [];
+
   view.dispatch({
     changes: {from: edit.from, to: edit.to, insert: edit.insert},
     selection: edit.select
       ? {anchor: edit.from + edit.select.from, head: edit.from + edit.select.to}
-      : {anchor: edit.from + (edit.caret ?? edit.insert.length)},
+      : {anchor: курсор},
+    effects: пометка,
   });
   view.focus();
 }
@@ -275,4 +282,6 @@ function decide(
   return null;
 }
 
-export {decide as decideEdit};
+// Наружу — той же дорогой, какой панель отправляет правку: тест обязан проверять сам путь кнопки,
+// а не его пересказ. Тем же доводом наружу отдана `правкаСписка`.
+export {decide as decideEdit, run as нажатиеКнопки};

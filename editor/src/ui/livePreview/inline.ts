@@ -3,7 +3,7 @@ import {Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type
 import {syntaxTree} from '@codemirror/language';
 import {Annotation, StateEffect, StateField, type Range} from '@codemirror/state';
 import {РАЗБОР_КАРТИНКИ, shownAlt} from '../../core/commands';
-import {знакиЖирногоВидны} from './boldMarks';
+import {знакиЖирногоВидны, курсорОтКнопки} from './boldMarks';
 import {знакМаркера, уровеньСписка} from './listMarker';
 import {адресКартинки} from './assetSrc';
 
@@ -149,7 +149,7 @@ export function inlinePreview(article: () => string, onImage?: (картинка
     {decorations: (plugin) => plugin.decorations},
   );
 
-  return [версииКартинок, plugin];
+  return [версииКартинок, курсорОтКнопки, plugin];
 }
 
 function build(view: EditorView, article: string, onImage?: (картинка: КартинкаВОкне) => void): DecorationSet {
@@ -163,6 +163,8 @@ function build(view: EditorView, article: string, onImage?: (картинка: �
     for (let line = first; line <= last; line += 1) activeLines.add(line);
   }
   const raw = (pos: number): boolean => activeLines.has(doc.lineAt(pos).number);
+  // Курсор, оставленный кнопкой оформления: знаки свежего жирного куска ему не открываются.
+  const отКнопки = view.state.field(курсорОтКнопки, false) ?? null;
 
   // Куски, целиком заменённые на готовый вид: внутрь них другие пометки ставить нельзя.
   const replaced: Array<[number, number]> = [];
@@ -250,7 +252,7 @@ function build(view: EditorView, article: string, onImage?: (картинка: �
         // Знаки жирного прячутся и на строке под курсором: правило — `boldMarks.ts`.
         if (name === 'EmphasisMark' && node.node.parent?.name === 'StrongEmphasis') {
           const кусок = node.node.parent;
-          if (!знакиЖирногоВидны(кусок, view.state.selection.ranges)) hide(node.from, node.to);
+          if (!знакиЖирногоВидны(кусок, view.state.selection.ranges, отКнопки)) hide(node.from, node.to);
           return;
         }
 
