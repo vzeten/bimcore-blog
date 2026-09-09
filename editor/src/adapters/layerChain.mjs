@@ -20,8 +20,8 @@ import {listSnapshots, snapshotText} from './draftStore.mjs';
  * Снимок, который не читается (пропал, битый), просто пропускается: цвет — не то, ради чего стоит
  * ронять открытие статьи.
  */
-export function historyLayers({editorDir, settings, rel, публикацияОт, ктоЯ}) {
-  const выбранные = слоиИзИмён(listSnapshots(editorDir, settings, rel), {публикацияОт});
+export function historyLayers({repo, settings, rel, публикацияОт, ктоЯ}) {
+  const выбранные = слоиИзИмён(listSnapshots(repo, settings, rel), {публикацияОт});
   const предел = settings['хранение']['слоёвИстории'];
 
   // Идём от свежих к старым: предел — предохранитель, и отбрасывать он должен самое старое,
@@ -37,7 +37,7 @@ export function historyLayers({editorDir, settings, rel, публикацияО�
 
   for (let i = выбранные.length - 1; i >= 0 && прочитано < потолокЧтения; i -= 1) {
     прочитано += 1;
-    const текст = snapshotText(editorDir, settings, rel, выбранные[i]['имя']);
+    const текст = snapshotText(repo, settings, rel, выбранные[i]['имя']);
     // Снимок пропал или нечитаем — цвет не то, ради чего стоит ронять открытие статьи.
     if (текст === null) continue;
 

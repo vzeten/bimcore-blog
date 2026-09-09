@@ -8,7 +8,7 @@ import path from 'node:path';
 import {saveDraft, saveSnapshot} from '../src/adapters/draftStore.mjs';
 import {вКорзину, вернутьИзКорзины, довести, папкаКорзины, положитьЦеликом, составАрхива, списокКорзины} from '../src/adapters/trashStore.mjs';
 
-const НАСТРОЙКИ = {хранение: {файлСостояния: '_state.json', папкаЧерновиков: '.drafts', папкаСнимков: '.history', снимковНаВерсию: 5, папкаКорзины: '.trash', корзинаДней: 30}};
+const НАСТРОЙКИ = {хранение: {файлСостояния: '_state.json', папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', снимковНаВерсию: 5, папкаКорзины: '.trash', корзинаДней: 30}};
 const RU = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/index.mdx';
 const EN = 'docs/lessons/proba/index.mdx';
 const ПАПКА_RU = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba';
@@ -27,8 +27,8 @@ function репозиторий() {
     fs.mkdirSync(path.join(repo, path.dirname(rel)), {recursive: true});
     fs.writeFileSync(path.join(repo, rel), `содержимое ${rel}`, 'utf8');
   }
-  saveDraft(editorDir, НАСТРОЙКИ, {path: RU, body: 'черновик', frontmatterRaw: '', отпечатокБазы: 'x'});
-  saveSnapshot(editorDir, НАСТРОЙКИ, RU, 'снимок', 'Автор', '2026-09-01T10:00:00.000Z');
+  saveDraft(repo, НАСТРОЙКИ, {path: RU, body: 'черновик', frontmatterRaw: '', отпечатокБазы: 'x'});
+  saveSnapshot(repo, НАСТРОЙКИ, RU, 'снимок', 'Автор', '2026-09-01T10:00:00.000Z');
   return {repo, editorDir};
 }
 

@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-import {draftPath, historyDirOf} from './draftStore.mjs';
+import {draftPath, historyDirOf, хранилищеРедактора} from './draftStore.mjs';
 
 const ОПИСЬ = 'manifest.json';
 /** Имя записи корзины: время и короткий хвост — в адресе ничего, кроме безопасных знаков. */
@@ -28,9 +28,13 @@ export function дниКорзины(settings) {
   return Number(settings['хранение']['корзинаДней']) || 30;
 }
 
-/** Корни, из которых архив забирает файлы: содержимое из репозитория, служебные следы из папки редактора. */
-function корни(repo, editorDir) {
-  return {repo, editor: editorDir};
+/**
+ * Корни, из которых архив забирает файлы: содержимое из репозитория, служебные следы — из общего
+ * хранилища редактора внутри материалов. Папка запущенного кода корнем не бывает: черновик и
+ * снимки лежат при материалах, и опись, посчитанная от кода, указывала бы мимо них (SPEC 7.1.5).
+ */
+function корни(repo) {
+  return {repo, editor: хранилищеРедактора(repo)};
 }
 
 /**
@@ -82,20 +86,21 @@ function файлыПапки(repo, папка) {
  * Состав архива по решению об удалении: файлы статьи и состояния, все файлы её собственных папок,
  * черновик и снимки каждой языковой версии. Считается до первого действия и больше не меняется.
  */
-export function составАрхива({repo, editorDir, settings, решение}) {
+export function составАрхива({repo, settings, решение}) {
+  const хранилище = хранилищеРедактора(repo);
   const записи = new Map();
   const добавить = (корень, rel) => {
-    проверенный(корни(repo, editorDir)[корень], rel);
+    проверенный(корни(repo)[корень], rel);
     записи.set(`${корень}/${rel}`, {корень, из: rel, в: `${корень}/${rel}`});
   };
   for (const файл of решение.файлы) добавить('repo', файл);
   for (const папка of решение.папки) for (const файл of файлыПапки(repo, папка)) добавить('repo', файл);
   for (const версия of решение.пути) {
-    const черновик = draftPath(editorDir, settings, версия);
-    if (fs.existsSync(черновик)) добавить('editor', path.relative(editorDir, черновик).split(path.sep).join('/'));
-    const история = historyDirOf(editorDir, settings, версия);
+    const черновик = draftPath(repo, settings, версия);
+    if (fs.existsSync(черновик)) добавить('editor', path.relative(хранилище, черновик).split(path.sep).join('/'));
+    const история = historyDirOf(repo, settings, версия);
     if (fs.existsSync(история)) {
-      for (const имя of fs.readdirSync(история)) добавить('editor', path.relative(editorDir, path.join(история, имя)).split(path.sep).join('/'));
+      for (const имя of fs.readdirSync(история)) добавить('editor', path.relative(хранилище, path.join(история, имя)).split(path.sep).join('/'));
     }
   }
   return [...записи.values()];
@@ -190,7 +195,7 @@ export function вКорзину({repo, editorDir, settings, статья, со�
 
 /** Довести перенос до конца с того шага, на котором он остановился. */
 export function довести({repo, editorDir, settings, dir, опись}) {
-  const корень = корни(repo, editorDir);
+  const корень = корни(repo);
   if (опись.состояние === 'перенос') {
     for (const файл of опись.файлы) {
       const от = проверенный(корень[файл.корень], файл.из);
@@ -260,7 +265,7 @@ export function вернутьИзКорзины({repo, editorDir, settings, id}
   }
   const опись = прочитатьОпись(dir);
   if (опись === null) return {ошибка: 'нетЗаписи'};
-  const корень = корни(repo, editorDir);
+  const корень = корни(repo);
   const план = [];
   const конфликты = [];
   try {

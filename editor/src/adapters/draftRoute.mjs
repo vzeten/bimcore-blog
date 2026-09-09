@@ -14,7 +14,7 @@ import {badFields, badPath} from './httpBody.mjs';
  * Обрабатывает `/api/draft`. Возвращает true, если запрос был к ней.
  * `последняяПравка` — память сервера о времени последней принятой правки по каждой статье.
  */
-export async function draftRoute({req, res, url, repo, editorDir, settings, тело, insideRepo, send, последняяПравка}) {
+export async function draftRoute({req, res, url, repo, settings, тело, insideRepo, send, последняяПравка}) {
   if (url.pathname !== '/api/draft' || req.method !== 'POST') return false;
 
   const payload = await тело(req);
@@ -43,7 +43,7 @@ export async function draftRoute({req, res, url, repo, editorDir, settings, те
   // ни удалять уже записанную свежую. Порядок — по времени правки в окне, а не прихода запроса.
   // Порог берётся и из памяти: настоящее сохранение убирает черновик, и без памяти
   // задержавшийся старый запрос воскресил бы его поверх уже сохранённой работы.
-  const порог = позже(последняяПравка.get(rel), loadDraft(editorDir, settings, rel)?.['правкаОт']);
+  const порог = позже(последняяПравка.get(rel), loadDraft(repo, settings, rel)?.['правкаОт']);
   if (!свежееЧерновика(payload.правкаОт, {правкаОт: порог})) {
     send(res, 200, {автосохранено: null, устарел: true});
     return true;
@@ -62,13 +62,13 @@ export async function draftRoute({req, res, url, repo, editorDir, settings, те
   // сравнении черновик, слово в слово равный файлу, оставался бы лежать и всплывал бы потом
   // «продолжением работы», которого не было.
   if (nothingChanged(текущий, {body: текстЧерновика, frontmatterRaw: шапка})) {
-    dropDraft(editorDir, settings, rel);
+    dropDraft(repo, settings, rel);
     send(res, 200, {автосохранено: null, совпадаетСФайлом: true});
     return true;
   }
 
   const когда = new Date().toISOString();
-  saveDraft(editorDir, settings, newDraft({
+  saveDraft(repo, settings, newDraft({
     path: rel,
     frontmatterRaw: шапка,
     body: текстЧерновика,

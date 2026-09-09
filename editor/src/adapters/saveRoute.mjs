@@ -64,7 +64,7 @@ export function собрать(current, frontmatterRaw, body) {
  * запрос не стирает черновик, написанный уже после его отправки.
  */
 export async function saveRoute({
-  req, res, url, repo, editorDir, settings, git, тело, insideRepo, send, фиксировать, последняяПравка,
+  req, res, url, repo, settings, git, тело, insideRepo, send, фиксировать, последняяПравка,
 }) {
   if (url.pathname !== '/api/article/save' || req.method !== 'POST') return false;
 
@@ -125,9 +125,9 @@ export async function saveRoute({
 
   /** Убрать черновик после настоящего сохранения — но только если он не новее самого сохранения. */
   const убратьЧерновик = () => {
-    const черновик = loadDraft(editorDir, settings, payload.path);
+    const черновик = loadDraft(repo, settings, payload.path);
     if (черновик === null || свежееЧерновика(payload.правкаОт, черновик)) {
-      dropDraft(editorDir, settings, payload.path);
+      dropDraft(repo, settings, payload.path);
     }
     // Порог свежести остаётся в памяти и после удаления черновика: без него поздний запрос
     // автосохранения воскресил бы черновик поверх только что сохранённой работы.
@@ -157,7 +157,7 @@ export async function saveRoute({
   const state = afterEdit(loadState(repo, payload.path, settings), settings);
 
   const предупреждения = [];
-  безСрыва(() => saveSnapshot(editorDir, settings, payload.path, текст, автор, сейчас), предупреждения, 'история');
+  безСрыва(() => saveSnapshot(repo, settings, payload.path, текст, автор, сейчас), предупреждения, 'история');
   безСрыва(убратьЧерновик, предупреждения, 'черновик');
   // Правка после подготовки возвращает версию в черновик.
   безСрыва(() => saveState(repo, payload.path, settings, state), предупреждения, 'состояние');

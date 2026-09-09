@@ -43,7 +43,7 @@ async function версияНаСайте(git, ref, rel) {
  * `articles` приходит готовым: свод статей собирает сервер.
  */
 export async function articleRoute({
-  req, res, url, repo, editorDir, settings, git, publishedRef,
+  req, res, url, repo, settings, git, publishedRef,
   insideRepo, send, фиксировать, articles, веткаИзвестна,
 }) {
   if (url.pathname !== '/api/article' || req.method !== 'GET') return false;
@@ -66,7 +66,7 @@ export async function articleRoute({
   const факты = articleFacts(await articles(), rel, settings);
   const наСайте = await версияНаСайте(git, publishedRef, rel);
 
-  const draft = loadDraft(editorDir, settings, rel);
+  const draft = loadDraft(repo, settings, rel);
   const решение = draftDecision({
     draft,
     файл: {frontmatterRaw, body},
@@ -96,7 +96,7 @@ export async function articleRoute({
     // Кто трогал текст между публикацией и сейчас. Считается при открытии статьи: набор текста
     // за этим на диск не ходит, иначе каждая буква стоила бы чтения истории.
     слои: historyLayers({
-      editorDir,
+      repo,
       settings,
       rel,
       публикацияОт: await publishedAt(git, publishedRef, rel),
