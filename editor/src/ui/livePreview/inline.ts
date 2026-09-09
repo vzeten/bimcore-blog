@@ -165,7 +165,11 @@ function build(view: EditorView, article: string, onImage?: (картинка: �
 
   const activeLines = new Set<number>();
   for (const range of view.state.selection.ranges) {
-    const абзац = абзацСтрок(строки, doc.lineAt(range.from).number - 1, doc.lineAt(range.to).number - 1);
+    // Последняя ЗАТРОНУТАЯ позиция, а не конец выделения: выделение, оканчивающееся ровно в начале
+    // соседнего абзаца, его не задевает и открывать его знаки не должно. У пустого курсора
+    // затронутая позиция одна, и отступать назад некуда.
+    const конец = range.to > range.from ? range.to - 1 : range.to;
+    const абзац = абзацСтрок(строки, doc.lineAt(range.from).number - 1, doc.lineAt(конец).number - 1);
     for (let line = абзац.первая; line <= абзац.последняя; line += 1) activeLines.add(line + 1);
   }
   const raw = (pos: number): boolean => activeLines.has(doc.lineAt(pos).number);
