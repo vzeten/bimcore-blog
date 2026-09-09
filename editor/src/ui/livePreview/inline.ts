@@ -3,7 +3,7 @@ import {Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type
 import {syntaxTree} from '@codemirror/language';
 import {Annotation, StateEffect, StateField, type Range} from '@codemirror/state';
 import {РАЗБОР_КАРТИНКИ, shownAlt} from '../../core/commands';
-import {знакиЖирногоВидны, курсорОтКнопки} from './boldMarks';
+import {абзацСтрок} from './softBreak';
 import {знакМаркера, уровеньСписка} from './listMarker';
 import {адресКартинки} from './assetSrc';
 
@@ -149,22 +149,26 @@ export function inlinePreview(article: () => string, onImage?: (картинка
     {decorations: (plugin) => plugin.decorations},
   );
 
-  return [версииКартинок, курсорОтКнопки, plugin];
+  return [версииКартинок, plugin];
 }
 
 function build(view: EditorView, article: string, onImage?: (картинка: КартинкаВОкне) => void): DecorationSet {
   const list: Range<Decoration>[] = [];
   const doc = view.state.doc;
 
+  // Знаки разметки открываются целым АБЗАЦЕМ, в котором стоит курсор или выделение, — одинаково у
+  // жирного, курсива, кода, цитаты и ссылки. Строки для этого мало: абзац из двух строк для
+  // человека одна фраза, и раскрытая в ней половина знаков показала бы незакрытую пару. Ушёл из
+  // абзаца — знаков снова не видно, остаётся готовый вид.
+  const строки: string[] = [];
+  for (let номер = 1; номер <= doc.lines; номер += 1) строки.push(doc.line(номер).text);
+
   const activeLines = new Set<number>();
   for (const range of view.state.selection.ranges) {
-    const first = doc.lineAt(range.from).number;
-    const last = doc.lineAt(range.to).number;
-    for (let line = first; line <= last; line += 1) activeLines.add(line);
+    const абзац = абзацСтрок(строки, doc.lineAt(range.from).number - 1, doc.lineAt(range.to).number - 1);
+    for (let line = абзац.первая; line <= абзац.последняя; line += 1) activeLines.add(line + 1);
   }
   const raw = (pos: number): boolean => activeLines.has(doc.lineAt(pos).number);
-  // Курсор, оставленный кнопкой оформления: знаки свежего жирного куска ему не открываются.
-  const отКнопки = view.state.field(курсорОтКнопки, false) ?? null;
 
   // Куски, целиком заменённые на готовый вид: внутрь них другие пометки ставить нельзя.
   const replaced: Array<[number, number]> = [];
@@ -249,13 +253,6 @@ function build(view: EditorView, article: string, onImage?: (картинка: �
         if (name === 'InlineCode') return void mark(node.from, node.to, 'md-code');
         if (name === 'Link') return void mark(node.from, node.to, 'md-link');
 
-        // Знаки жирного прячутся и на строке под курсором: правило — `boldMarks.ts`.
-        if (name === 'EmphasisMark' && node.node.parent?.name === 'StrongEmphasis') {
-          const кусок = node.node.parent;
-          if (!знакиЖирногоВидны(кусок, view.state.selection.ranges, отКнопки)) hide(node.from, node.to);
-          return;
-        }
-
         if ((name === 'EmphasisMark' || name === 'CodeMark' || name === 'QuoteMark') && !raw(node.from)) {
           hide(node.from, node.to);
           return;
@@ -291,3 +288,7 @@ function build(view: EditorView, article: string, onImage?: (картинка: �
 
   return Decoration.set(list, true);
 }
+
+// Наружу для проверки: тест спрашивает те же декорации, какими живёт окно, а не пересказывает
+// правило своим кодом (SPEC 5.2.1). Тем же доводом наружу отданы `decideEdit` и `правкаСписка`.
+export {build as внутристрочныеЗнаки};

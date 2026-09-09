@@ -8,13 +8,12 @@ import {commonmarkLanguage} from '@codemirror/lang-markdown';
 import type {SyntaxNode} from '@lezer/common';
 import {colorize, type Layer, type LayerKind} from '../src/core/colorize';
 import type {Button, Edit, Selection} from '../src/core/commands';
-import {EditorState} from '@codemirror/state';
-import {знакиЖирногоВидны, курсорОтКнопки, курсорПоставленКнопкой} from '../src/ui/livePreview/boldMarks';
-import {EditorSelection, type TransactionSpec} from '@codemirror/state';
+import {EditorSelection, EditorState} from '@codemirror/state';
 import type {EditorView} from '@codemirror/view';
+import {ensureSyntaxTree} from '@codemirror/language';
 import {markdown} from '@codemirror/lang-markdown';
-import {inlinePreview} from '../src/ui/livePreview/inline';
-import {decideEdit, нажатиеКнопки} from '../src/ui/editor/SelectionToolbar';
+import {внутристрочныеЗнаки} from '../src/ui/livePreview/inline';
+import {decideEdit} from '../src/ui/editor/SelectionToolbar';
 
 const settings = JSON.parse(readFileSync(fileURLToPath(new URL('../settings.json', import.meta.url)), 'utf8')) as {
   вставки: Button[];
@@ -47,14 +46,26 @@ function жирныеКуски(text: string): {from: number; to: number; зна
   return куски;
 }
 
-/** Что видно человеку: текст без тех знаков, которые окно прячет при таком выделении. */
-function видно(text: string, места: Selection[], отКнопки: number | null = null): string {
-  const спрятать = жирныеКуски(text)
-    .filter((кусок) => !знакиЖирногоВидны(кусок, места, отКнопки))
-    .flatMap((кусок) => кусок.знаки);
-  return [...text]
-    .filter((_, at) => !спрятать.some((знак) => at >= знак.from && at < знак.to))
-    .join('');
+/**
+ * Что человек видит в окне при таком курсоре: текст без кусков, которые спрятал слой показа.
+ * Декорации спрашиваются у самого слоя, а не пересказываются здесь (SPEC 5.2.1); спрятанное — это
+ * замена пустотой, у пометки есть класс, у виджета — свой вид.
+ */
+function видно(text: string, курсор: Selection): string {
+  const state = EditorState.create({
+    doc: text,
+    selection: EditorSelection.range(курсор.from, курсор.to),
+    extensions: [markdown({addKeymap: false})],
+  });
+  ensureSyntaxTree(state, state.doc.length, 5_000);
+
+  // Видимая область — весь текст: в тесте окна нет, а прокрутка к правилу показа отношения не имеет.
+  const view = {state, visibleRanges: [{from: 0, to: state.doc.length}]} as unknown as EditorView;
+  const спрятано: Selection[] = [];
+  внутристрочныеЗнаки(view, '').between(0, state.doc.length, (from, to, deco) => {
+    if (to > from && deco.spec.class === undefined && deco.spec.widget === undefined) спрятано.push({from, to});
+  });
+  return [...text].filter((_, at) => !спрятано.some((к) => at >= к.from && at < к.to)).join('');
 }
 
 /** Каким слоем помечен кусок текста в готовой цепочке. */
@@ -88,60 +99,69 @@ describe('кнопка «Жирный» пишет в файл ровно `**в�
   });
 });
 
-describe('знаки жирного в окне', () => {
-  const {текст, курсор} = нажать(ФАЙЛ, СЛОВО);
+describe('знаки разметки открываются активным абзацем, одинаково у жирного и курсива', () => {
+  // Два абзаца: первый из двух строк через мягкий перенос, второй за пустой строкой.
+  const ТЕКСТ = [
+    'Первый **жирный** и *курсив* тут.',
+    'Вторая строка с **парой**.',
+    '',
+    'Второй абзац с **жирным** и *курсивом*.',
+    '',
+  ].join('\n');
+  const БЕЗ_ЗНАКОВ = ТЕКСТ.replace(/\*/g, '');
+  const место = (кусок: string): Selection => {
+    const from = ТЕКСТ.indexOf(кусок);
+    return {from, to: from + кусок.length};
+  };
+  /** Тот же текст, но знаки убраны только в названных строках. */
+  const безЗнаковВ = (...строки: number[]): string => ТЕКСТ.split('\n')
+    .map((строка, i) => (строки.includes(i) ? строка.replace(/\*/g, '') : строка))
+    .join('\n');
 
-  it('после кнопки «Жирный» курсор стоит за куском и служебные знаки не показываются', () => {
-    expect(видно(текст, [{from: курсор, to: курсор}], курсор)).toBe(ФАЙЛ);
+  it('курсор в абзаце открывает знаки ВСЕХ его кусков, а не только слова под курсором', () => {
+    const {from} = место('Первый');
+    // Жирный и курсив первой строки и жирный второй — весь абзац сразу; второй абзац закрыт.
+    expect(видно(ТЕКСТ, {from, to: from})).toBe(безЗнаковВ(3));
   });
 
-  it('клик сразу за жирным куском открывает обе пары знаков, курсор остаётся за ними', () => {
-    // Место в тексте то же, что после кнопки, но поставил его человек: знаки нужны ему, чтобы
-    // посмотреть и убрать их руками (слово владельца 2026-09-09).
-    expect(видно(текст, [{from: курсор, to: курсор}])).toBe(текст);
-    expect(текст.slice(курсор - 2, курсор)).toBe('**');
+  it('соседний абзац знаков не открывает: ушёл из абзаца — остаётся готовый вид', () => {
+    const {from} = место('Второй абзац');
+    expect(видно(ТЕКСТ, {from, to: from})).toBe(безЗнаковВ(0, 1));
   });
 
-  it('курсор, сдвинутый после кнопки и вернувшийся на то же место, знаки уже открывает', () => {
-    const состояние = EditorState.create({doc: текст, extensions: [курсорОтКнопки]});
-    const кнопкой = состояние.update({
-      selection: {anchor: курсор}, effects: курсорПоставленКнопкой.of(курсор),
-    }).state;
-    expect(кнопкой.field(курсорОтКнопки)).toBe(курсор);
-
-    const ушёл = кнопкой.update({selection: {anchor: 0}}).state;
-    expect(ушёл.field(курсорОтКнопки)).toBe(null);
-    const вернулся = ушёл.update({selection: {anchor: курсор}}).state;
-    expect(вернулся.field(курсорОтКнопки)).toBe(null);
-    expect(видно(текст, [{from: курсор, to: курсор}], вернулся.field(курсорОтКнопки))).toBe(текст);
+  it('вне абзацев знаки закрыты у всех кусков', () => {
+    const пустая = ТЕКСТ.indexOf('\n\n') + 1;
+    expect(видно(ТЕКСТ, {from: пустая, to: пустая})).toBe(БЕЗ_ЗНАКОВ);
   });
 
-  it('набор текста после кнопки метку снимает: она живёт только до первой правки человека', () => {
-    const состояние = EditorState.create({doc: текст, extensions: [курсорОтКнопки]});
-    const кнопкой = состояние.update({
-      selection: {anchor: курсор}, effects: курсорПоставленКнопкой.of(курсор),
-    }).state;
-    const набрал = кнопкой.update({changes: {from: курсор, insert: 'х'}}).state;
-    expect(набрал.field(курсорОтКнопки)).toBe(null);
+  it('курсор сразу за закрывающими знаками жирного открывает их: там их и правят руками', () => {
+    const за = ТЕКСТ.indexOf('**жирный**') + '**жирный**'.length;
+    expect(ТЕКСТ.slice(за - 2, за)).toBe('**');
+    expect(видно(ТЕКСТ, {from: за, to: за})).toBe(безЗнаковВ(3));
   });
 
-  it('курсор перед открывающими знаками их не открывает: смотрят и правят их с другого края', () => {
-    const передКуском = текст.indexOf('**');
-    expect(видно(текст, [{from: передКуском, to: передКуском}])).toBe(ФАЙЛ);
+  it('курсор у курсива открывает и жирное того же абзаца: правило у них одно', () => {
+    const за = ТЕКСТ.indexOf('*курсив*') + '*курсив*'.length;
+    expect(видно(ТЕКСТ, {from: за, to: за})).toBe(безЗнаковВ(3));
   });
 
-  it('существующая жирность открывается без видимых знаков и без правки самого файла', () => {
-    expect(видно(текст, [{from: 0, to: 0}])).toBe(ФАЙЛ);
-    expect(текст).toBe('Параметр **Ушки по бокам** включаются к любому изголовью.\n');
+  it('выделение через оба абзаца открывает знаки обоих', () => {
+    expect(видно(ТЕКСТ, {from: место('Первый').from, to: место('Второй абзац').to})).toBe(ТЕКСТ);
   });
 
-  it('курсор внутри куска открывает знаки — там их правят руками', () => {
-    expect(видно(текст, [{from: 13, to: 13}])).toBe(текст);
+  it('заголовок над абзацем своих знаков не открывает: он абзацу не продолжение', () => {
+    // Заодно видно, что правило у всей разметки одно: закрыты и `**` заголовка, и его собственные `##`.
+    const текст = '## Раздел с **жирным**\n\nАбзац с **жирным**.\n';
+    const from = текст.indexOf('Абзац');
+    expect(видно(текст, {from, to: from})).toBe('Раздел с жирным\n\nАбзац с **жирным**.\n');
   });
 
-  it('знаки соседнего курсива по-прежнему живут своим правилом строки, жирное их не трогает', () => {
-    const курсивом = 'Параметр *Ушки* включаются.\n';
-    expect(видно(курсивом, [{from: 0, to: 0}])).toBe(курсивом);
+  it('поставленная кнопкой жирность открыта, пока курсор в абзаце, и закрывается при уходе', () => {
+    const {текст, курсор} = нажать(ФАЙЛ, СЛОВО);
+    expect(видно(текст, {from: курсор, to: курсор})).toBe(текст);
+    const другой = `${текст}\nВторой абзац.\n`;
+    const вне = другой.indexOf('Второй абзац');
+    expect(видно(другой, {from: вне, to: вне})).toBe(ФАЙЛ.replace('\n', '') + '\n\nВторой абзац.\n');
   });
 });
 
@@ -186,41 +206,5 @@ describe('слой правки жирности', () => {
     const окно = 'Раз **два.\nТри четыре.\n';
     const слои: Layer[] = [{text: начало, kind: 'site'}, {text: окно, kind: 'current'}];
     expect(слой(слои, 'Три четыре')).toBe('site');
-  });
-});
-
-describe('дорога кнопки до слоя показа', () => {
-  /** Нажатие кнопки панели ровно тем путём, каким отправляет правку окно, но без DOM. */
-  function панелью(текстФайла: string, выбор: Selection): EditorState {
-    const state = EditorState.create({
-      doc: текстФайла,
-      selection: EditorSelection.range(выбор.from, выбор.to),
-      extensions: [markdown({addKeymap: false}), inlinePreview(() => '')],
-    });
-    let итог = state;
-    const view = {
-      state,
-      dispatch: (spec: TransactionSpec) => { итог = state.update(spec).state; },
-      focus: () => {},
-    } as unknown as EditorView;
-    нажатиеКнопки(ЖИРНЫЙ, {settings: {} as never, view, articlePath: ''});
-    return итог;
-  }
-
-  it('панель сообщает слою показа своё место курсора, и знаки свежего куска остаются скрытыми', () => {
-    const после = панелью(ФАЙЛ, СЛОВО);
-    const курсор = после.selection.main.head;
-    expect(после.doc.toString()).toBe('Параметр **Ушки по бокам** включаются к любому изголовью.\n');
-    expect(после.field(курсорОтКнопки)).toBe(курсор);
-    expect(видно(после.doc.toString(), [{from: курсор, to: курсор}], после.field(курсорОтКнопки))).toBe(ФАЙЛ);
-  });
-
-  it('тот же курсор после клика человека знаки открывает: метка кнопки уже снята', () => {
-    const после = панелью(ФАЙЛ, СЛОВО);
-    const курсор = после.selection.main.head;
-    const кликнул = после.update({selection: {anchor: 0}}).state.update({selection: {anchor: курсор}}).state;
-    expect(кликнул.field(курсорОтКнопки)).toBe(null);
-    const текст = кликнул.doc.toString();
-    expect(видно(текст, [{from: курсор, to: курсор}], кликнул.field(курсорОтКнопки))).toBe(текст);
   });
 });
