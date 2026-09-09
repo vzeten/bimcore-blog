@@ -1,5 +1,6 @@
 // Что делает каждая кнопка панели. Чистые правила: на входе текст и выделение,
 // на выходе — новый текст и куда поставить курсор. Ни редактора, ни интерфейса здесь нет.
+import {знакиПары, парыЗнаков, type Пара} from './emphasisPairs';
 
 export interface Selection {
   from: number;
@@ -52,13 +53,75 @@ export function heading(text: string, at: Selection, level: number): Edit {
   return {from: bounds.from, to: bounds.to, insert, caret: insert.length};
 }
 
-/** Оборачивает выделенное в знаки разметки. Без выделения — ставит знаки и курсор между ними. */
-export function wrap(text: string, at: Selection, sign: string): Edit {
-  const chosen = text.slice(at.from, at.to);
-  if (chosen === '') {
-    return {from: at.from, to: at.to, insert: `${sign}${sign}`, caret: sign.length};
+/** Выделение без пробелов по краям: знаки разметки к пробелу не липнут, иначе пара не закроется. */
+function безКраёв(text: string, at: Selection): Selection {
+  let from = at.from;
+  let to = at.to;
+  while (from < to && /\s/.test(text[from])) from += 1;
+  while (to > from && /\s/.test(text[to - 1])) to -= 1;
+  return {from, to};
+}
+
+/** Текст области без знаков задетых пар: то, что человек видит в окне. */
+function безЗнаков(text: string, область: Selection, пары: Пара[]): string {
+  const знаки = пары.flatMap(знакиПары);
+  let итог = '';
+  for (let at = область.from; at < область.to; at += 1) {
+    if (знаки.some((знак) => at >= знак.from && at < знак.to)) continue;
+    итог += text[at];
   }
-  return {from: at.from, to: at.to, insert: `${sign}${chosen}${sign}`, caret: sign.length + chosen.length + sign.length};
+  return итог;
+}
+
+/**
+ * Вся ли область уже оформлена этим знаком: каждая буква либо внутри пары, либо это её знак.
+ * Пробел между двумя оформленными кусками счёт не портит — на вид человека такой кусок жирный
+ * целиком, и повторное нажатие обязано снять оформление, а не поставить его заново.
+ */
+function ужеОформлено(text: string, область: Selection, пары: Пара[]): boolean {
+  if (пары.length === 0) return false;
+  for (let at = область.from; at < область.to; at += 1) {
+    const внутри = пары.some((пара) => at >= пара.from && at < пара.to);
+    if (внутри || /\s/.test(text[at])) continue;
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Знаки разметки на выделенном куске: нажатие ставит их, повторное нажатие на уже оформленном
+ * куске — снимает ровно свою обёртку и оставляет текст. Одна кнопка обоих действий, потому что в
+ * окне служебных знаков не видно: человек видит только жирный или наклонный вид и нажимает ту же
+ * кнопку, чтобы его убрать.
+ *
+ * Область правки шире выделения, когда выделение задело чужие знаки: наполовину снятая пара
+ * оставила бы в тексте одинокую звёздочку. Смешанный кусок (часть уже оформлена) сначала теряет
+ * внутренние знаки и оформляется целиком — вложенных пар одного вида в markdown не бывает.
+ * Без выделения знаки просто ставятся, а курсор встаёт между ними.
+ */
+export function wrap(text: string, at: Selection, sign: string): Edit {
+  const кусок = безКраёв(text, at);
+  if (кусок.from === кусок.to) {
+    return {from: at.from, to: at.from, insert: `${sign}${sign}`, caret: sign.length};
+  }
+
+  const задетые = парыЗнаков(text, lineBounds(text, кусок), sign)
+    .filter((пара) => пара.to > кусок.from && пара.from < кусок.to);
+  const область = {
+    from: Math.min(кусок.from, ...задетые.map((пара) => пара.from)),
+    to: Math.max(кусок.to, ...задетые.map((пара) => пара.to)),
+  };
+  const голый = безЗнаков(text, область, задетые);
+
+  if (ужеОформлено(text, область, задетые)) {
+    return {from: область.from, to: область.to, insert: голый, select: {from: 0, to: голый.length}};
+  }
+  return {
+    from: область.from,
+    to: область.to,
+    insert: `${sign}${голый}${sign}`,
+    caret: sign.length + голый.length + sign.length,
+  };
 }
 
 /**
