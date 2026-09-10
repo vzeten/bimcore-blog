@@ -57,6 +57,8 @@ describe('каркас окна', () => {
       ...кодовые(path.join(EDITOR, 'tests')),
       ...кодовые(path.join(EDITOR, 'scripts')),
       path.join(EDITOR, 'server.mjs'),
+      // Панель — вторая программа этой папки и под то же правило подпадает целиком.
+      path.join(EDITOR, 'panel.mjs'),
     ]
       .map((file) => ({
         file: path.relative(EDITOR, file).split(path.sep).join('/'),
