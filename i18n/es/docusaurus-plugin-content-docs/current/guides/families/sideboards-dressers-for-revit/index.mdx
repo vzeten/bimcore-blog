@@ -1,0 +1,265 @@
+---
+title: "Familias de aparadores y cómodas para Revit"
+slug: /guides/families/sideboards-dressers-for-revit
+sidebar_label: "15 Aparadores y cómodas"
+sidebar_position: 15
+description: "Aparadores y cómodas para Revit. Consulta qué incluye el conjunto y cómo colocar los muebles y ajustar sus dimensiones, frentes, tiradores y patas."
+image: ./img-01.jpg
+---
+
+import productPreview from '@site/docs/guides/families/sideboards-dressers-for-revit/product.png';
+
+<ProductCard
+  name="Familias de aparadores y cómodas para Revit"
+  eyebrow="Conjunto de familias de Revit"
+  description="Cómodas y aparadores, listos para colocar en tu proyecto de Revit."
+  image={productPreview}
+  imageAlt="Vista previa del conjunto de aparadores y cómodas para Revit"
+  buyUrl="https://bimcore.one/products/dresser-revit-families"
+  ecwidProductId="615953573"
+  buyLabel="Comprar"
+  shopLabel="Ir a la tienda"
+/>
+
+## 1. INFORMACIÓN GENERAL
+
+- Nombre del conjunto Aparadores y cómodas
+- Versión del conjunto 1.0.0
+- Versión de Revit 2019
+
+### Descripción
+
+Este conjunto permite modelar aparadores y cómodas de distintas configuraciones con dimensiones exactas en Autodesk Revit.
+
+Está pensado para diseñadores de interiores y arquitectos. Las familias no tienen suficiente detalle para modelar muebles destinados a su fabricación.
+
+### Carga y colocación
+
+Para ver y cargar las familias, abre el proyecto de aparadores y cómodas, copia las que necesites con Ctrl+C y pégalas en tu proyecto con Ctrl+V. También puedes abrir la carpeta de archivos de familia y arrastrarlos al proyecto.
+
+:::note
+Las imágenes y los nombres de los parámetros corresponden a la versión inglesa del conjunto. Las explicaciones están en español.
+:::
+
+## 2. CONTENIDO DEL CONJUNTO
+
+![Aparadores y cómodas del conjunto](./img-01.jpg)
+
+- Aparador (Sideboard)
+- Aparador ovalado (Sideboard oval)
+- Cómoda (Dresser)
+
+## 3. ELEMENTOS COMUNES DE LA CÓMODA Y EL APARADOR
+
+Este apartado describe los elementos y opciones que se repiten en Dresser y Sideboard.
+
+### Frentes
+
+![Tipos de frente](./img-02.jpg)
+
+La lista incluye frentes lisos (STD.front), con marco exterior (FR.Front) y con tirador integrado (INT.front).
+
+![Frentes remetidos y superpuestos](./img-03.jpg)
+
+Todos los tipos pueden ser remetidos o superpuestos.
+
+### Tiradores
+
+![Formas de tirador disponibles](./img-04.jpg)
+
+- Pomo (Knob)
+- Recorte (Cut-out handle)
+- Tirador de puente (Bow handle)
+- Lazo de cuero (Leather loop pull)
+- Tirador superpuesto (Overlay handle)
+- Tirador en T (T-shaped)
+- Concha (Shell pull)
+- Asa de cuero (Leather pull handle)
+- Tirador rectangular de toda la anchura del frente (Rectangular handle)
+
+### Patas
+
+![Formas de patas disponibles](./img-05.jpg)
+
+- Rectangular (Rectangle)
+- Cilíndrica (Cylinder)
+- Cónica (Cone)
+- Plataforma (Platform)
+- Rectangular estrechada (Chamfered rectangle)
+- Cónica inclinada (Angled cone)
+- En U (U-shaped)
+- Zócalo (Plinth)
+- Clásica (Classic)
+
+Con las patas independientes puedes activar o desactivar los travesaños que las unen.
+
+## 4. FAMILIAS
+
+### Cómoda (Dresser)
+
+Esta familia permite crear cómodas de distintas configuraciones.
+
+![Elementos de la cómoda](./img-06.jpg)
+
+Puedes activar o desactivar el módulo 2 (**Module 2**), los tiradores de cada módulo (**Handle module 1** y **Handle module 2**), el tablero (**Worktop**), el borde elevado (**Raised edge**), las patas (**Legs**) y sus travesaños (**Rails for leg**).
+
+#### Opciones de la cómoda
+
+![Columnas y cajones de los módulos](./img-07.jpg)
+
+La cantidad de frentes parte de uno. Su anchura se calcula automáticamente. Para consultar los límites de cada parámetro, coloca el cursor sobre su nombre y espera a que aparezca la información de herramienta.
+
+En el módulo 1, **1_Column count** admite de 1 a 2 columnas y **1_Drawer count**, uno o más cajones. En el módulo 2, **2_Column count** admite de 1 a 4 columnas y **2_Drawer count**, uno o más cajones.
+
+Al aumentar la cantidad de cajones en vertical, comprueba que las dimensiones sigan siendo compatibles para evitar errores.
+
+#### Dimensiones
+
+![Dimensiones de la cómoda](./img-08.jpg)
+
+**Dresser Height** incluye las alturas de los elementos activados, como **Legs Height**, **Module 2 Height**, **Worktop Thickness** y **Raised edge Height**.
+
+Los parámetros en gris no se pueden editar y ayudan a entender los cálculos. Por ejemplo, **INT_Width** muestra la anchura total, calculada a partir de la anchura de la cómoda y del vuelo del tablero.
+
+Si el tablero está desactivado, **INT_Width** coincide con **Dresser Width**. La misma lógica se aplica a la profundidad.
+
+![Dimensiones y posición de los tiradores](./img-09.jpg)
+
+Los tiradores recortados, de puente y superpuestos permiten ajustar su anchura. Los recortados y superpuestos siempre quedan centrados en el borde superior del frente. **Handle Offset from edge** controla la posición vertical de los tiradores.
+
+![Dimensiones y desplazamiento de las patas](./img-10.jpg)
+
+Las patas clásicas tienen dimensiones fijas de 40 mm de anchura y 150 mm de altura.
+
+**Lateral shift Legs** y **Forward-backward shift Legs** desplazan las patas hacia el centro de la cómoda.
+
+#### Frentes
+
+![Módulo superior abierto](./img-11.jpg)
+
+En el módulo 2 puedes desactivar los frentes para crear una balda abierta en la parte superior. Solo puede haber una balda y la cantidad de divisiones verticales depende del número de columnas del módulo 2.
+
+#### Tiradores
+
+![Configuración independiente de los tiradores](./img-12.jpg)
+
+Los tiradores de cada módulo se activan, desactivan y configuran por separado. Cada frente puede tener uno o dos, excepto los recortados y superpuestos, que siempre son únicos.
+
+Al desactivar **1_Handles centered** o **2_Handles centered**, los tiradores del módulo correspondiente se desplazan hacia el borde superior. Puedes ajustar su separación de ese borde en el apartado de dimensiones.
+
+#### Materiales
+
+![Materiales de la cómoda](./img-13.jpg)
+
+### Aparador (Sideboard)
+
+Esta familia permite crear aparadores de distintas configuraciones.
+
+![Elementos del aparador](./img-14.jpg)
+
+Puedes activar o desactivar el tablero (**Worktop**), los tiradores (**Handles**), las patas (**Legs**), sus travesaños (**Rails for leg**), los paneles laterales izquierdo y derecho (**End panel on the left** y **End panel on the right**), las divisiones (**Partitions**) y la apertura (**Opening**).
+
+El tipo de frente y de tirador es común a todos los módulos. Para cada módulo se ajustan por separado la cantidad de frentes, la posición y orientación vertical del tirador y el tipo de apertura.
+
+#### Opciones del aparador
+
+![Cantidad y anchura de los módulos](./img-15.jpg)
+
+El aparador puede tener de 1 a 5 módulos, iguales o configurados por separado. La anchura de cada uno es independiente, excepto la del módulo 1, que se calcula restando las anchuras de los módulos 2 a 5 a la anchura total.
+
+![Configuraciones independientes de cada módulo](./img-16.jpg)
+
+Cada módulo se configura por separado.
+
+![Paneles laterales y divisiones adicionales](./img-17.jpg)
+
+Los paneles laterales se activan por separado, pero su altura se ajusta conjuntamente. Puedes activar una división adicional entre módulos para crear otras configuraciones.
+
+#### Dimensiones
+
+![Dimensiones generales del aparador](./img-18.jpg)
+
+**Sideboard Height** incluye las alturas de los elementos activados, como **Legs Height** y **Worktop Thickness**.
+
+Los parámetros en gris no se pueden modificar. **Module 1 Width** se calcula para que la familia funcione correctamente. Los parámetros con el prefijo INT son compartidos y se pueden utilizar en tablas de planificación.
+
+Sin tablero, **INT_Width** coincide con **Sideboard Width**. La misma lógica se aplica a la profundidad.
+
+![Dimensiones de los tiradores del aparador](./img-19.jpg)
+
+Los tiradores recortados, de puente y superpuestos permiten ajustar su anchura. Los recortados y superpuestos quedan centrados en el borde superior. **Handle Offset from edge** controla su posición vertical.
+
+![Dimensiones de las patas del aparador](./img-20.jpg)
+
+Las patas clásicas tienen 40 mm de anchura y 150 mm de altura, ambos valores fijos. **Lateral shift Legs** y **Forward-backward shift Legs** desplazan las patas hacia el centro.
+
+#### Apertura de los frentes
+
+![Tipos de apertura por módulo](./img-21.jpg)
+
+La apertura se configura para cada módulo.
+
+1. Apertura a la izquierda (Left-hinged)
+2. Cajón (Drawer)
+3. Apertura a la derecha (Right-hinged)
+4. Abatible hacia abajo (Drop-down)
+
+#### Posición de los tiradores
+
+![Posición y orientación de los tiradores por módulo](./img-22.jpg)
+
+La posición y la orientación se configuran para cada módulo.
+
+#### Materiales
+
+![Materiales del aparador](./img-23.jpg)
+
+#### Ajustes gráficos
+
+![Estilos de líneas y apertura del aparador](./img-24.jpg)
+
+Para cambiar el color, el grosor o el patrón de las líneas, o desactivar las líneas de apertura, abre la ficha Gestionar, selecciona Estilos de objeto y busca la categoría Mobiliario.
+
+### Aparador ovalado (Sideboard oval)
+
+Esta familia permite crear aparadores con esquinas redondeadas y distintas configuraciones.
+
+![Elementos del aparador ovalado](./img-25.jpg)
+
+Puedes activar o desactivar el borde elevado (**Raised edge**) y los tiradores integrados (**Integrated handles**). También se ajustan el tipo y la cantidad de frentes, la posición del tablero y la forma de las patas.
+
+#### Dimensiones
+
+![Dimensiones del aparador ovalado](./img-26.jpg)
+
+**Sideboard Height** incluye la altura del borde cuando está activado. Los parámetros en gris no se pueden modificar. Los que empiezan por INT son compartidos y se pueden utilizar en tablas de planificación.
+
+#### Frentes
+
+![Cajones, puertas y balda del aparador ovalado](./img-27.jpg)
+
+Con los tipos cajón (Drawer) y puerta (Door), puedes modificar la cantidad de frentes. Con la opción de balda (Shelves), el frente del cajón inferior es siempre único.
+
+![Tiradores integrados en los frentes](./img-28.jpg)
+
+Cualquier tipo de frente puede tener un tirador integrado.
+
+![Posición del tablero del aparador ovalado](./img-29.jpg)
+
+Al seleccionar Worktop + gap inside o Worktop + upward offset, puedes ajustar el desplazamiento del tablero en el apartado de dimensiones.
+
+#### Patas
+
+![Formas de patas del aparador ovalado](./img-30.jpg)
+
+Puedes elegir patas rectangulares (Rectangle), cilíndricas (Cylinder), cónicas (Cone), cónicas inclinadas (Angled cone) o una plataforma (Platform).
+
+![Desplazamiento de las patas del aparador ovalado](./img-31.jpg)
+
+**Lateral shift Legs** y **Forward-backward shift Legs** desplazan las patas hacia el centro.
+
+#### Materiales
+
+![Materiales del aparador ovalado](./img-32.jpg)
+
+<CTA type="guide" />
