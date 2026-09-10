@@ -64,15 +64,31 @@ export function словаЗапуска(порт) {
  * Кто держит порт: номер процесса и его командная строка. Спрашивается у самой системы, а не у
  * сервера: слово `accepted` в ответе напишет кто угодно, а владелец слушающего сокета — факт.
  * Ничего не найдено или PowerShell не ответил — `null`, и остановка не разрешается.
+ *
+ * `свойПорт` — номер НАШЕГО конца ещё открытой связи, по которой только что пришло опознание. Пока
+ * связь жива, система называет процесс, который этот самый запрос обслужил. Это прямее любого
+ * косвенного признака: ни командная строка, ни слово сервера о себе так не доказывают. Довод
+ * заведён потому, что косвенные признаки бывают недоступны сразу оба: запуск `node .\\server.mjs`
+ * не кладёт в командную строку папку кода, а сервер, поднятый кодом старше панели, своего номера не
+ * называет, — и вполне живой принятый редактор оказывался неопознаваемым.
  */
-export async function владелецПорта(порт, запустить = powershell) {
+export async function владелецПорта(порт, свойПорт = null, запустить = powershell) {
+  const связь = Number.isInteger(свойПорт) && свойПорт > 0
+    ? [
+      `$e = Get-NetTCPConnection -LocalPort ${Number(порт)} -RemotePort ${свойПорт} -State Established`,
+      '-ErrorAction SilentlyContinue | Select-Object -First 1;',
+    ].join(' ')
+    : '$e = $null;';
+
   const скрипт = [
     '[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;',
+    связь,
     `$c = Get-NetTCPConnection -LocalPort ${Number(порт)} -State Listen -ErrorAction SilentlyContinue |`,
     'Select-Object -First 1;',
     'if (-not $c) { "{}"; exit 0 };',
     '$p = Get-CimInstance Win32_Process -Filter "ProcessId=$($c.OwningProcess)" -ErrorAction SilentlyContinue;',
-    '[pscustomobject]@{pid=[int]$c.OwningProcess; cmd=[string]$p.CommandLine} | ConvertTo-Json -Compress',
+    '[pscustomobject]@{pid=[int]$c.OwningProcess; cmd=[string]$p.CommandLine;',
+    'answered=$(if ($e) { [int]$e.OwningProcess } else { 0 })} | ConvertTo-Json -Compress',
   ].join(' ');
 
   let вывод;
@@ -91,7 +107,12 @@ export async function владелецПорта(порт, запустить = 
   }
 
   if (!Number.isInteger(разобрано['pid'])) return null;
-  return {номер: разобрано['pid'], командная: разобрано['cmd'] ?? ''};
+  const ответил = разобрано['answered'];
+  return {
+    номер: разобрано['pid'],
+    командная: разобрано['cmd'] ?? '',
+    ответил: Number.isInteger(ответил) && ответил > 0 ? ответил : null,
+  };
 }
 
 /** Один разговор с PowerShell без окна. Отдельной дверью, чтобы правило можно было проверить. */
