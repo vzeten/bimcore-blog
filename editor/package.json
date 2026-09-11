@@ -8,6 +8,7 @@
     "test": "vitest run",
     "corpus": "node scripts/corpus.mjs",
     "adopt": "node scripts/adoptStore.mjs",
+    "worktree-remove": "node scripts/worktreeRemove.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

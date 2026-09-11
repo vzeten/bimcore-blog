@@ -20,7 +20,8 @@
     "editor:test": "npm --prefix editor run test",
     "editor:typecheck": "npm --prefix editor run typecheck",
     "editor:corpus": "npm --prefix editor run corpus",
-    "editor:adopt": "npm --prefix editor run adopt"
+    "editor:adopt": "npm --prefix editor run adopt",
+    "editor:worktree-remove": "npm --prefix editor run worktree-remove --"
   },
   "dependencies": {
     "@docusaurus/core": "3.10.1",

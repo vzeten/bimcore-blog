@@ -10,6 +10,8 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {simpleGit} from 'simple-git';
 
+import {поставитьЗависимости} from './depsFixture.mjs';
+
 import {срезОднойВерсии} from '../src/adapters/prepareStamp.mjs';
 import {закреплённаяОснова} from '../src/adapters/publishBase.mjs';
 import {готовыйПлан} from '../src/adapters/publishFacts.mjs';
@@ -88,6 +90,8 @@ export async function среда(файлы = {[RU]: СТАТЬЯ, [EN]: СТА�
   // Файлы, которых в ветке быть не должно, кладём уже после коммита: так выглядит незакоммиченная
   // работа человека.
   for (const [rel, содержимое] of Object.entries(файлы)) if (!вВетку.includes(rel)) положить(rel, содержимое);
+
+  поставитьЗависимости(repo);
 
   const основа = (await git.raw(['rev-parse', 'HEAD'])).trim();
 

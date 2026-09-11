@@ -21,6 +21,7 @@ import {взятьЗамок, отпустить} from './publishLock.mjs';
 import {готовыйПлан, изменённыеПротивОсновы} from './publishFacts.mjs';
 import {отпечатокПлана} from './planBytes.mjs';
 import {собратьПлан} from './planBuild.mjs';
+import {проверитьЗависимости} from './rootDeps.mjs';
 import {запомнитьСборку} from './buildMemory.mjs';
 import {причинаПадения} from './siteBuild.mjs';
 import {isUnlisted} from '../core/frontmatterRules.mjs';
@@ -190,6 +191,20 @@ export async function releaseRoute({req, res, url, repo, editorDir, settings, gi
 
   if (сборкаИдёт) {
     send(res, 409, {error: settings['ошибкиСервера']['сборкаУжеИдёт']});
+    return true;
+  }
+
+  // Зависимости проверяются ЗДЕСЬ — до временной копии, до сборщика и до любой записи. Отказ на
+  // этом месте стоит человеку секунду и объясним словами; тот же отказ изнутри сборки пришёл бы
+  // через минуты чужим текстом про ненайденный модуль. Состав выпуска (`/api/release`) этой
+  // проверкой не закрывается: посмотреть, что уедет, можно и без установленных зависимостей.
+  const зависимости = проверитьЗависимости(repo);
+  if (зависимости.ошибка) {
+    send(res, 409, {
+      error: String(settings['ошибкиЗависимостей'][зависимости.ошибка])
+        .replace('{подробность}', зависимости.подробность ?? ''),
+      код: зависимости.ошибка,
+    });
     return true;
   }
 

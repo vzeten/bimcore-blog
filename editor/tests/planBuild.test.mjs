@@ -13,6 +13,7 @@ import {ЖДАТЬ_GIT} from './saveHarness.mjs';
 
 import {закреплённаяОснова} from '../src/adapters/publishBase.mjs';
 import {собратьПлан} from '../src/adapters/planBuild.mjs';
+import {поставитьЗависимости} from './depsFixture.mjs';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const НАСТРОЙКИ = JSON.parse(fs.readFileSync(path.join(EDITOR, 'settings.json'), 'utf8'));
@@ -50,8 +51,7 @@ async function среда() {
 
   fs.mkdirSync(path.join(repo, path.dirname(RU)), {recursive: true});
   fs.writeFileSync(path.join(repo, RU), СТАТЬЯ, 'utf8');
-  fs.mkdirSync(path.join(repo, 'node_modules', 'сборщик'), {recursive: true});
-  fs.writeFileSync(path.join(repo, 'node_modules', 'сборщик', 'файл'), 'зависимость\n', 'utf8');
+  поставитьЗависимости(repo);
   await git.raw(['add', '--', RU]);
   await git.raw(['commit', '-m', 'начало']);
   await git.raw(['push', 'origin', 'main']);
@@ -67,7 +67,8 @@ describe('сборка плана', () => {
     const копия = настройки.cwd;
     виденное.копия = копия;
     виденное.статья = fs.readFileSync(path.join(копия, RU), 'utf8');
-    виденное.зависимость = fs.existsSync(path.join(копия, 'node_modules', 'сборщик', 'файл'));
+    виденное.свои = fs.existsSync(path.join(копия, 'node_modules'));
+    виденное.сборщик = аргументы[0];
     готово(null, 'собрано', '');
     return {on: () => {}};
   };
@@ -93,16 +94,37 @@ describe('сборка плана', () => {
     expect(виденное.копия).not.toBe(repo);
   });
 
-  it('зависимости в копии есть, но своей копией они не становятся', async () => {
+  it('копия своих зависимостей не заводит и связи на них не получает', async () => {
     const {repo, git} = await среда();
     const {основа} = await закреплённаяОснова({git, settings: настройки});
     const виденное = {};
 
     await собратьПлан({git, repo, основа, записи: план('байты\n'), пределМинут: 1, запуск: сборщик(виденное)});
 
-    expect(виденное.зависимость).toBe(true);
+    // Внутри удаляемой копии нет ни зависимостей, ни связи на них: уводить уборку наружу нечему.
+    expect(виденное.свои).toBe(false);
+    // Сборщик берётся у настоящего проекта, а копия лежит внутри него — Node найдёт зависимости
+    // обычным подъёмом по дереву папок, безо всякой связи.
+    expect(виденное.сборщик.startsWith(repo)).toBe(true);
+    expect(виденное.копия.startsWith(repo + path.sep)).toBe(true);
     // Настоящие зависимости репозитория уборкой не тронуты.
-    expect(fs.existsSync(path.join(repo, 'node_modules', 'сборщик', 'файл'))).toBe(true);
+    expect(fs.existsSync(path.join(repo, 'node_modules', '@docusaurus', 'core', 'bin', 'docusaurus.mjs'))).toBe(true);
+  });
+
+  it('без своих зависимостей сборка плана не начинается и копии после себя не оставляет', async () => {
+    const {repo, git} = await среда();
+    const {основа} = await закреплённаяОснова({git, settings: настройки});
+    fs.rmSync(path.join(repo, 'node_modules'), {recursive: true, force: true});
+    let звали = false;
+
+    const итог = await собратьПлан({
+      git, repo, основа, записи: план('байты\n'), пределМинут: 1,
+      запуск: () => { звали = true; return {on: () => {}}; },
+    });
+
+    expect(звали).toBe(false);
+    expect(итог.ошибка).toBe('зависимостейНет');
+    expect(fs.readdirSync(repo).some((имя) => имя.startsWith('.editor-plan-'))).toBe(false);
   });
 
   it('вместе со сборкой считается ожидаемое дерево будущего коммита', async () => {
@@ -201,29 +223,28 @@ describe('сборка плана: аварийные границы', () => {
     expect(строка.startsWith('100644 blob')).toBe(true);
   });
 
-  it('связь не снялась — рекурсивной уборки не происходит и итог не зелёный', async () => {
-    const {repo, git} = await среда();
-    // В опубликованной ветке лежит настоящая папка `node_modules`. Связь на её место не встанет,
-    // и снять её будет нечем: обычной папкой она не является.
-    fs.mkdirSync(path.join(repo, 'node_modules', 'своё'), {recursive: true});
-    fs.writeFileSync(path.join(repo, 'node_modules', 'своё', 'файл'), 'в ветке\n', 'utf8');
-    await git.raw(['add', '-f', '--', 'node_modules/своё/файл']);
-    await git.raw(['commit', '-m', 'зависимости в ветке']);
-    await git.raw(['push', 'origin', 'main']);
+  it('связь, появившаяся внутри копии во время сборки, снимается, а её цель цела', async () => {
+    const {корень, repo, git} = await среда();
     const {основа} = await закреплённаяОснова({git, settings: настройки});
+    // Внешнее дерево — то самое, что однажды было вычищено уборкой рабочей копии.
+    const снаружи = path.join(корень, 'дорогое');
+    fs.mkdirSync(снаружи, {recursive: true});
+    fs.writeFileSync(path.join(снаружи, 'файл'), 'дорогое содержимое\n', 'utf8');
+
+    const связьВКопии = (файл, аргументы, настройки, готово) => {
+      const вид = process.platform === 'win32' ? 'junction' : 'dir';
+      fs.symlinkSync(снаружи, path.join(настройки.cwd, 'наружу'), вид);
+      готово(null, 'собрано', '');
+      return пустой();
+    };
 
     const итог = await собратьПлан({
-      git, repo, основа, записи: [запись(RU, 'байты\n')], пределМинут: 1, запуск: удачный,
+      git, repo, основа, записи: [запись(RU, 'байты\n')], пределМинут: 1, запуск: связьВКопии,
     });
 
-    expect(итог.зелёная).toBe(undefined);
-    expect(итог.ошибка).toBe('связьНеСнята');
-    // Настоящие зависимости репозитория целы.
-    expect(fs.readFileSync(path.join(repo, 'node_modules', 'сборщик', 'файл'), 'utf8')).toBe('зависимость\n');
-
-    // Копия осталась намеренно — уберём её сами, как это сделает человек по сообщению об ошибке.
-    const копия = path.dirname(итог.вывод);
-    fs.rmSync(копия, {recursive: true, force: true});
-    await git.raw(['worktree', 'prune']);
+    expect(итог.зелёная).toBe(true);
+    // Главное свойство: внешнее дерево целиком на месте, а копии не осталось.
+    expect(fs.readFileSync(path.join(снаружи, 'файл'), 'utf8')).toBe('дорогое содержимое\n');
+    expect(fs.readdirSync(repo).some((имя) => имя.startsWith('.editor-plan-'))).toBe(false);
   });
 });
