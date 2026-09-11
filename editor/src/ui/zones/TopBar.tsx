@@ -189,9 +189,9 @@ export function TopBar(props: {
         {props.article && (
           <span
             className={props.состояниеСохранения === 'неУдалосьАвтосохранить' ? 'autosave autosave-fail' : 'autosave'}
-            title={п.файлИзменёнСнаружи && props.article.черновикРешение === 'конфликт' ? п.файлИзменёнСнаружи : ''}
+            title={props.article.спор !== null ? п.файлИзменёнСнаружи : ''}
           >
-            {props.article.черновикРешение === 'конфликт' ? п.файлИзменёнСнаружи : п[props.состояниеСохранения]}
+            {props.article.спор !== null ? п.файлИзменёнСнаружи : п[props.состояниеСохранения]}
           </span>
         )}
 

@@ -23,7 +23,6 @@ export function useWindowText(deps: {
   setFields: (fields: Field[]) => void;
   setDirty: (dirty: boolean) => void;
   setСостояние: (state: SaveState) => void;
-  setКонфликтСохранения: (конфликт: boolean) => void;
 }) {
   // Текст, который надо положить в редактор целиком, и номер подстановки. Номер нужен потому,
   // что подряд можно вернуть одну и ту же версию дважды: по одному тексту это не отличить.
@@ -67,13 +66,17 @@ export function useWindowText(deps: {
    * Нужно там, где пара уже записана: возврат к версии пишет черновик сам, до подстановки,
    * и повторная постановка в очередь завела бы таймер, а он вернул бы надпись «Автосохранено»
    * поверх честного «Сохранено».
+   *
+   * `база` — с чем сравнивать. Обычно это содержимое файла, каким его знает окно, но поздний
+   * ответ сервера приносит СВОЁ, уже сведённое содержимое файла, а окно этого захода помнит
+   * прежнее: сравни мы со старым — сразу после удачной записи горело бы «есть несохранённые».
    */
-  const отметить = (пара: Пара): void => {
+  const отметить = (пара: Пара, база?: Пара): void => {
     const article = deps.article;
     if (!article) return;
 
     const изменилось = !nothingChanged(
-      {body: article.body, frontmatterRaw: article.frontmatterRaw},
+      база ?? {body: article.body, frontmatterRaw: article.frontmatterRaw},
       пара,
     );
     deps.setDirty(изменилось);
@@ -91,7 +94,7 @@ export function useWindowText(deps: {
    * База сравнения (`article.body`, `article.frontmatterRaw`) не подменяется: это содержимое файла,
    * и по нему считаются признак несохранённого и отпечаток.
    */
-  const положитьПару = (пара: Пара): void => {
+  const положитьПару = (пара: Пара, база?: Пара): void => {
     const article = deps.article;
     if (!article) return;
 
@@ -99,10 +102,8 @@ export function useWindowText(deps: {
     deps.шапкаСейчас.current = пара.frontmatterRaw;
     // Видимость едет вместе с полями: она обычное поле шапки, и отдельного признака у окна нет.
     deps.setFields(parseFrontmatter(пара.frontmatterRaw, article.path, deps.roots, deps.общаяОбложка));
-    // Прежний выбор «сохранить поверх» относился к другому содержимому окна.
-    deps.setКонфликтСохранения(false);
     // Только отметка, без записи: пару уже записал возврат, до того как тронул окно.
-    отметить(пара);
+    отметить(пара, база);
 
     номер.current += 1;
     setПодстановка({текст: пара.body, номер: номер.current, ключ: ключОкна()});

@@ -14,7 +14,7 @@ import {historyFolder, snapshotName} from '../src/core/history.mjs';
 const REL = 'i18n/ru/docusaurus-plugin-content-docs/current/beds/index.mdx';
 const НАСТРОЙКИ = {
   хранение: {
-    папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', файлПереноса: '.drafts-перенесено.json', папкаСнимков: '.history', снимковНаВерсию: 2,
+    папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', файлПереноса: '.drafts-перенесено.json', папкаСнимков: '.history', папкаСведения: '.сведение', снимковНаВерсию: 2,
   },
   ошибкиСервера: {споренЧерновик: 'Разные старые черновики. Папка {папка}'},
 };

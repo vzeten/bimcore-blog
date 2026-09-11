@@ -1,20 +1,26 @@
 // Ручка автосохранения: пишет черновик рядом с редактором и НЕ трогает настоящий `.mdx`.
 // Вынесено из сервера, чтобы он оставался в пределах лимита размера файла (SPEC 4.9).
-// Правила порядка и разбора живут в ядре (`core/drafts.mjs`), здесь только файлы и ответы.
+// Правила порядка и разбора живут в ядре (`core/drafts.mjs`), сведение — в `mergeGate`.
+//
+// Перед каждой записью черновика файл на диске перечитывается заново: внешняя правка, пришедшая
+// пока человек набирал, обязана попасть в историю и быть сведена с его работой, а не потеряться.
 
-import fs from 'node:fs';
 import path from 'node:path';
 
-import {nothingChanged, splitArticle} from '../core/articleFile.mjs';
-import {newDraft, позже, свежееЧерновика} from '../core/drafts.mjs';
+import {nothingChanged} from '../core/articleFile.mjs';
+import {newDraft, базаЧерновика, позже, свежееЧерновика} from '../core/drafts.mjs';
 import {dropDraft, loadDraft, saveDraft} from './draftStore.mjs';
+import {отложитьСпор, сверитьСДиском} from './mergeGate.mjs';
 import {badFields, badPath} from './httpBody.mjs';
+import {ответСпора, знакомаяВерсия} from './mergeAnswer.mjs';
 
 /**
  * Обрабатывает `/api/draft`. Возвращает true, если запрос был к ней.
  * `последняяПравка` — память сервера о времени последней принятой правки по каждой статье.
  */
-export async function draftRoute({req, res, url, repo, settings, тело, insideRepo, send, последняяПравка}) {
+export async function draftRoute({
+  req, res, url, repo, settings, git, publishedRef, тело, insideRepo, send, последняяПравка, фиксировать,
+}) {
   if (url.pathname !== '/api/draft' || req.method !== 'POST') return false;
 
   const payload = await тело(req);
@@ -28,12 +34,9 @@ export async function draftRoute({req, res, url, repo, settings, тело, insid
   }
 
   const rel = payload.path;
-  const bad = badPath(
-    [rel],
-    (p) => insideRepo(path.join(repo, p)),
-    (p) => fs.existsSync(path.join(repo, p)),
-    settings['ошибкиСервера'],
-  );
+  // Существование файла здесь НЕ требуется: версию могли удалить снаружи, и работа человека
+  // обязана уцелеть и в этом случае. Что делать с пропавшим файлом, решает сведение.
+  const bad = badPath([rel], (p) => insideRepo(path.join(repo, p)), () => true, settings['ошибкиСервера']);
   if (bad) {
     send(res, bad.status, {error: bad.error});
     return true;
@@ -43,40 +46,62 @@ export async function draftRoute({req, res, url, repo, settings, тело, insid
   // ни удалять уже записанную свежую. Порядок — по времени правки в окне, а не прихода запроса.
   // Порог берётся и из памяти: настоящее сохранение убирает черновик, и без памяти
   // задержавшийся старый запрос воскресил бы его поверх уже сохранённой работы.
-  const порог = позже(последняяПравка.get(rel), loadDraft(repo, settings, rel)?.['правкаОт']);
+  const прежний = loadDraft(repo, settings, rel);
+  const порог = позже(последняяПравка.get(rel), прежний?.['правкаОт']);
   if (!свежееЧерновика(payload.правкаОт, {правкаОт: порог})) {
-    send(res, 200, {автосохранено: null, устарел: true});
+    send(res, 200, {path: rel, автосохранено: null, устарел: true});
     return true;
   }
   последняяПравка.set(rel, позже(payload.правкаОт, порог));
 
   // Имя «тело» здесь занято чтением запроса, поэтому текст статьи назван иначе.
-  const текстЧерновика = String(payload.body ?? '');
-  const шапка = String(payload.frontmatterRaw ?? '');
+  const мои = {
+    body: String(payload.body ?? ''),
+    frontmatterRaw: String(payload.frontmatterRaw ?? ''),
+  };
+  const отпечатокБазы = String(payload.отпечатокБазы ?? '');
+  const когда = new Date().toISOString();
+  const запись = (данные) => saveDraft(repo, settings, newDraft({path: rel, когда, ...данные,
+    правкаОт: typeof payload.правкаОт === 'string' ? payload.правкаОт : когда}));
 
-  // Черновик, слово в слово равный файлу, хранить незачем. Заодно это закрывает гонку:
-  // запрос, посланный до кнопки «Сохранить», не воскресит черновик уже сохранённой работы.
-  const текущий = splitArticle(fs.readFileSync(path.join(repo, rel), 'utf8'));
-  // Сравнение тем же правилом, что и у сохранения: переводы строк в счёт не идут (SPEC 3.6).
-  // На диске файл может быть в windows-виде, а в окне текст живёт в unix-виде — при точном
-  // сравнении черновик, слово в слово равный файлу, оставался бы лежать и всплывал бы потом
-  // «продолжением работы», которого не было.
-  if (nothingChanged(текущий, {body: текстЧерновика, frontmatterRaw: шапка})) {
-    dropDraft(repo, settings, rel);
-    send(res, 200, {автосохранено: null, совпадаетСФайлом: true});
+  const итог = await сверитьСДиском({repo, settings, rel, мои, отпечатокБазы, git, ref: publishedRef?.(),
+    фиксировать: (путь) => фиксировать(путь, true)});
+
+  if (итог.исход === 'нетФайла' && !знакомаяВерсия(repo, settings, rel)) {
+    send(res, 404, {error: settings['ошибкиСервера']['нетСтатьи']});
     return true;
   }
 
-  const когда = new Date().toISOString();
-  saveDraft(repo, settings, newDraft({
-    path: rel,
-    frontmatterRaw: шапка,
-    body: текстЧерновика,
-    отпечатокБазы: String(payload.отпечатокБазы ?? ''),
-    когда,
-    правкаОт: typeof payload.правкаОт === 'string' ? payload.правкаОт : когда,
-  }));
+  if (итог.исход === 'неуспеть') {
+    send(res, 409, {error: settings['ошибкиСервера']['файлМеняется']});
+    return true;
+  }
 
-  send(res, 200, {автосохранено: когда});
+  // Спор, отсутствие базы и пропажа файла ведут себя одинаково: стороны надёжно ложатся на диск,
+  // ничего не сводится молча, а решает человек. Соседние языковые версии это не трогает.
+  if (итог.исход !== 'нетВнешней' && итог.исход !== 'сведено') {
+    отложитьСпор({repo, settings, rel, итог, мои, когда});
+    // База прежнего черновика не теряется: спор её не отменяет, а без неё следующее
+    // сведение этой версии стало бы невозможным.
+    запись({...мои, отпечатокБазы, база: итог.база ?? базаЧерновика(прежний)});
+    send(res, 200, {path: rel, автосохранено: когда, ...ответСпора(repo, settings, rel)});
+    return true;
+  }
+
+  // Внешней правки нет либо она сведена целиком. В обоих случаях базой черновика становится то,
+  // что ЛЕЖИТ В ФАЙЛЕ прямо сейчас: она доказана чтением, и следующее сведение отсчитывается от неё.
+  const работа = итог.исход === 'сведено' ? итог.сведено : мои;
+  const сведено = итог.исход === 'сведено' ? итог.сведено : null;
+
+  // Черновик, слово в слово равный файлу, хранить незачем. Заодно это закрывает гонку:
+  // запрос, посланный до кнопки «Сохранить», не воскресит черновик уже сохранённой работы.
+  if (nothingChanged(итог.внешняя, работа)) {
+    dropDraft(repo, settings, rel);
+    send(res, 200, {path: rel, автосохранено: null, совпадаетСФайлом: true, сведено, файл: итог.внешняя, отпечаток: итог.отпечатокВнешней});
+    return true;
+  }
+
+  запись({...работа, отпечатокБазы: итог.отпечатокВнешней, база: итог.внешняя});
+  send(res, 200, {path: rel, автосохранено: когда, сведено, файл: итог.внешняя, отпечаток: итог.отпечатокВнешней});
   return true;
 }

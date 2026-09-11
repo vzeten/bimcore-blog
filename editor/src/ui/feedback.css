@@ -20,19 +20,47 @@
 .crash h1 { font-size: 20px; }
 .crash pre { background: var(--bg-soft); border: 1px solid var(--line); border-radius: 8px; padding: 12px; white-space: pre-wrap; font-size: 13px; color: var(--layer-deleted); }
 
-/* Выбор при конфликте: файл изменился снаружи после автосохранения. */
-.conflictbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
+/* Расхождение с файлом: стороны спорного места и выбор между ними. Панель, а не полоса —
+   выбирать между двумя версиями одного места нужно, видя обе целиком и то, что было. */
+.conflict {
+  padding: 8px 16px 12px;
   background: #fff6e5;
   border-bottom: 1px solid #f0d9a8;
   color: #7a5312;
   font-size: 13px;
+  max-height: 45vh;
+  overflow-y: auto;
 }
 
-.conflictbar span { flex: 1; }
+.conflict-head { display: flex; gap: 12px; align-items: baseline; padding-bottom: 6px; }
+.conflict-head span { flex: 1; }
+
+.conflict-spot { border-top: 1px solid #f0d9a8; padding: 8px 0; }
+.conflict-spot-name { font-size: 12px; color: #9a7433; padding-bottom: 4px; }
+
+/* Кнопка выбора стоит слева от своей стороны: связь «эта кнопка про этот текст» должна читаться
+   без подписей. Выбранная сторона отмечается рамкой, а не цветом шрифта — цвет занят слоями. */
+.conflict-choice { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; }
+.conflict-choice .ghost { flex: 0 0 auto; min-width: 150px; }
+.conflict-choice .chosen { border: 1px solid #7a5312; border-radius: 6px; }
+
+.conflict-side { flex: 1; min-width: 0; }
+.conflict-side-name { font-size: 11px; color: #9a7433; }
+.conflict-side pre {
+  margin: 0;
+  padding: 4px 6px;
+  background: #fffdf8;
+  border: 1px solid #f0d9a8;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  max-height: 12em;
+  overflow-y: auto;
+}
+
+.conflict-side-quiet { opacity: 0.75; padding-bottom: 4px; }
+.conflict-foot { display: flex; align-items: center; gap: 12px; padding-top: 8px; }
 
 /* Состояние автосохранения рядом с кнопкой сохранения. */
 .autosave { font-size: 12px; color: var(--ink-quiet); }

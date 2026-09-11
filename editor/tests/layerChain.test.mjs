@@ -9,7 +9,7 @@ import {historyLayers} from '../src/adapters/layerChain.mjs';
 import {historyFolder, snapshotName} from '../src/core/history.mjs';
 
 const НАСТРОЙКИ = {
-  хранение: {папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', слоёвИстории: 3, снимковНаВерсию: 50},
+  хранение: {папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', папкаСведения: '.сведение', слоёвИстории: 3, снимковНаВерсию: 50},
   слоиПоАвторам: {Claude: 'prevAi'},
 };
 

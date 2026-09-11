@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
+import {сравнимый} from '../core/articleFile.mjs';
 import {draftName, extraSnapshots, readDraft, староеИмяЧерновика, writeDraft} from '../core/drafts.mjs';
 import {historyFolder, версииИзИмён, свободноеИмя} from '../core/history.mjs';
 import {ПАПКА_РЕДАКТОРА, префиксСпора} from '../core/draftHome.mjs';
@@ -17,9 +18,14 @@ import {ApiError} from './httpBody.mjs';
 /**
  * Отпечаток содержимого файла: по нему видно, менялся ли файл под черновиком.
  * Хеш, а не время правки: время на разных дисках и после копирования врёт.
+ *
+ * Считается по СРАВНИМОМУ виду — той же основе, какой пользуются «изменилось ли» и решение по
+ * черновику (`core/articleFile.mjs`). Считай он сырые байты, переписанные снаружи переводы строк
+ * меняли бы отпечаток, а сравнение текста — нет: человек получал бы спор о тексте, которого никто
+ * не трогал, и при этом ни одной новой версии в истории.
  */
 export function fingerprint(text) {
-  return crypto.createHash('sha1').update(String(text), 'utf8').digest('hex');
+  return crypto.createHash('sha1').update(сравнимый(text), 'utf8').digest('hex');
 }
 
 /**

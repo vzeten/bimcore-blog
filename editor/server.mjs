@@ -10,6 +10,7 @@ import {обложкаСайта} from './src/core/siteConfig.mjs';
 import {editTimes, listArticles, опубликованные, черновыеПравки} from './src/adapters/library.mjs';
 import {errorResponse, readBody} from './src/adapters/httpBody.mjs';
 import {draftRoute} from './src/adapters/draftRoute.mjs';
+import {conflictRoute} from './src/adapters/conflictRoute.mjs';
 import {assetRoute} from './src/adapters/assets.mjs';
 import {assetReformatRoute} from './src/adapters/assetReformat.mjs';
 import {assetIntakeRoute} from './src/adapters/assetIntake.mjs';
@@ -178,7 +179,7 @@ async function api(req, res, url) {
   // Сохранение статьи — тоже отдельным модулем. Вместе с файлом человека оно переключает
   // видимость остальных языковых версий: отдельной ручки видимости в программе нет.
   if (await saveRoute({
-    req, res, url, repo: REPO, settings: readSettings(), git,
+    req, res, url, repo: REPO, settings: readSettings(), git, publishedRef: () => publishedRef,
     тело, insideRepo, send, фиксировать, последняяПравка,
   })) return;
 
@@ -208,11 +209,10 @@ async function api(req, res, url) {
     req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, insideRepo, send,
   })) return;
 
-  // Автосохранение — отдельным модулем: сервер иначе выходит за лимит размера файла.
-  if (await draftRoute({
-    req, res, url, repo: REPO, settings: readSettings(),
-    тело, insideRepo, send, последняяПравка,
-  })) return;
+  // Автосохранение и разрешение спора: общий у них порядок правок одной языковой версии.
+  const ручкиПравок = {req, res, url, repo: REPO, settings: readSettings(), git, publishedRef: () => publishedRef, тело, insideRepo, send, последняяПравка};
+  if (await draftRoute({...ручкиПравок, фиксировать})) return;
+  if (await conflictRoute(ручкиПравок)) return;
 
   // Картинки статьи — отдельным модулем: сервер иначе выходит за лимит размера файла.
   if (await assetRoute({req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send})) return;

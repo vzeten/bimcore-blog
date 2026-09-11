@@ -14,6 +14,7 @@ import {listArticles, опубликованные, черновыеПравки
 import {расхождениеССайтом} from '../src/adapters/gitFile.mjs';
 import {articleFacts} from '../src/adapters/articleFacts.mjs';
 import {draftRoute} from '../src/adapters/draftRoute.mjs';
+import {fingerprint} from '../src/adapters/draftStore.mjs';
 import {loadDraft} from '../src/adapters/draftStore.mjs';
 import {признакиЛокали} from '../src/core/localeSigns.mjs';
 import {splitArticle} from '../src/core/articleFile.mjs';
@@ -93,7 +94,8 @@ async function автосохранить({repo}, rel, текст, правка�
   const ответы = [];
   // Шапку окно шлёт ту же, что открыло: правится в этой пробе только тело статьи.
   const файл = path.join(repo, rel);
-  const шапка = fs.existsSync(файл) ? splitArticle(fs.readFileSync(файл, 'utf8')).frontmatterRaw : '';
+  const сырой = fs.existsSync(файл) ? fs.readFileSync(файл, 'utf8') : '';
+  const шапка = fs.existsSync(файл) ? splitArticle(сырой).frontmatterRaw : '';
 
   await draftRoute({
     req: {method: 'POST'},
@@ -101,10 +103,12 @@ async function автосохранить({repo}, rel, текст, правка�
     url: {pathname: '/api/draft'},
     repo,
     settings: НАСТРОЙКИ,
-    тело: async () => ({path: rel, body: текст, frontmatterRaw: шапка, правкаОт}),
+    // Отпечаток базы окно шлёт всегда: по нему сервер видит, менялся ли файл снаружи.
+    тело: async () => ({path: rel, body: текст, frontmatterRaw: шапка, отпечатокБазы: fingerprint(сырой), правкаОт}),
     insideRepo: () => true,
     send: (_res, code, data) => ответы.push({code, data}),
     последняяПравка: new Map(),
+    фиксировать: async () => null,
   });
 
   return ответы[0];
