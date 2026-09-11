@@ -14,7 +14,11 @@ export type {DraftPayload};
  * (`useNavigation`), потому что перечитывание свода живёт там; здесь только место для него: очередь
  * создаётся раньше, чем появляется само перечитывание.
  */
-export function useAutosave(интервалСек: number, onState: (state: SaveState) => void) {
+export function useAutosave(
+  интервалСек: number,
+  onState: (state: SaveState) => void,
+  onОшибка: (причина: string) => void,
+) {
   const очередь = useRef<ReturnType<typeof createAutosaveQueue> | null>(null);
   const послеЗаписи = useRef<() => void>(() => {});
   // Свежие интервал и обработчик в ref: очередь создаётся один раз и иначе держала бы первые —
@@ -23,10 +27,15 @@ export function useAutosave(интервалСек: number, onState: (state: Sav
   интервал.current = интервалСек;
   const состояние = useRef(onState);
   состояние.current = onState;
+  const сбой = useRef(onОшибка);
+  сбой.current = onОшибка;
 
   if (очередь.current === null) {
-    очередь.current = createAutosaveQueue(() => интервал.current, (state) => {
+    очередь.current = createAutosaveQueue(() => интервал.current, (state, причина) => {
       состояние.current(state);
+      // Отказ объясняет себя словами сервера. Без этого человек упирается в «не удалось» без
+      // единой подсказки: сервер, например, говорит про неразобранные спорные черновики версии.
+      if (причина !== undefined && причина !== '') сбой.current(причина);
       // Сервер принял запись — признаки версий на диске могли стать другими, и окно перечитывает
       // их само. Ошибку и ещё не сохранённый текст сюда не пускает `записьПодтверждена`.
       if (записьПодтверждена(state)) послеЗаписи.current();

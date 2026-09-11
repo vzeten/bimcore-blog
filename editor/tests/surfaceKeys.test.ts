@@ -8,6 +8,7 @@ import {ensureSyntaxTree} from '@codemirror/language';
 import {markdown} from '@codemirror/lang-markdown';
 import {блокВ, поверхностьРедактирования} from '../src/ui/editor/structureGuard';
 import {клавишиПоверхности} from '../src/ui/editor/surfaceKeys';
+import {переносыАбзацев} from '../src/ui/livePreview/softBreak';
 import type {ОписаниеБлока} from '../src/ui/types';
 
 const БЛОКИ: Record<string, ОписаниеБлока> = {
@@ -196,5 +197,36 @@ describe('удаление у разделителя и служебных ст�
     expect(нажать('Backspace', состояние('Строка\\\nдальше', 8)).сработала).toBe(false);
     expect(нажать('Backspace', состояние('Абзац.', 3)).сработала).toBe(false);
     expect(нажать('Delete', состояние('Абзац.', 3)).сработала).toBe(false);
+  });
+});
+
+describe('Enter не оставляет перенос, который показ спрячет пробелом', () => {
+  /** Вся цепочка клавиш Enter поверхности по порядку: первая сработавшая и решает. */
+  function enter(state: EditorState) {
+    let итог = state;
+    const view = {state, dispatch: (spec: TransactionSpec) => { итог = state.update(spec).state; }} as unknown as EditorView;
+    const сработала = клавишиПоверхности.filter((b) => b.key === 'Enter').some((b) => b.run!(view));
+    const текст = итог.doc.toString();
+    const строка = текст.slice(0, итог.selection.main.head).split('\n').length - 1;
+    return {сработала, текст, спрятан: переносыАбзацев(текст.split('\n')).мягкие.includes(строка - 1)};
+  }
+
+  it('поверх выделения абзац делится по-настоящему, а не склеивается пробелом', () => {
+    const текст = 'Первая часть фразы и вторая часть.\n\nПосле.';
+    const от = текст.indexOf('фразы');
+    expect(enter(состояние(текст, от, от + 6)))
+      .toMatchObject({сработала: true, текст: 'Первая часть \n\nи вторая часть.\n\nПосле.', спрятан: false});
+  });
+
+  it('в абзаце, начатом строкой таблицы или тегом, перенос виден и без разрыва абзаца', () => {
+    for (const начало of ['| а | б |', '<YouTube id="x" />']) {
+      const текст = `До.\n\n${начало}\nПервое продолжение.\nВторое продолжение.\n\nПосле.`;
+      expect(enter(состояние(текст, текст.indexOf('продолжение.\nВторое'))).спрятан).toBe(false);
+    }
+  });
+
+  it('там, где склейки не было бы, вторая команда не вмешивается', () => {
+    const цитата = 'До.\n\n> Цитата в две строки.\n> Вторая строка.\n\nПосле.';
+    expect(enter(состояние(цитата, цитата.indexOf('в две'))).сработала).toBe(false);
   });
 });

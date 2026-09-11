@@ -17,7 +17,7 @@ import {historyFolder, snapshotName} from '../src/core/history.mjs';
 const REL = 'i18n/ru/docusaurus-plugin-content-docs/current/beds-for-revit/index.mdx';
 const НАСТРОЙКИ = {
   хранение: {
-    папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', снимковНаВерсию: 50,
+    папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', файлПереноса: '.drafts-перенесено.json', папкаСнимков: '.history', снимковНаВерсию: 50,
   },
   контент: [{папка: 'docs', наСайте: true}, {папка: 'editor/sandbox', наСайте: false}],
   материалы: {отказы: {переносЧтение: 'серверный текст, команде не годится'}},

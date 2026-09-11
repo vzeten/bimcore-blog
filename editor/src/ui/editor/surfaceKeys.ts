@@ -7,7 +7,7 @@ import {isolateHistory} from '@codemirror/commands';
 import {тегиТекста} from '../../core/jsxTag.mjs';
 import {видеоТекста, упоминаетсяВне} from '../../core/videoFile.mjs';
 import type {Блок} from '../../core/jsxBlocks';
-import {строкаАбзаца} from '../livePreview/softBreak';
+import {переносыАбзацев, строкаАбзаца} from '../livePreview/softBreak';
 import {блокВ, контейнерКурсора, поверхность, целойСтрокой, type Диапазон, type Область} from './structureGuard';
 import {зазорМеждуПунктами} from './listKeys';
 
@@ -201,8 +201,33 @@ function удаление(вперёд: boolean): Command {
   };
 }
 
+/**
+ * `Enter`, который не оборачивается пробелом. Своя команда абзаца работает не везде: выделение,
+ * цитата, абзац, начатый строкой таблицы или тегом, ей не по зубам, и нажатие уходит в общую
+ * раскладку — а та кладёт ОДИН перевод строки. Между двумя обычными строками markdown склеивает
+ * такой перенос пробелом, показ честно рисует пробел, и человек видит, что «Enter не сработал»,
+ * и жмёт второй раз. Невидимого нажатия быть не должно: ровно в этом случае кладётся разрыв абзаца.
+ *
+ * Правило про склейку тут не повторяется: спрашивается тот же `переносыАбзацев`, что рисует показ,
+ * — на тексте, который получился бы от обычного нажатия. Не склеился бы — команда уступает дорогу.
+ */
+const видимыйПеренос: Command = (view) => {
+  const state = view.state;
+  if (state.readOnly) return false;
+
+  const {from, to} = state.selection.main;
+  const текст = state.doc.toString();
+  const было = текст.slice(0, from);
+  const строки = `${было}\n${текст.slice(to)}`.split('\n');
+  if (!переносыАбзацев(строки).мягкие.includes(было.split('\n').length - 1)) return false;
+
+  view.dispatch({changes: {from, to, insert: '\n\n'}, selection: {anchor: from + 2}, scrollIntoView: true, userEvent: 'input'});
+  return true;
+};
+
 export const клавишиПоверхности: KeyBinding[] = [
   {key: 'Enter', run: новыйАбзац},
+  {key: 'Enter', run: видимыйПеренос},
   {key: 'Shift-Enter', run: жёсткийПеренос},
   {key: 'Backspace', run: удаление(false)},
   {key: 'Delete', run: удаление(true)},
