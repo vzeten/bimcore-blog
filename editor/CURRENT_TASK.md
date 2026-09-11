@@ -8,7 +8,7 @@
 
 ## Снимок
 
-- operation: `panel-owner-only`; class: `1`; state: `implementation`.
+- operation: `panel-owner-only`; class: `1`; state: `ready_for_review`.
 - card: `ED-043`.
 - branch: `fix/editor-panel-owner-only`.
 - base: `497f5bcc8b359b72992c20ea42adb1ab5ab9f789`.
