@@ -3,7 +3,7 @@
 #   python scripts/image-prep.py <папка статьи> [ещё папки...]
 #
 # Что делает с каждым файлом img-*.png / img-*.jpg / cover.*:
-#   - ужимает до 1000 px по длинной стороне (меньше не трогает);
+#   - ужимает по ширине до 1100 px (высоту не ограничивает, узкое не трогает);
 #   - переводит в палитру 256 цветов и пересохраняет PNG с оптимизацией;
 #   - расширение приводит к .png (формат сайта по умолчанию).
 # Ссылки в index.mdx на переименованные файлы обновляются здесь же.
@@ -15,14 +15,25 @@ import os
 import sys
 from PIL import Image
 
-MAX_SIDE = 1000
+MAX_WIDTH = 1100
 COLORS = 256
+
+
+def fit(size):
+    # Вертикальная схема остаётся как есть: высота не ограничивается, уменьшает только ширина.
+    # Половина округляется вверх — так же, как её предсказывает редактор в отчёте «было -> стало».
+    width, height = size
+    if width <= MAX_WIDTH:
+        return size
+    return MAX_WIDTH, max(1, int(height * MAX_WIDTH / width + 0.5))
 
 
 def prep(path):
     name, ext = os.path.splitext(os.path.basename(path))
     im = Image.open(path).convert('RGB')
-    im.thumbnail((MAX_SIDE, MAX_SIDE), Image.LANCZOS)
+    target = fit(im.size)
+    if target != im.size:
+        im = im.resize(target, Image.LANCZOS)
     out = os.path.join(os.path.dirname(path), name + '.png')
     im.convert('P', palette=Image.Palette.ADAPTIVE, colors=COLORS).save(out, optimize=True)
     if out != path:
