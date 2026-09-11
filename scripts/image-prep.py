@@ -33,7 +33,9 @@ def prep(path):
     im = Image.open(path).convert('RGB')
     target = fit(im.size)
     if target != im.size:
-        im = im.resize(target, Image.LANCZOS)
+        # reducing_gap=2.0 — режим пересчёта, который был у прежнего thumbnail: при уменьшении больше
+        # чем вчетверо перед LANCZOS идёт дешёвый reduce. Менялось правило размеров, а не качество.
+        im = im.resize(target, Image.LANCZOS, reducing_gap=2.0)
     out = os.path.join(os.path.dirname(path), name + '.png')
     im.convert('P', palette=Image.Palette.ADAPTIVE, colors=COLORS).save(out, optimize=True)
     if out != path:

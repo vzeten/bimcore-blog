@@ -30,6 +30,29 @@ function картинка(ширина, высота, формат, пёстра
   return fs.readFileSync(файл);
 }
 
+/**
+ * Эталон прежнего качества пересчёта: тот же файл, прогнанный рецептом до ED-033 (`thumbnail`
+ * с LANCZOS), а дальше та же палитра и та же запись. Меняться должно правило размеров, но не
+ * то, какими получаются пиксели, поэтому эталон и результат скрипта сверяются побайтово.
+ */
+function прежнийРецепт(ширина, высота) {
+  const папка = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-prep-'));
+  const исходный = path.join(папка, 'широкая.png');
+  const эталон = path.join(папка, 'эталон.png');
+  execFileSync(python, ['-c', [
+    'import sys; from PIL import Image, ImageDraw',
+    'ш, в = int(sys.argv[3]), int(sys.argv[4])',
+    'im = Image.new("RGB", (ш, в), (200, 30, 30)); d = ImageDraw.Draw(im)',
+    // Мелкая частая сетка: именно на ней дешёвый reduce перед LANCZOS и виден.
+    '[d.line((0, y, ш, y + 40), fill=(y * 7 % 255, 20, 200)) for y in range(0, в, 3)]',
+    '[d.ellipse((i * 13, i * 7, i * 13 + 90, i * 7 + 90), fill=(i * 3 % 255, (80 + i) % 255, (255 - i * 2) % 255)) for i in range(300)]',
+    'im.save(sys.argv[1])',
+    'э = Image.open(sys.argv[1]).convert("RGB"); э.thumbnail((1100, 1100), Image.LANCZOS)',
+    'э.convert("P", palette=Image.Palette.ADAPTIVE, colors=256).save(sys.argv[2], optimize=True)',
+  ].join('\n'), исходный, эталон, String(ширина), String(высота)]);
+  return {исходный: fs.readFileSync(исходный), эталон: fs.readFileSync(эталон)};
+}
+
 describe('медиаподготовка через scripts/image-prep.py', () => {
   it('JPEG 1600×900 становится PNG 1100×619 с палитрой; папка стенда убирается', async () => {
     const [{байты}] = await инструменты().подготовить([{байты: картинка(1600, 900, 'jpg'), род: 'jpg'}]);
@@ -67,6 +90,13 @@ describe('медиаподготовка через scripts/image-prep.py', () =
     expect(размерыКартинки(итог.файлы.get('схема.png'), 'png')).toEqual({ширина: 1000, высота: 1750});
     expect(отчёт.изменено[0].стало).toContain('1000×1750');
   }, 60_000);
+
+  it('уменьшение вчетверо и сильнее считается прежним качеством: 4400×2200 совпадает с прежним рецептом байт в байт', async () => {
+    const {исходный, эталон} = прежнийРецепт(4400, 2200);
+    const [{байты}] = await инструменты().подготовить([{байты: исходный, род: 'png'}]);
+    expect(размерыКартинки(байты, 'png')).toEqual({ширина: 1100, высота: 550});
+    expect(Buffer.compare(Buffer.from(байты), Buffer.from(эталон))).toBe(0);
+  }, 120_000);
 
   it('PNG, ставший после скрипта тяжелее, всё равно заменяется результатом скрипта; GIF не читается', async () => {
     const малый = картинка(2, 2, 'png', false);
