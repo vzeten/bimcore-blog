@@ -3,7 +3,23 @@
 // примечаний и настоящий компилятор MDX установленного Docusaurus с плагином примечаний.
 // Компактный список у сайта — `spread: false`, разреженный — `spread: true`; примечание — контейнер.
 import {beforeAll, describe, expect, it} from 'vitest';
+import {createRequire} from 'node:module';
+import {pathToFileURL} from 'node:url';
+import path from 'node:path';
+
 import {кнопка, нажать, состояние} from './listHarness';
+import {ПАПКА_ВЛАДЕЛЬЦА} from '../src/core/materialRoot.mjs';
+
+/**
+ * Разбор и компилятор берутся из зависимостей САЙТА — тех самых, которыми он собирается.
+ *
+ * Спрашиваются они по имени пакета у корня материалов, а не путём вида `../../node_modules/...`:
+ * такой путь молча зависел от того, где лежит копия кода, и из отдельной рабочей копии указывал в
+ * пустоту. Место кода и место материалов — разные вещи (`materialRoot.mjs`), и точка отсчёта здесь
+ * только вторая. Ни связи, ни `NODE_PATH` для этого не нужны: резолвинг обычный, его делает Node.
+ */
+const отКорняМатериалов = createRequire(path.join(ПАПКА_ВЛАДЕЛЬЦА, 'package.json'));
+const пакетСайта = (имя: string) => pathToFileURL(отКорняМатериалов.resolve(имя)).href;
 
 type Узел = {type: string; name?: string; ordered?: boolean; spread?: boolean; children?: Узел[]; data?: {directiveLabel?: boolean}};
 
@@ -11,13 +27,13 @@ let разобрать: (text: string) => Узел;
 let скомпилировать: (text: string) => Promise<string>;
 
 beforeAll(async () => {
-  const {unified} = await import('../../node_modules/unified/index.js');
-  const {default: remarkParse} = await import('../../node_modules/remark-parse/index.js');
-  const {default: remarkDirective} = await import('../../node_modules/remark-directive/index.js');
+  const {unified} = await import(пакетСайта('unified'));
+  const {default: remarkParse} = await import(пакетСайта('remark-parse'));
+  const {default: remarkDirective} = await import(пакетСайта('remark-directive'));
   const процессор = unified().use(remarkParse).use(remarkDirective);
   разобрать = (text) => процессор.parse(text) as unknown as Узел;
 
-  const {createProcessorUncached} = await import('../../node_modules/@docusaurus/mdx-loader/lib/processor.js');
+  const {createProcessorUncached} = await import(пакетСайта('@docusaurus/mdx-loader/lib/processor.js'));
   const mdx = await createProcessorUncached({
     format: 'mdx',
     options: {
