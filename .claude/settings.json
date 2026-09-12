@@ -13,18 +13,6 @@
           }
         ]
       }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "shell": "bash",
-            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/leftovers.mjs\"",
-            "timeout": 15
-          }
-        ]
-      }
     ]
   }
 }

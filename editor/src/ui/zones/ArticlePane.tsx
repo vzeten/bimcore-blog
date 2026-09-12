@@ -1,14 +1,19 @@
 import {useEffect, useRef, useState} from 'react';
 import {Transaction} from '@codemirror/state';
 import type {EditorView} from '@codemirror/view';
-import {типыТелаСтатьи} from '../../core/imageType.mjs';
+import {типыВидео, типыТелаСтатьи} from '../../core/imageType.mjs';
 import {выбратьФайл, type ВставленнаяКартинка} from '../editor/images';
-import type {Deletion} from '../../core/colorize';
 import {ImagePanel} from '../editor/ImagePanel';
+import {BlockPanel} from '../editor/BlockPanel';
+import {ProductPicker} from '../editor/ProductPicker';
 import {перенестиВыбор} from '../editor/imagePanelPlace';
+import {вставленныйБлок, уУзла} from '../editor/widgetPlace';
 import {SelectionToolbar, decideEdit} from '../editor/SelectionToolbar';
 import {useEditor, type Spot} from '../editor/useEditor';
+import {файлБлока, type ЗаменаВидео} from '../editor/videoReplace';
 import type {КартинкаВОкне} from '../livePreview/inline';
+import type {БлокВОкне} from '../livePreview/blocks';
+import {названиеСоветаСтатьи} from '../livePreview/tip';
 import {Properties} from './Properties';
 import type {Field} from '../headFields';
 import type {Article, Settings} from '../types';
@@ -19,23 +24,23 @@ export function ArticlePane(props: {
   fields: Field[];
   onFields: (fields: Field[]) => void;
   onText: (text: string) => void;
-  onDeletions: (deletions: Deletion[]) => void;
+  /** Отказ команды панели: причина уходит в общую строку сообщений окна. */
+  onСообщить: (текст: string) => void;
   /**
    * Вставка новой картинки: файл едет на сервер, ссылка дописывается в текст. `null` в ответе —
    * вставки не было (окно сменилось или запрос не прошёл), и панель свойств не открывается.
    */
   вставитьКартинку: (file: File, view: EditorView) => Promise<ВставленнаяКартинка | null>;
+  /** Ролик WebM той же дорогой: вставка (файл на сервер, импорт и тег в текст; название — для доступности) и замена файла у выбранного блока (`null` — замены не было, причина показана). */
+  вставитьВидео: (file: File, view: EditorView, название: string) => Promise<unknown>;
+  заменитьВидео: ЗаменаВидео;
   /** Загрузка файла для поля-картинки в свойствах. `null` в ответе — не вышло, причина показана. */
   загрузить: (file: File) => Promise<string | null>;
   /** Текст окна совпадает с файлом — условие входа в смену формата картинки. */
   сохранено: boolean;
   /** Файл статьи изменён сервером при смене формата: наверх уходят новые тело и отпечаток. */
   ссылкаОбновлена: (данные: {текст: string; отпечаток: string}) => void;
-  /**
-   * Идёт просмотр старой версии: рабочий редактор прячется, но остаётся живым.
-   * Снять его с экрана насовсем нельзя — вместе с ним пропадут несохранённые правки
-   * и вся история отмены: редактор пересоздался бы из текста, каким статья открывалась.
-   */
+  /** Просмотр старой версии: рабочий редактор прячется, но живёт — иначе пропали бы несохранённые правки и история отмены. */
   скрыт?: boolean;
   /**
    * Текст, который надо положить в редактор целиком: возврат к версии или откат возврата.
@@ -45,7 +50,12 @@ export function ArticlePane(props: {
 }) {
   const [spot, setSpot] = useState<Spot | null>(null);
   const [menu, setMenu] = useState(false);
+  const [товар, setТовар] = useState(false);
   const [картинка, setКартинка] = useState<КартинкаВОкне | null>(null);
+  const [блок, setБлок] = useState<БлокВОкне | null>(null);
+  // Панель открыта вставкой, а не нажатием на готовый блок: тогда она спрашивает одно поле
+  // и уходит сама. Нажал человек сам — он видит все свойства блока сразу.
+  const [вставкой, setВставкой] = useState(false);
   // Номер выбора картинки. Он и есть ключ панели: нажали другую картинку — панель создаётся
   // заново и поля в ней чистые; сменился адрес той же выбранной — панель остаётся, иначе
   // с ней пропали бы и набранный alt, и показанный итог операции.
@@ -57,28 +67,39 @@ export function ArticlePane(props: {
   // Пока панель меняет файл, правка текста её не закрывает: человек обязан получить итог
   // операции, которая уже меняет диск. Ref, а не состояние: признак читает обработчик редактора.
   const файловаяОперация = useRef(false);
+  // Правку в тег сделала сама панель свойств блока. Своя правка панель не закрывает: у видео
+  // пять полей, и после каждого человеку пришлось бы открывать блок заново. Чужую правку она
+  // по-прежнему не переживает — позиция тега после неё уже не та.
+  const свояПравкаБлока = useRef(false);
 
-  // Пока человек не выбрал, с чего продолжать, документ показывается, но не правится:
-  // любой из двух выборов подставляет свой вариант целиком, и набранное пропало бы.
-  const выборНеСделан = props.article.черновикРешение === 'конфликт' && props.article.черновик !== null;
+  // Пока не решено расхождение с файлом, документ показывается, но не правится: ответ человека
+  // подставит в спорные места свой выбор, и набранное поверх пропало бы.
+  const выборНеСделан = props.article.спор !== null;
 
   const {host, view} = useEditor({
     article: props.article,
     onText: props.onText,
-    onDeletions: props.onDeletions,
     onSelection: setSpot,
     onPaste: (file, editor) => void вставить(file, editor),
     onImage: (картинка) => {
       выборРеф.current += 1;
       setВыбор(выборРеф.current);
+      setБлок(null);
       setКартинка(картинка);
     },
-    // Панель свойств картинки держит позицию узла на момент открытия: любая правка текста
-    // (своя, чужая, подстановка версии) сдвигает позиции, и панель закрывается, а не правит
-    // наугад. Кроме времени файловой операции: диск уже меняется, и итог обязан дойти
-    // до человека (находка ворот 2026-08-17); применять устаревшую позицию панель не станет —
-    // она сверяет текст сама.
+    блоки: props.settings.блоки,
+    названиеСовета: названиеСоветаСтатьи(props.settings, props.article.path),
+    onБлок: (блок) => {
+      setВставкой(false);
+      setКартинка(null);
+      setБлок(блок);
+    },
+    // Панель свойств картинки держит позицию узла: любая правка текста сдвигает позиции, и панель
+    // закрывается, а не правит наугад. Кроме времени файловой операции: диск уже меняется, и итог
+    // обязан дойти до человека; применять устаревшую позицию панель не станет — она сверяет текст.
     onDocChanged: () => {
+      if (свояПравкаБлока.current) свояПравкаБлока.current = false;
+      else setБлок(null);
       if (!файловаяОперация.current) setКартинка(null);
     },
     толькоЧтение: выборНеСделан,
@@ -87,7 +108,9 @@ export function ArticlePane(props: {
   // Просмотр старой версии прячет рабочий редактор — панель картинки уходит вместе с ним:
   // её правки относятся к рабочему тексту, а на экране в это время другой.
   useEffect(() => {
-    if (props.скрыт === true) setКартинка(null);
+    if (props.скрыт !== true) return;
+    setКартинка(null);
+    setБлок(null);
   }, [props.скрыт]);
 
   // Возврат кладёт текст ТРАНЗАКЦИЕЙ в живой редактор, а не пересозданием зоны: пересоздание
@@ -163,7 +186,29 @@ export function ArticlePane(props: {
         spot={выборНеСделан ? null : spot}
         view={view.current}
         articlePath={props.article.path}
+        onСообщить={props.onСообщить}
       />
+
+      {блок !== null && !выборНеСделан && view.current !== null && (
+        <BlockPanel
+          /* Ключ перемонтирует панель при выборе другого блока: без него в полях остались бы
+             значения прежнего, и запись ушла бы в чужой тег. */
+          key={`${блок.имя}-${блок.from}`}
+          settings={props.settings}
+          блок={блок}
+          view={view.current}
+          приВставке={вставкой}
+          onСвояПравка={() => {
+            свояПравкаБлока.current = true;
+          }}
+          файл={файлБлока(view.current, блок, props.заменитьВидео)}
+          onClose={() => setБлок(null)}
+        />
+      )}
+
+      {товар && view.current !== null && (
+        <ProductPicker settings={props.settings} article={props.article.path} view={view.current} onClose={() => setТовар(false)} />
+      )}
 
       {картинка !== null && !выборНеСделан && view.current !== null && (
         <ImagePanel
@@ -196,30 +241,35 @@ export function ArticlePane(props: {
     const button = blocks.find((item) => item.подпись === подпись);
     if (!editor || !button) return;
 
-    // Картинка — не текстовая вставка: сначала человек выбирает файл, потом сервер кладёт его
-    // рядом со статьёй, и только затем в текст дописывается ссылка.
-    if (button.команда === 'картинка') {
-      выбратьКартинку(editor);
-      return;
-    }
+    // Картинка и товар — не текстовые вставки: сначала человек выбирает файл (ровно тех родов,
+    // что примет сервер) или товар, сервер кладёт картинку рядом со статьёй, потом правится текст.
+    if (button.команда === 'картинка') return выбратьФайл(типыТелаСтатьи(), (file) => void вставить(file, editor));
+    if (button.команда === 'видеофайл') return выбратьФайл(типыВидео(), (file) => void props.вставитьВидео(file, editor, props.fields.find((поле) => поле.key === 'title')?.display ?? ''));
+    if (button.команда === 'товар') return setТовар(true);
 
     const at = {from: editor.state.selection.main.from, to: editor.state.selection.main.to};
     const edit = decideEdit(button, editor.state.doc.toString(), at, {
       settings: props.settings,
       articlePath: props.article.path,
+      шапка: Object.fromEntries(props.fields.map((поле) => [поле.key, поле.display])),
     });
     if (!edit) return;
 
-    editor.dispatch({
-      changes: {from: edit.from, to: edit.to, insert: edit.insert},
-      selection: {anchor: edit.from + (edit.caret ?? edit.insert.length)},
-    });
+    const конец = edit.from + (edit.caret ?? edit.insert.length);
+    editor.dispatch({changes: {from: edit.from, to: edit.to, insert: edit.insert}, selection: {anchor: конец}});
     editor.focus();
+
+    if (button.команда === 'блок' && button.блок !== undefined) открытьБлок(editor, button.блок, конец);
   }
 
-  /** Выбор файла картинки. Предлагается ровно то, что примет сервер: PNG, JPG и GIF. */
-  function выбратьКартинку(editor: EditorView): void {
-    выбратьФайл(типыТелаСтатьи(), (file) => void вставить(file, editor));
+  function открытьБлок(editor: EditorView, имя: string, конец: number): void {
+    if ((props.settings.блоки[имя]?.поля.length ?? 0) === 0) return;
+    setВставкой(true);
+
+    const блок = вставленныйБлок(editor, конец);
+    if (блок === null) return;
+
+    setБлок({имя, текст: editor.state.sliceDoc(блок.from, блок.to), ...блок});
   }
 
   /**
@@ -230,32 +280,16 @@ export function ArticlePane(props: {
     const готово = await props.вставитьКартинку(file, editor);
     if (готово === null || !editor.dom.isConnected) return;
 
-    // Координаты берутся сразу: редактор строит виджет картинки в той же правке, что и текст,
-    // поэтому ждать отрисовки нечего. Ожидание кадра здесь было бы хуже — в неактивной вкладке
-    // браузер такие кадры не выдаёт вовсе, и панель не появилась бы никогда.
-    const место = уКартинки(editor, готово.узелОт);
+    // Координаты берутся сразу: виджет картинки строится в той же правке, что и текст. Ждать кадра
+    // нельзя — в неактивной вкладке браузер кадров не выдаёт, и панель не появилась бы никогда.
+    const место = уУзла(editor, готово.узелОт, '.md-image');
     if (место === null) return;
 
     выборРеф.current += 1;
     setВыбор(выборРеф.current);
-    setКартинка({src: готово.src, alt: '', from: готово.узелОт, to: готово.узелДо, ...место});
+    setКартинка({
+      src: готово.src, alt: '', from: готово.узелОт, to: готово.узелДо,
+      left: место.left, top: место.top,
+    });
   }
-}
-
-/**
- * Где на экране картинка в этой позиции. Сначала спрашивается сам её виджет — он знает свои
- * настоящие края; если виджет ещё не построен, берётся место позиции в тексте.
- * `null` — показать панель не у чего: строка вне видимой части.
- */
-function уКартинки(editor: EditorView, позиция: number): {left: number; top: number} | null {
-  const узел = editor.domAtPos(позиция).node;
-  const элемент = узел instanceof HTMLElement ? узел : узел.parentElement;
-  const картинка = элемент?.closest('.md-image') ?? элемент?.querySelector('.md-image');
-  if (картинка instanceof HTMLElement) {
-    const место = картинка.getBoundingClientRect();
-    return {left: место.left, top: место.top};
-  }
-
-  const место = editor.coordsAtPos(позиция);
-  return место === null ? null : {left: место.left, top: место.top};
 }

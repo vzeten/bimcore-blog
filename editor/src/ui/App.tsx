@@ -1,5 +1,4 @@
 import {useEffect, useRef, useState} from 'react';
-import type {Deletion} from '../core/colorize';
 import {Rail} from './zones/Rail';
 import {Registry} from './zones/Registry';
 import {TopBar} from './zones/TopBar';
@@ -13,13 +12,16 @@ import {Bars} from './zones/Bars';
 import {useCreate} from './useCreate';
 import type {Field} from './headFields';
 import {makeCoverUpload, makeImageInsert} from './editor/images';
+import {makeVideoInsert, правилоВидео} from './editor/videoInsert';
+import {makeVideoReplace} from './editor/videoReplace';
 import {правилоАнимации} from './editor/imageGuard';
 import {requestJson} from './api';
 import {useDelete} from './useDelete';
 import {useAutosave} from './useAutosave';
 import {label, setLabels} from './labels';
 import {makeReporter} from './errors';
-import {useConflictChoice} from './useConflictChoice';
+import {useConflict} from './useConflict';
+import {makeОтветАвтосохранения} from './mergeApply';
 import {useSaving} from './useSaving';
 import {useNavigation} from './useNavigation';
 import {useVersions} from './useVersions';
@@ -37,34 +39,18 @@ export function App() {
   const [fields, setFields] = useState<Field[]>([]);
   // Текст живёт в редакторе и в `текстСейчас`; состояние нужно только для пересоздания зоны.
   const [, setText] = useState('');
-  const [deletions, setDeletions] = useState<Deletion[]>([]);
   const [dirty, setDirty] = useState(false);
   const [colors, setColors] = useState(true);
   const [ошибка, setОшибка] = useState<string | null>(null);
   const [состояниеСохранения, setСостояниеСохранения] = useState<SaveState>('сохранено');
-  const [конфликтСохранения, setКонфликтСохранения] = useState(false);
   const {runSafe, сПричиной} = makeReporter(setОшибка);
-  const автосохранение = useAutosave(settings?.хранение.автосохранениеСек ?? 0, setСостояниеСохранения);
+  const автосохранение = useAutosave(settings?.хранение.автосохранениеСек ?? 0, setСостояниеСохранения, setОшибка);
   const версии = useVersions({
     // Не отменяем, а дописываем: отменённая правка осталась бы только в спрятанном редакторе.
     дописатьАвтосохранение: автосохранение.дописать,
     onОшибка: (причина) => setОшибка(сПричиной('ошибкаВерсии', причина)),
   });
-  const {взятьЧерновик, взятьФайл} = useConflictChoice({
-    article, roots: settings?.контент ?? [], общаяОбложка: settings?.сайт?.обложкаПоУмолчанию ?? null, setArticle, setText, setFields,
-    setDirty, setСостояние: setСостояниеСохранения,
-    запомнить: (body, frontmatterRaw) => {
-      текстСейчас.current = body;
-      шапкаСейчас.current = frontmatterRaw;
-    },
-    // Пишем в черновик то, что теперь в окне: оно равно файлу, и сервер такой черновик убирает.
-    отброситьЧерновик: () => {
-      вЧерновик();
-      void автосохранение.дописать();
-    },
-  });
-  // Текст и шапка в ref: пока запрос идёт, человек печатает, и ответ должен сравнить
-  // «что сохраняли» с «что в окне сейчас».
+  // Текст и шапка в ref: пока запрос идёт, человек печатает, и ответ сравнивает «что сохраняли» с «что в окне».
   const текстСейчас = useRef('');
   const шапкаСейчас = useRef('');
   // Какая статья открыта и идёт ли просмотр — в ref: эти признаки читают замыкания редактора
@@ -79,17 +65,17 @@ export function App() {
   const загрузитьОбложку = makeCoverUpload({
     runSafe, статья: статьяСейчас, заход: открытие, просмотр: просмотрРеф,
   });
-  // Вставка новой картинки живёт по тем же признакам окна: пока файл ехал, человек мог уйти
+  // Вставка картинки и ролика живёт по тем же признакам окна: пока файл ехал, человек мог уйти
   // в другую статью, открыть её заново или уйти в просмотр старой версии.
-  const положитьКартинку = makeImageInsert({
-    runSafe, статья: статьяСейчас, заход: открытие, просмотр: просмотрРеф,
-    правилоГифа: правилоАнимации(settings),
-  });
+  const признакиОкна = {runSafe, статья: статьяСейчас, заход: открытие, просмотр: просмотрРеф};
+  const положитьКартинку = makeImageInsert({...признакиОкна, правилоГифа: правилоАнимации(settings)});
+  const положитьВидео = makeVideoInsert({...признакиОкна, правило: правилоВидео(settings)});
+  const сменитьВидео = makeVideoReplace({...признакиОкна, правило: правилоВидео(settings)});
 
   // Пара «тело + шапка» в окне: обычная правка и подстановка целой пары при возврате к версии.
   const {подстановка, вЧерновик, правка, правитьПоля, отметить, положитьПару} = useWindowText({
     article, roots: settings?.контент ?? [], общаяОбложка: settings?.сайт?.обложкаПоУмолчанию ?? null, текстСейчас, шапкаСейчас, автосохранение,
-    setArticle, setFields, setDirty, setСостояние: setСостояниеСохранения, setКонфликтСохранения,
+    setArticle, setFields, setDirty, setСостояние: setСостояниеСохранения,
   });
 
   // Актуальные настройки в ref: обработчик «назад» ставится один раз и иначе поймал бы старое (null) значение.
@@ -98,8 +84,8 @@ export function App() {
 
   const {refresh, open, closeArticle} = useNavigation({
     article, settingsRef, автосохранение, версии, текстСейчас, шапкаСейчас, статьяСейчас, открытие, runSafe,
-    setArticles, setArticle, setFields, setText, setDeletions, setMode, setDirty,
-    setОшибка, setКонфликтСохранения, setСостояние: setСостояниеСохранения,
+    setArticles, setArticle, setFields, setText, setMode, setDirty,
+    setОшибка, setСостояние: setСостояниеСохранения,
   });
 
   // Кнопка «назад» браузера — отдельным правилом: реестр — начальный экран, выхода из программы нет.
@@ -112,10 +98,21 @@ export function App() {
     onСоздано: setОшибка,
   });
 
+  const setСпор = (спор: Article['спор']): void => setArticle((было) => (было ? {...было, спор} : было));
+  const расхождение = useConflict({
+    article, setArticle, положитьПару, setОшибка, сПричиной,
+    актуально: (путь, заход) => статьяСейчас.current === путь && открытие.current === заход,
+  });
+  // Ответ автосохранения может принести сведённый текст, новый файл или расхождение.
+  автосохранение.ответСервера.current = makeОтветАвтосохранения({статьяСейчас, setArticle, положитьПару});
+
   const {save} = useSaving({
     article, settings, fields, текстСейчас, шапкаСейчас, статьяСейчас, открытие, автосохранение,
-    setArticle, setDirty, setОшибка, setКонфликтСохранения, setСостояние: setСостояниеСохранения,
+    setArticle, setDirty, setОшибка, setСпор, setСостояние: setСостояниеСохранения,
     refresh, сПричиной, вЧерновик: () => вЧерновик(),
+    // Сервер свёл нашу работу с внешней правкой: в окно кладём то, что действительно в файле,
+    // и той же парой двигаем базу сравнения — иначе окно сразу зажгло бы «есть несохранённые».
+    положитьЗаписанное: (пара) => положитьПару(пара, пара),
     // Работа записана в файл — откатывать больше не к чему, на диске уже другое состояние.
     послеЗаписи: () => возврат.забытьСнимок(),
   });
@@ -172,8 +169,7 @@ export function App() {
         onColors={setColors}
         onSave={save}
         fields={fields}
-        onDelete={() => void удаление.удалить()}
-        удаление={удаление.идёт}
+        удаление={удаление}
         onОбновить={refresh}
         onСообщить={setОшибка}
         // Просмотр версии ничего не пишет: пишущие кнопки шапки на это время заперты.
@@ -185,15 +181,11 @@ export function App() {
         article={реестр ? null : article}
         ошибка={ошибка}
         onЗакрытьОшибку={() => setОшибка(null)}
-        конфликтСохранения={конфликтСохранения}
+        расхождение={расхождение}
         просмотрИдёт={просмотрИдёт}
         реестр={реестр}
         спрашиваемВозврат={возврат.спрашиваем()}
         откатДоступен={возврат.откатДоступен()}
-        onВзятьЧерновик={взятьЧерновик}
-        onВзятьФайл={взятьФайл}
-        onСохранитьПоверх={() => void save(true)}
-        onПеречитать={() => void open(article!.path, false)}
         onПодтвердитьВозврат={() => void возврат.подтвердить()}
         onОтменитьВозврат={возврат.отменитьПодтверждение}
         onОткатить={() => void возврат.откатить()}
@@ -220,7 +212,7 @@ export function App() {
         />
 
         {article === null ? (
-          <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} создание={создание} />
+          <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} onОбновить={refresh} создание={создание} />
         ) : (
           <>
             {/* Всё, что показывается вместо открытой статьи, встаёт РЯДОМ с рабочим редактором,
@@ -228,7 +220,7 @@ export function App() {
                 пересоздать его при возврате — из текста, каким статья открывалась, — то есть
                 потерять несохранённую правку и всю историю отмены. */}
             {реестр && (
-              <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} создание={создание} />
+              <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} onОбновить={refresh} создание={создание} />
             )}
 
             {версии.просмотр && (
@@ -260,7 +252,7 @@ export function App() {
                 setText(next);
                 правка(next, шапкаСейчас.current);
               }}
-              onDeletions={setDeletions}
+              onСообщить={setОшибка}
               // Возврат к версии кладёт текст сюда транзакцией: пересоздание зоны стёрло бы
               // историю отмены вместе с обещанием обратимости.
               подстановка={подстановка}
@@ -268,13 +260,15 @@ export function App() {
               // в неё и не идёт просмотр старой версии: иначе разметка уедет в чужой или уже
               // уничтоженный редактор. Признаки берутся из ref: пока файл ехал, всё могло смениться.
               вставитьКартинку={положитьКартинку}
+              вставитьВидео={положитьВидео}
+              заменитьВидео={сменитьВидео}
               загрузить={загрузитьОбложку}
               // Смена формата картинки требует, чтобы файл был ровно тем, что видит человек.
-              сохранено={!dirty && состояниеСохранения === 'сохранено' && !конфликтСохранения}
+              сохранено={!dirty && состояниеСохранения === 'сохранено' && article!.спор === null}
               ссылкаОбновлена={makeСсылкаОбновлена({текстСейчас, setText, setArticle})}
             />
 
-            {!реестр && !просмотрИдёт && <CommentGutter settings={settings} deletions={deletions} />}
+            {!реестр && !просмотрИдёт && <CommentGutter settings={settings} />}
           </>
         )}
       </div>

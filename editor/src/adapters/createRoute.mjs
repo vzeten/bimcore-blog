@@ -16,7 +16,7 @@ import {badFields} from './httpBody.mjs';
  * Причины отказа приходят кодом, а человеческий текст берётся из настроек: коды — внутренний
  * договор сервера и окна, слова человеку меняются без правки кода (SPEC 4.4).
  */
-export async function createRoute({req, res, url, repo, editorDir, settings, git, тело, send}) {
+export async function createRoute({req, res, url, repo, settings, git, тело, send}) {
   if (url.pathname !== '/api/article/new' || req.method !== 'POST') return false;
 
   const payload = await тело(req);
@@ -59,7 +59,7 @@ export async function createRoute({req, res, url, repo, editorDir, settings, git
     // подпишет заглушку «Неизвестный», а при первом её открытии посчитает содержимое чужой
     // правкой со стороны — хотя завела файл сама программа.
     for (const версия of итог.версии ?? [итог.path]) {
-      saveSnapshot(editorDir, settings, версия, fs.readFileSync(path.join(repo, версия), 'utf8'), автор, сейчас);
+      saveSnapshot(repo, settings, версия, fs.readFileSync(path.join(repo, версия), 'utf8'), автор, сейчас);
     }
   } catch (error) {
     // История — служебный шаг: статья уже создана, и отменять её из-за этого нельзя.

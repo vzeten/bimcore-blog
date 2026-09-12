@@ -2,7 +2,8 @@
 // Цепочка слоёв окна и цвет, который из неё выходит: кто трогал текст последним.
 import {describe, expect, it} from 'vitest';
 import {colorize, type Layer} from '../src/core/colorize';
-import {слоиОкна} from '../src/ui/layerColors';
+import {ChangeSet} from '@codemirror/state';
+import {служебноеУдаление, слоиОкна} from '../src/ui/layerColors';
 
 const САЙТ = 'Первый абзац.\n';
 const ИИ = 'Первый абзац.\nАбзац от ИИ.\n';
@@ -92,5 +93,48 @@ describe('цвет по автору', () => {
       {text: сейчас, kind: 'current'} as Layer];
 
     expect(цвет(слои, 'Только что набрано')).toBe('current');
+  });
+});
+
+describe('косая при удалении: служебная только там, где она была переносом', () => {
+  const ушла = (text: string) => {
+    const at = text.indexOf('\\');
+    return служебноеУдаление(text, at, at + 1);
+  };
+
+  it('косая жёсткого переноса перед продолжением абзаца или пустой строкой — служебная', () => {
+    expect(ушла('раз\\\nдва')).toBe(true);
+    expect(ушла('раз\\\n\nдва')).toBe(true);
+    expect(ушла('- раз\\\nдва')).toBe(true);
+  });
+
+  it('косая в коде, перед заголовком, перед пунктом и в конце текста — буква, её удаление видно', () => {
+    expect(ушла('```\nраз\\\nдва\n```')).toBe(false);
+    expect(ушла('раз\\\n## Два')).toBe(false);
+    expect(ушла('раз\\\n- два')).toBe(false);
+    expect(ушла('раз\\')).toBe(false);
+    expect(служебноеУдаление('раз\\\\\nдва', 3, 5)).toBe(false);
+  });
+
+  it('удалённое слово вместе с косой — не служебное', () => {
+    expect(служебноеУдаление('раз\\\nдва', 0, 4)).toBe(false);
+  });
+});
+
+describe('правки окна складываются штатно', () => {
+  it('отмена набранного гасит правку целиком: границ правок не остаётся', () => {
+    const набор = ChangeSet.of({from: 10, insert: '\n- фывафыва'}, 33);
+    const назад = набор.compose(ChangeSet.of({from: 10, to: 21}, набор.newLength));
+    const границы: number[] = [];
+    назад.iterChangedRanges((fromA, toA, fromB, toB) => границы.push(fromA, toA, fromB, toB));
+    expect(границы).toEqual([]);
+  });
+
+  it('удаление и набор того же слова сводятся к одной правке с прежними границами', () => {
+    const удалил = ChangeSet.of({from: 4, to: 7}, 11);
+    const набрал = удалил.compose(ChangeSet.of({from: 4, insert: 'два'}, 8));
+    const границы: number[] = [];
+    набрал.iterChangedRanges((fromA, toA, fromB, toB) => границы.push(fromA, toA, fromB, toB));
+    expect(границы).toEqual([4, 7, 4, 7]);
   });
 });

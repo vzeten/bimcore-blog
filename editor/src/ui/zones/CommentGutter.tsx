@@ -1,31 +1,14 @@
-import type {Deletion} from '../../core/colorize';
 import type {Settings} from '../types';
-import {подписьСлоя} from '../layerColors';
 
 /**
- * Узкая полоса справа: постоянно видны только метки, а не текст.
- * Простыни комментариев не должно быть — она съедает ширину у статьи.
+ * Узкая полоса справа под будущие комментарии: постоянно видны только метки, а не текст.
+ * Простыни комментариев не должно быть — она съедает ширину у статьи. Меток удалённого здесь
+ * больше нет: красные точки мешали читать статью, а сами удаления сравнение по-прежнему знает.
  */
-export function CommentGutter(props: {settings: Settings; deletions: Deletion[]}) {
-  const п = props.settings.подписи;
-
-  if (props.deletions.length === 0) {
-    return (
-      <aside className="gutter gutter-empty">
-        <span className="gutter-hint">{п.нетКомментариев}</span>
-      </aside>
-    );
-  }
-
+export function CommentGutter(props: {settings: Settings}) {
   return (
-    <aside className="gutter">
-      {props.deletions.map((item, index) => (
-        <span
-          key={`${item.at}-${index}`}
-          className="gutter-mark"
-          title={`${подписьСлоя('deleted')}: ${item.text.trim()}`}
-        />
-      ))}
+    <aside className="gutter gutter-empty">
+      <span className="gutter-hint">{props.settings.подписи.нетКомментариев}</span>
     </aside>
   );
 }

@@ -132,8 +132,8 @@ describe('автосохранение черновика', () => {
   });
 });
 
-describe('сохранение поверх внешней правки', () => {
-  it('файл изменён снаружи — сохранение не подтверждается, человеку предлагается выбор', async () => {
+describe('внешняя правка файла при сохранении', () => {
+  it('свести не вышло — сохранение не подтверждается, человеку показывают спорное место', async () => {
     const конфликт = Object.assign(new Error('файл изменён снаружи'), {конфликт: true});
     const request = vi.fn().mockRejectedValue(конфликт);
     const ok = vi.fn();
@@ -143,8 +143,8 @@ describe('сохранение поверх внешней правки', () => 
     await saveArticle(тело, {ok, fail, conflict}, request as never);
 
     expect(ok).not.toHaveBeenCalled();
-    // Конфликт — не обычная ошибка: показываем выбор, а не только сообщение.
-    expect(conflict).toHaveBeenCalledWith('файл изменён снаружи');
+    // Расхождение — не обычная ошибка: показываем стороны, а не только сообщение.
+    expect(conflict).toHaveBeenCalledWith('файл изменён снаружи', undefined);
     expect(fail).not.toHaveBeenCalled();
   });
 
@@ -179,12 +179,25 @@ describe('отпечаток базы после сохранения', () => {
     expect(ok).toHaveBeenCalledWith(expect.objectContaining({отпечаток: 'НОВЫЙ'}));
   });
 
-  it('сохранение поверх помечается явным решением человека', async () => {
+  it('записи поверх чужой правки в запросе нет вовсе', async () => {
     const request = vi.fn().mockResolvedValue({saved: true});
 
-    await saveArticle({...тело, отпечатокБазы: 'СТАРЫЙ', перезаписать: true}, {ok: vi.fn(), fail: vi.fn()}, request as never);
+    await saveArticle({...тело, отпечатокБазы: 'СТАРЫЙ'}, {ok: vi.fn(), fail: vi.fn()}, request as never);
 
     const посланное = JSON.parse((request.mock.calls[0][1] as {body: string}).body);
-    expect(посланное.перезаписать).toBe(true);
+    expect(посланное).not.toHaveProperty('перезаписать');
+  });
+
+  it('расхождение доходит до окна вместе с телом отказа: по нему рисуется панель со сторонами', async () => {
+    const спор = {вид: 'спор', спорные: [{место: 'тело', номер: 0, база: 'б', мои: 'м', внешние: 'в'}]};
+    const request = vi.fn().mockRejectedValue(Object.assign(new Error('файл изменён снаружи'), {
+      конфликт: true,
+      ответ: {конфликт: true, спор},
+    }));
+    const conflict = vi.fn();
+
+    await saveArticle(тело, {ok: vi.fn(), fail: vi.fn(), conflict}, request as never);
+
+    expect(conflict).toHaveBeenCalledWith('файл изменён снаружи', expect.objectContaining({спор}));
   });
 });

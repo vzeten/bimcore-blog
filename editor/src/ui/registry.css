@@ -22,10 +22,24 @@
 .cell-title { border: 0; background: transparent; font: inherit; text-align: left; padding: 0; cursor: pointer; }
 .cell-title:hover { text-decoration: underline; }
 .cell-foreign { color: var(--layer-deleted); }
-.cell-langs { display: inline-flex; gap: 4px; }
-.cell-langs .lang { padding: 1px 5px; font-size: 10px; }
-.lang-срыв { color: #fff; background: var(--layer-deleted); }
+/* Просвет между метками заметно больше отступов внутри метки: так точка читается частью своей
+   локали, а не отдельным рядом над столбцом (наблюдение владельца 2026-09-08). */
+.cell-langs { display: inline-flex; gap: 16px; }
+.cell-langs .lang { padding: 1px 2px; font-size: 10px; }
+/* Обязательного языка нет, а статья на сайте: это беда самой статьи, а не состояние версии,
+   поэтому она перебивает бледный цвет отсутствующей локали и видна издалека. */
+.lang-срыв { background: var(--layer-deleted); opacity: 1; }
+.lang-срыв .lang-код { color: #fff; }
 .cell-shown, .cell-hidden { font-size: 12px; padding: 2px 6px; border-radius: 6px; }
 .cell-hidden { color: var(--ink-quiet); background: #eef1f4; }
 .cell-section .cell-title { color: var(--ink-quiet); font-style: italic; }
 .td-когда, .td-автор { color: var(--ink-quiet); font-size: 12px; white-space: nowrap; }
+
+/* Корзина: список записей поверх реестра, у каждой — срок возврата и кнопка «Вернуть». */
+.trash-panel { position: fixed; inset: 56px 24px auto 24px; z-index: 7; max-height: calc(100vh - 80px); overflow: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12); }
+.trash-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.trash-head h2 { margin: 0; font-size: 15px; }
+.trash-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid #eef1f4; }
+.trash-row .trash-name { flex: 1; min-width: 0; }
+.trash-row .trash-meta { color: var(--ink-quiet); font-size: 12px; white-space: nowrap; }
+.trash-note { color: var(--ink-quiet); font-size: 13px; margin: 6px 0; }

@@ -5,8 +5,11 @@ import './styles.css';
 import './registry.css';
 import './properties.css';
 import './feedback.css';
+import './refine.css';
 import './versions.css';
 import './imagePanel.css';
+import './blocks.css';
+import './toolbar.css';
 
 /** Белый экран вместо программы недопустим: ошибку надо показать словами. */
 class Guard extends Component<{children: ReactNode}, {error: Error | null}> {

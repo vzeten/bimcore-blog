@@ -1,10 +1,19 @@
 // Имя каждого теста повторяет формулировку правила.
 // Кто автор правки: свой, машинный или посторонний. Чистое правило, без диска и без git.
 import {describe, expect, it} from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {видСлоя, приведиИмя} from '../src/core/authors.mjs';
 
 const СПРАВОЧНИК = {Claude: 'prevAi', Codex: 'prevAi'};
 const Я = 'vzeten';
+
+/** Живой справочник настроек: проверяется он сам, а не его копия в тесте. */
+const НАСТРОЙКИ = JSON.parse(fs.readFileSync(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'settings.json'),
+  'utf8',
+));
 
 describe('кто автор правки', () => {
   it('автор из справочника показывается машинным слоем', () => {
@@ -46,6 +55,17 @@ describe('кто автор правки', () => {
     expect(видСлоя('Claude Code', {'Claude Code': 'prevAi'}, Я)).toBe('prevAi');
     expect(видСлоя('Claude_Code', {'Claude Code': 'prevAi'}, Я)).toBe('prevAi');
     expect(видСлоя('  Claude   Code  ', {'Claude Code': 'prevAi'}, Я)).toBe('prevAi');
+  });
+
+  it('прежняя подпись владельца в git показывается его прошлыми правками, а не правкой со стороны', () => {
+    // «Bimcore» — имя, которым владелец подписывал старые статьи сайта: его собственная работа.
+    expect(видСлоя('Bimcore', НАСТРОЙКИ['слоиПоАвторам'], Я)).toBe('prevHuman');
+  });
+
+  it('неизвестный автор остаётся правкой со стороны и после появления прежней подписи владельца', () => {
+    // Иначе фиолетовый исчез бы ценой того, что чужие правки стали бы своими.
+    expect(видСлоя('Неизвестный', НАСТРОЙКИ['слоиПоАвторам'], Я)).toBe('prevOther');
+    expect(видСлоя('Коллега', НАСТРОЙКИ['слоиПоАвторам'], Я)).toBe('prevOther');
   });
 
   it('приведение имени убирает разницу подчёркиваний, пробелов и регистра', () => {

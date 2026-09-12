@@ -1,5 +1,7 @@
 import {useRef, useState, type ReactNode} from 'react';
 import {типыОбложки} from '../../core/imageType.mjs';
+import {флаговоеПоле} from '../../core/frontmatterFields.mjs';
+import {РЕЖИМЫ, поляРежима, режимДоступности} from '../../core/siteAccess.mjs';
 import {безПоказанных, полеПослеЗагрузки, показанныеПоля, порядокПолей, type Field} from '../headFields';
 import type {Settings} from '../types';
 
@@ -58,6 +60,17 @@ export function Properties(props: {
     ? показанныеПоля(props.fields, порядокПолей(props.settings, props.path))
     : props.fields;
 
+  // `draft` и `unlisted` своими строками не показываются вовсе: у человека одно понятие —
+  // доступность страницы на сайте, и ответов у него три, а не четыре. Пару этих полей Docusaurus
+  // отвергает и роняет сборку всего сайта, поэтому выбирать из двух независимых флажков человеку
+  // и нельзя (решение владельца 2026-09-08). Что значит каждый ответ, решает ядро.
+  const обычные = поля.filter((поле) => !(флаговоеПоле as (key: string) => boolean)(поле.key));
+  const режим = режимДоступности(поля) as string;
+
+  const выбратьРежим = (значение: string): void => {
+    props.onChange(безПоказанных(props.fields, поляРежима(поля, значение) as Field[]));
+  };
+
   // Поля в ref: ответ загрузки приходит поздно, а к тому времени человек уже мог дописать описание
   // или заголовок. Из состояния обработчик получил бы значения на момент выбора файла и стёр бы
   // набранное — это тихая потеря текста, а не мелочь.
@@ -88,12 +101,12 @@ export function Properties(props: {
         {props.settings.подписи.свойства}
         {/* Счёт — по тому, что человек увидит, раскрыв свойства. Считать поля одного лишь файла
             нельзя: показываются все поля рода, и цифра расходилась бы со списком под ней вдвое. */}
-        <span className="props-count">{поля.length}</span>
+        <span className="props-count">{обычные.length + 1}</span>
       </button>
 
       {open && (
         <div className="props-grid">
-          {поля.map((field, index) => (
+          {обычные.map((field, index) => (
             // Ключ с номером, а не одно имя поля: сломанная шапка может нести один ключ дважды,
             // и на одинаковых ключах React вправе оставить один узел или подменить содержимое
             // второго — окно показало бы не то, что лежит в файле, ровно там, где оно обязано
@@ -101,22 +114,12 @@ export function Properties(props: {
             <label key={`${field.key}#${index}`}>
               {/* Человеку — понятная подпись; техническое имя остаётся подсказкой при наведении. */}
               <span title={field.key}>{props.settings.подписиПолей[field.key] ?? field.key}</span>
-              {field.kind === 'флаг' ? (
-                // Видимость — «да» или «нет», поэтому флажок, а не строка ввода со словом `true`.
-                // Уезжает на диск обычным «Сохранить», как любое другое поле шапки.
-                <input
-                  type="checkbox"
-                  className="props-flag"
-                  checked={field.display === 'true'}
-                  disabled={props.толькоЧтение === true}
-                  onChange={(event) => правка(props, поля, index, field, event.target.checked ? 'true' : '')}
-                />
-              ) : ДЛИННЫЕ.includes(field.key) ? (
+              {ДЛИННЫЕ.includes(field.key) ? (
                 <textarea
                   rows={3}
                   value={field.display}
                   readOnly={props.толькоЧтение === true || field.kind === 'заперто'}
-                  onChange={(event) => правка(props, поля, index, field, event.target.value)}
+                  onChange={(event) => правка(props, поля, поля.indexOf(field), field, event.target.value)}
                 />
               ) : (
                 <input
@@ -129,7 +132,7 @@ export function Properties(props: {
                   // переписать: правка стёрла бы то, чего мы не поняли, в опубликованной статье.
                   readOnly={props.толькоЧтение === true || НЕПРАВИМЫЕ.includes(field.key)
                     || field.kind === 'заперто' || идёт === field.key}
-                  onChange={(event) => правка(props, поля, index, field, event.target.value)}
+                  onChange={(event) => правка(props, поля, поля.indexOf(field), field, event.target.value)}
                 />
               )}
 
@@ -174,6 +177,37 @@ export function Properties(props: {
               )}
             </label>
           ))}
+
+          {/* Доступность стоит последней строкой — там же, где прежде стоял флажок видимости.
+              Выбор один на два поля шапки: запрещённой пары человеку взять неоткуда.
+
+              Все три ответа видны всегда, а не прячутся в списке (решение владельца 2026-09-08):
+              нынешнее состояние страницы на сайте читается сразу, а смена стоит одного нажатия.
+              Переключатель собран на обычных радиокнопках, а не на кнопках с ролями: тогда
+              и клавиатура, и чтение с экрана работают сами, без нашего разбора нажатий. */}
+          <div className="props-доступность" role="radiogroup" aria-label={props.settings.доступность.подпись}>
+            {/* Технического имени у этой строки нет и быть не может: она не поле шапки,
+                а одно понятие человека поверх двух полей сайта. */}
+            <span>{props.settings.доступность.подпись}</span>
+
+            <div className="props-сегменты">
+              {(РЕЖИМЫ as string[]).map((значение) => (
+                <label key={значение}>
+                  <input
+                    type="radio"
+                    // Имя с путём статьи: на экране бывает вторая шапка — просмотр старой версии,
+                    // — и с общим именем две группы стали бы одной, гася выбор друг у друга.
+                    name={`доступность:${props.path}`}
+                    value={значение}
+                    checked={режим === значение}
+                    disabled={props.толькоЧтение === true}
+                    onChange={() => выбратьРежим(значение)}
+                  />
+                  <span>{props.settings.доступность[значение]}</span>
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </section>

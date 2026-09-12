@@ -10,6 +10,8 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {simpleGit} from 'simple-git';
 
+import {поставитьЗависимости} from './depsFixture.mjs';
+
 import {срезОднойВерсии} from '../src/adapters/prepareStamp.mjs';
 import {закреплённаяОснова} from '../src/adapters/publishBase.mjs';
 import {готовыйПлан} from '../src/adapters/publishFacts.mjs';
@@ -53,7 +55,7 @@ export function убратьПесочницы() {
  * остаётся незакоммиченной работой человека. По умолчанию в ветку уезжает всё: так проверяется
  * обычная статья, давно живущая на сайте.
  */
-export async function среда(файлы = {[RU]: СТАТЬЯ, [EN]: СТАТЬЯ, [ES]: СТАТЬЯ}, {вКоммите = null} = {}) {
+export async function среда(файлы = {[RU]: СТАТЬЯ, [EN]: СТАТЬЯ, [ES]: СТАТЬЯ}, {вКоммите = null, ветка = null} = {}) {
   const корень = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-pub-'));
   песочницы.push(корень);
 
@@ -89,10 +91,37 @@ export async function среда(файлы = {[RU]: СТАТЬЯ, [EN]: СТА�
   // работа человека.
   for (const [rel, содержимое] of Object.entries(файлы)) if (!вВетку.includes(rel)) положить(rel, содержимое);
 
+  поставитьЗависимости(repo);
+
   const основа = (await git.raw(['rev-parse', 'HEAD'])).trim();
+
+  // Рабочая ветка человека: публикация из неё — обычный случай, а не особый. Заводится ПОСЛЕ
+  // отправки `main`, чтобы сайт про неё не знал ничего.
+  if (ветка !== null) await git.raw(['checkout', '-b', ветка]);
 
   return {корень, repo, editorDir, git, сервер, основа, положить};
 }
+
+/** SHA ветки на сервере сайта: что там лежит на самом деле. */
+export const наСервере = async (место) => (await simpleGit(место.сервер).raw(['rev-parse', 'refs/heads/main'])).trim();
+
+/**
+ * Снимок репозитория человека: ветка, `HEAD`, индекс, рабочее дерево и местная `main`. Публикация
+ * обязана оставить всё это ровно таким же — и при успехе, и при отказе.
+ */
+export async function снимокРепозитория({git}) {
+  return {
+    ветка: (await git.raw(['rev-parse', '--abbrev-ref', 'HEAD'])).trim(),
+    голова: (await git.raw(['rev-parse', 'HEAD'])).trim(),
+    индекс: (await git.raw(['-c', 'core.quotepath=false', 'diff', '--cached', '--name-only'])).trim(),
+    дерево: (await git.raw(['-c', 'core.quotepath=false', 'status', '--porcelain', '--untracked-files=all'])).trim(),
+    main: (await git.raw(['rev-parse', 'refs/heads/main'])).trim(),
+  };
+}
+
+/** Что лежит в названном коммите: пути, отсортированные для сравнения. */
+export const файлыКоммита = async ({git}, sha) => (await git.raw(['-c', 'core.quotepath=false', 'show', '--name-only', '--format=', sha]))
+  .split(/\r?\n/).map((строка) => строка.trim()).filter(Boolean).sort();
 
 /** Подставной сборщик: отвечает так же, как `execFile`, но мгновенно. */
 export const сборщик = ({ошибка = null, stdout = 'собрано', stderr = ''} = {}) => (файл, аргументы, опции, готово) => {
@@ -164,7 +193,7 @@ async function отпечатокПоказанного({repo, git, settings, re
   const план = await готовыйПлан({git, repo, settings, rel, основа: основа.основа});
   if (план.ошибка) return СНИМКА_НЕТ;
 
-  return отпечатокПлана({основа: основа.основа, родитель: основа.голова, записи: план.записи});
+  return отпечатокПлана({основа: основа.основа, родитель: основа.основа, записи: план.записи});
 }
 
 /** Плана нет — окно бы сюда не дошло. Строка непустая: она проверяет отказ, а не заслон снимка. */

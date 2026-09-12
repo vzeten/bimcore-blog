@@ -57,6 +57,8 @@ describe('каркас окна', () => {
       ...кодовые(path.join(EDITOR, 'tests')),
       ...кодовые(path.join(EDITOR, 'scripts')),
       path.join(EDITOR, 'server.mjs'),
+      // Панель — вторая программа этой папки и под то же правило подпадает целиком.
+      path.join(EDITOR, 'panel.mjs'),
     ]
       .map((file) => ({
         file: path.relative(EDITOR, file).split(path.sep).join('/'),
@@ -102,6 +104,17 @@ describe('каркас окна', () => {
 
     expect(app).toContain('скрыт={');
     expect(css.replace(/\s+/g, '')).toContain('.pane-away{display:none');
+  });
+
+  it('слово на главной кнопке окна выбора товара видно: её вид сильнее вида соседки по ряду', () => {
+    // Предохранитель от возврата найденного дефекта: `.product-pick-go` в одиночку слабее правила
+    // `.product-pick-buttons button`, и фон кнопки становился белым при белом слове — «Вставить»
+    // пропадало. Проверяется строкой: отрисовать окно в тесте нечем (SPEC 4.10, 5.2.1).
+    const css = fs.readFileSync(path.join(UI, 'blocks.css'), 'utf8').replace(/\s+/g, '');
+
+    expect(css).toContain('.product-pick-buttons.product-pick-go{');
+    // И слабой записи рядом не осталось: вернись она, победило бы снова правило соседки.
+    expect(css).not.toContain('}.product-pick-go{');
   });
 
   it('сохранение берёт метку времени из часов очереди автосохранения, а не из своих', () => {
@@ -155,7 +168,7 @@ describe('каркас окна', () => {
     expect(app).toContain('const просмотрИдёт = версии.просмотр !== null || версии.занято;');
     expect(app).toContain('просмотрИдёт={просмотрИдёт}');
     expect(app).toContain('просмотр={просмотрИдёт}');
-    expect(bars).toContain('{!props.просмотрИдёт && (');
+    expect(bars).toContain('{!props.просмотрИдёт &&');
   });
 
   it('реестр не пишет файлы: видимость переключается только внутри открытой статьи', () => {

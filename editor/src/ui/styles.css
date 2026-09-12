@@ -5,6 +5,9 @@
   --ink: #111418;
   --ink-quiet: #7c848e;
   --accent: #1257d6;
+  /* Цвет тревоги обозначений локалей: `draft` и неуехавшая правка. Свой, а не цвет слоя истории:
+     слои говорят про текст статьи, а здесь речь о судьбе языковой версии. */
+  --знак-тревоги: #c8102e;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 15px;
   color: var(--ink);
@@ -31,22 +34,53 @@ button { font: inherit; cursor: pointer; }
 .topbar-name { min-width: 0; display: flex; flex-direction: column; }
 .topbar-title { font-size: 14px; line-height: 1.3; }
 .topbar-path { font-size: 11px; color: var(--ink-quiet); }
-.topbar-locales { display: flex; align-items: center; gap: 2px; }
+.topbar-locales { display: flex; align-items: center; gap: 14px; }
 /* Вопрос о начале языковой версии стоит в одной строке со своими вкладками. */
 .lang-ask { display: flex; align-items: center; gap: 6px; margin-left: 10px; font-size: 12px; }
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
+/* Обозначение языковой версии: буквы и её собственные признаки — точки над буквами, значок ссылки
+   под ними, цвет у самих букв. Всё лежит ВНУТРИ метки и никуда не выставляется относительно строки
+   или таблицы, поэтому при любой ширине едет вместе со своими буквами. Внутри метки теснее, чем
+   между метками, и это не украшение: при трёх изменённых локалях точки читались отдельным рядом
+   (наблюдение владельца 2026-09-08), а глаз группирует по близости. */
 .lang {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
   border: 0;
   background: transparent;
   color: var(--ink-quiet);
   border-radius: 999px;
-  padding: 3px 10px;
+  padding: 2px 4px;
   font-size: 12px;
+  line-height: 1.1;
 }
 
-.lang-on { background: var(--ink); color: #fff; }
-.status { font-size: 12px; color: var(--ink-quiet); }
+/* Строки признаков держат высоту всегда, даже пустые: иначе буквы соседних языков разъезжались
+   бы по вертикали, стоит одной версии обзавестись точкой. */
+.lang-сверху,
+.lang-снизу { display: flex; align-items: center; justify-content: center; gap: 2px; height: 8px; }
+
+/* Точка прижата к своим буквам снизу строки; высоту строка держит прежнюю. */
+.lang-сверху { align-items: flex-end; }
+.lang-точка { width: 5px; height: 5px; border-radius: 50%; }
+/* Опубликованный файл есть, но местная версия отличается: правка ещё не уехала на сайт. */
+.lang-точка-изменена { background: var(--знак-тревоги); }
+.lang-ссылка { width: 9px; height: 9px; display: block; }
+/* Пометка зовущего у букв: своя, потому что говорит не о выпуске версии, а о времени её правки.
+   Цвет у неё тоже свой, а не цвет букв: покрасься она заодно с красным черновиком, рядом с красной
+   точкой состояния она читалась бы вторым знаком выпуска, которым не является. */
+
+/* Цвет букв. Признаки спорят за него по порядку из ядра (`цветЛокали`), поэтому классов ровно
+   столько, сколько исходов спора, и ни один из них не гасит точки и значок ссылки. */
+.lang-цвет-обычная { color: var(--ink-quiet); }
+.lang-цвет-новая { color: var(--accent); }
+.lang-цвет-черновик { color: var(--знак-тревоги); }
+.lang-цвет-нет { opacity: 0.35; cursor: default; }
+
+/* Открытая версия отмечается оправой, а не заливкой: заливка съела бы цвет её собственных букв. */
+.lang-on { background: var(--bg-soft); box-shadow: inset 0 0 0 1px var(--line); font-weight: 600; }
 
 /* Видимость: надпись, а не кнопка. Меняется она в свойствах статьи, поэтому нажимать здесь
    нечего, и вид у неё спокойный — это правда о статье, а не орган управления. */
@@ -147,20 +181,6 @@ button { font: inherit; cursor: pointer; }
 .insert-menu button { border: 0; background: transparent; text-align: left; padding: 7px 10px; border-radius: 6px; font-size: 13px; }
 .insert-menu button:hover { background: var(--bg-soft); }
 
-.float {
-  position: fixed;
-  z-index: 6;
-  display: flex;
-  background: var(--ink);
-  border-radius: 8px;
-  padding: 3px;
-}
-
-.float button { border: 0; background: transparent; color: #fff; font-size: 12px; padding: 5px 9px; border-radius: 6px; }
-.float button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.16); }
-.float button:disabled { color: rgba(255, 255, 255, 0.4); cursor: default; }
-.float-back { color: rgba(255, 255, 255, 0.55) !important; padding: 5px 7px !important; }
-
 .ghost-on { background: var(--bg-soft); border-color: #c6ccd4; }
 
 /* Публикация — главное действие человека в этом окне, и выглядеть она должна главной: остальные
@@ -182,7 +202,6 @@ button { font: inherit; cursor: pointer; }
   gap: 8px;
 }
 
-.gutter-mark { width: 9px; height: 9px; border-radius: 50%; background: var(--layer-deleted); }
 .gutter-empty { justify-content: flex-start; }
 .gutter-hint { display: none; }
 
@@ -221,7 +240,11 @@ button { font: inherit; cursor: pointer; }
 .md-h2 { font-size: 1.4em; }
 .md-h3 { font-size: 1.18em; }
 .md-h4, .md-h5, .md-h6 { font-size: 1.04em; }
-.md-blank { line-height: 0.75; }
+.md-sep { line-height: 0.6; } /* разделитель абзацев — отступ, а не строка: курсор туда не встаёт */
+/* Пробел на месте спрятанного мягкого переноса. Собственный `pre-wrap` нужен затем, чтобы
+   пробел не схлопнулся между словами, но и не повис лишним знаком там, где строка переносится
+   сама, — ровно как на собранной странице. */
+.md-soft-break { white-space: pre-wrap; }
 .md-bullet { color: var(--ink-quiet); }
 .md-strong { font-weight: 700; }
 .md-em { font-style: italic; }
@@ -239,11 +262,16 @@ button { font: inherit; cursor: pointer; }
 .md-table-wrap th { background: var(--bg-soft); font-weight: 600; }
 .md-table-raw { font-family: ui-monospace, Consolas, monospace; font-size: 0.82em; line-height: 1.5; }
 
-/* Отступы как у картинки на сайте. У строки, в которой нет ничего кроме картинки, обнуляются
-   и высота строки, и её кегль: пустой строчный бокс вокруг блока держится на них обоих, и без
-   этого над картинкой и под ней остаются две пустые полосы ростом со строку текста. Текст в
-   такой строке не живёт по построению — правило включается только для одинокой картинки. */
-.paper .cm-line.md-image-line { line-height: 0; font-size: 0; padding: 0 2px; }
+.paper .cm-line.md-block-line { line-height: 0; font-size: 0; padding: 0 2px; }
+/* Закрывающая строка примечания — только нижнее поле рамки: своей высоты и курсорного места у неё нет. */
+.paper .cm-line.md-tip-foot { line-height: 0; font-size: 0; padding-bottom: 0.4rem; } /* высота под скругление */
+/* Сам блок внутри такой строки живёт своей высотой строки: иначе его надписи ложатся друг на друга. */
+.paper .cm-line.md-block-line .md-card, .paper .cm-line.md-block-line .md-video, .paper .cm-line.md-block-line .md-video-file, .paper .cm-line.md-block-line .md-block { line-height: 1.4; }
+.paper .cm-content ::selection { background: rgba(18, 87, 214, 0.22); }
+/* Разделитель — отступ, а не строка: выделение через него не рисует ему свой хвост. */
+.paper .cm-line.md-sep::selection, .paper .cm-line.md-sep *::selection { background: transparent; }
+/* Отступ до и после примечания заметнее межабзацного: на сайте у блока свой внешний отступ. */
+.paper .cm-line.md-tip-foot + .cm-line.md-sep, .paper .cm-line.md-sep:has(+ .cm-line.md-tip-head) { line-height: 1.3; }
 .md-image { display: block; margin: 10px 0; }
 .md-image img { display: block; max-width: 100%; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; }
 
@@ -260,27 +288,8 @@ button { font: inherit; cursor: pointer; }
 .mono .layer-prevOther,
 .mono .layer-current { color: var(--ink); }
 
-.mono .layer-deleted { display: none; }
-.mono .gutter-mark { opacity: 0.35; }
-
-.layer-deleted {
-  display: inline-block;
-  width: 3px;
-  height: 1.05em;
-  vertical-align: -0.2em;
-  margin: 0 1px;
-  border-radius: 2px;
-  background: var(--layer-deleted);
-}
-
 
 .side-foreign { color: var(--layer-deleted); }
-.lang-нет { opacity: 0.35; cursor: default; }
-.lang-устарела { color: var(--layer-prevAi); }
-/* Скрытая языковая версия: приглушена, но не заперта — открыть её можно, и видимость у неё своя.
-   Отличается от «версии нет» тем, что остаётся нажимаемой и не гаснет так сильно. */
-.lang-скрыта { opacity: 0.55; font-style: italic; }
-.lang-mark { margin-left: 3px; font-size: 9px; vertical-align: 2px; }
 
 /* Создание статьи: небольшое окно поверх реестра. Появляется по кнопке и уходит по «Отмена». */
 .newarticle { position: fixed; inset: 0; background: rgba(17, 20, 24, 0.35); display: flex; align-items: center; justify-content: center; z-index: 20; }

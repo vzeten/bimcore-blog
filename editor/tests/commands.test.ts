@@ -1,7 +1,10 @@
 // Имя каждого теста повторяет формулировку правила.
 // Проверяется результат применения правки к тексту, а не устройство функции.
 import {describe, expect, it} from 'vitest';
-import {heading, list, wrap, link, table, tableRow, imageAlt, imageSrc, shownAlt, type Edit, type Selection} from '../src/core/commands';
+import {heading, wrap, link, table, tableRow, imageAlt, imageSrc, shownAlt, type Edit, type Selection} from '../src/core/commands';
+
+/** Однострочный текст: склеивать нечего. Абзац через перенос проверяется в `wrapToggle.test.ts`. */
+const БЕЗ_ПЕРЕНОСОВ: ReadonlySet<number> = new Set();
 
 /** Применяет правку к тексту так же, как это делает редактор. */
 function apply(text: string, edit: Edit): string {
@@ -9,7 +12,7 @@ function apply(text: string, edit: Edit): string {
 }
 
 const всё = (text: string): Selection => ({from: 0, to: text.length});
-const ЗАГЛУШКИ = {адрес: 'вставьте ссылку', текст: 'текст ссылки'};
+const ЗАГЛУШКИ = {текст: 'текст ссылки'};
 const ШАБЛОН = 'Столбец {номер}';
 
 describe('команды правки текста', () => {
@@ -28,53 +31,46 @@ describe('команды правки текста', () => {
     expect(apply(text, heading(text, всё(text), 3))).toBe('### Раздел');
   });
 
-  it('список точками ставится на выделенные строки', () => {
-    const text = 'один\nдва';
-    expect(apply(text, list(text, всё(text), 'точки'))).toBe('- один\n- два');
-  });
-
-  it('повторный список точками снимается', () => {
-    const text = '- один\n- два';
-    expect(apply(text, list(text, всё(text), 'точки'))).toBe('один\nдва');
-  });
-
-  it('нумерованный список нумерует строки по порядку', () => {
-    const text = 'один\nдва\nтри';
-    expect(apply(text, list(text, всё(text), 'числа'))).toBe('1. один\n2. два\n3. три');
-  });
-
   it('жирный оборачивает выделение в двойные звёздочки', () => {
     const text = 'слово';
-    expect(apply(text, wrap(text, всё(text), '**'))).toBe('**слово**');
+    expect(apply(text, wrap(text, всё(text), '**', БЕЗ_ПЕРЕНОСОВ))).toBe('**слово**');
   });
 
   it('курсив оборачивает выделение в одну звёздочку', () => {
     const text = 'слово';
-    expect(apply(text, wrap(text, всё(text), '*'))).toBe('*слово*');
+    expect(apply(text, wrap(text, всё(text), '*', БЕЗ_ПЕРЕНОСОВ))).toBe('*слово*');
   });
 
   it('код оборачивает выделение в обратные кавычки', () => {
     const text = 'слово';
-    expect(apply(text, wrap(text, всё(text), '`'))).toBe('`слово`');
+    expect(apply(text, wrap(text, всё(text), '`', БЕЗ_ПЕРЕНОСОВ))).toBe('`слово`');
   });
 
   it('оборачивание без выделения ставит пустые знаки и курсор между ними', () => {
-    const edit = wrap('', {from: 0, to: 0}, '**');
+    const edit = wrap('', {from: 0, to: 0}, '**', БЕЗ_ПЕРЕНОСОВ);
     expect(apply('', edit)).toBe('****');
     expect(edit.caret).toBe(2);
   });
 
-  it('ссылка вставляется с адресом-заглушкой из настроек', () => {
-    const text = 'сайт';
-    const edit = link(text, всё(text), ЗАГЛУШКИ);
-    expect(apply(text, edit)).toBe('[сайт](вставьте ссылку)');
-    // Курсор выделяет именно адрес, чтобы его сразу заменить.
-    expect(edit.insert.slice(edit.select!.from, edit.select!.to)).toBe(ЗАГЛУШКИ.адрес);
+  it('ссылка оборачивает выделенное и ставит курсор между пустых скобок адреса', () => {
+    const text = 'наш сайт тут';
+    const edit = link(text, {from: 4, to: 8}, ЗАГЛУШКИ);
+    expect(apply(text, edit)).toBe('наш [сайт]() тут');
+    // Курсор строго между «(» и «)»: вставка из буфера ложится адресом, ничего стирать не надо.
+    expect(edit.select).toBeUndefined();
+    expect(edit.insert.slice(0, edit.caret)).toBe('[сайт](');
+    expect(apply(text, edit).slice(0, edit.from + edit.caret!) + 'https://a.b' + apply(text, edit).slice(edit.from + edit.caret!)).toBe('наш [сайт](https://a.b) тут');
   });
 
-  it('ссылка без выделения берёт текст-заглушку из настроек', () => {
+  it('ссылка не подставляет заглушку адреса ни в каком случае', () => {
+    expect(apply('слово', link('слово', всё('слово'), ЗАГЛУШКИ))).not.toContain('вставьте');
+    expect(apply('', link('', {from: 0, to: 0}, ЗАГЛУШКИ))).not.toContain('вставьте');
+  });
+
+  it('ссылка без выделения берёт текст-заглушку из настроек и выделяет его под набор', () => {
     const edit = link('', {from: 0, to: 0}, ЗАГЛУШКИ);
-    expect(apply('', edit)).toBe('[текст ссылки](вставьте ссылку)');
+    expect(apply('', edit)).toBe('[текст ссылки]()');
+    expect(edit.insert.slice(edit.select!.from, edit.select!.to)).toBe(ЗАГЛУШКИ.текст);
   });
 
   it('таблица создаётся с заголовком-шаблоном из настроек', () => {

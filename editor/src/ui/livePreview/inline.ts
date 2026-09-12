@@ -3,8 +3,9 @@ import {Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type
 import {syntaxTree} from '@codemirror/language';
 import {Annotation, StateEffect, StateField, type Range} from '@codemirror/state';
 import {РАЗБОР_КАРТИНКИ, shownAlt} from '../../core/commands';
-import {строкаТолькоКартинка} from './imageCaret';
+import {абзацСтрок} from './softBreak';
 import {знакМаркера, уровеньСписка} from './listMarker';
+import {адресКартинки} from './assetSrc';
 
 /** Картинка, по которой человек нажал: всё, что нужно панели её свойств. */
 export interface КартинкаВОкне {
@@ -118,8 +119,7 @@ class ImageWidget extends WidgetType {
     // Просим редактор пересчитать координаты, как только высота стала настоящей.
     // Слушатель вешаем ДО назначения src, иначе для картинки из кэша load успевает пройти мимо.
     img.addEventListener('load', this.onReady);
-    const метка = this.версия === '' ? '' : `&v=${encodeURIComponent(this.версия)}`;
-    img.src = `/api/asset?article=${encodeURIComponent(this.article)}&src=${encodeURIComponent(this.src)}${метка}`;
+    img.src = адресКартинки(this.article, this.src, this.версия);
     // Картинка уже в кэше — load не сработает, а высота сразу настоящая: пересчитываем сами.
     if (img.complete) this.onReady();
     wrap.append(img);
@@ -156,11 +156,21 @@ function build(view: EditorView, article: string, onImage?: (картинка: �
   const list: Range<Decoration>[] = [];
   const doc = view.state.doc;
 
+  // Знаки разметки открываются целым АБЗАЦЕМ, в котором стоит курсор или выделение, — одинаково у
+  // жирного, курсива, кода, цитаты и ссылки. Строки для этого мало: абзац из двух строк для
+  // человека одна фраза, и раскрытая в ней половина знаков показала бы незакрытую пару. Ушёл из
+  // абзаца — знаков снова не видно, остаётся готовый вид.
+  const строки: string[] = [];
+  for (let номер = 1; номер <= doc.lines; номер += 1) строки.push(doc.line(номер).text);
+
   const activeLines = new Set<number>();
   for (const range of view.state.selection.ranges) {
-    const first = doc.lineAt(range.from).number;
-    const last = doc.lineAt(range.to).number;
-    for (let line = first; line <= last; line += 1) activeLines.add(line);
+    // Последняя ЗАТРОНУТАЯ позиция, а не конец выделения: выделение, оканчивающееся ровно в начале
+    // соседнего абзаца, его не задевает и открывать его знаки не должно. У пустого курсора
+    // затронутая позиция одна, и отступать назад некуда.
+    const конец = range.to > range.from ? range.to - 1 : range.to;
+    const абзац = абзацСтрок(строки, doc.lineAt(range.from).number - 1, doc.lineAt(конец).number - 1);
+    for (let line = абзац.первая; line <= абзац.последняя; line += 1) activeLines.add(line + 1);
   }
   const raw = (pos: number): boolean => activeLines.has(doc.lineAt(pos).number);
 
@@ -184,7 +194,6 @@ function build(view: EditorView, article: string, onImage?: (картинка: �
       const line = doc.line(number);
       const text = line.text.trim();
       if (text.startsWith('|')) replaced.push([line.from, line.to]);
-      else if (text === '') list.push(Decoration.line({class: 'md-blank'}).range(line.from));
     }
   }
 
@@ -214,14 +223,6 @@ function build(view: EditorView, article: string, onImage?: (картинка: �
           );
           replaced.push([node.from, node.to]);
           list.push(Decoration.replace({widget}).range(node.from, node.to));
-
-          // У строки, где нет ничего кроме картинки, схлопывается высота строчного бокса:
-          // иначе над и под картинкой остаются две пустые полосы высотой в строку текста,
-          // которых на сайте нет (наблюдение владельца 2026-08-17).
-          const строка = doc.lineAt(node.from);
-          if (строкаТолькоКартинка(строка.text)) {
-            list.push(Decoration.line({class: 'md-image-line'}).range(строка.from));
-          }
           return false;
         }
 
@@ -291,3 +292,7 @@ function build(view: EditorView, article: string, onImage?: (картинка: �
 
   return Decoration.set(list, true);
 }
+
+// Наружу для проверки: тест спрашивает те же декорации, какими живёт окно, а не пересказывает
+// правило своим кодом (SPEC 5.2.1). Тем же доводом наружу отданы `decideEdit` и `правкаСписка`.
+export {build as внутристрочныеЗнаки};

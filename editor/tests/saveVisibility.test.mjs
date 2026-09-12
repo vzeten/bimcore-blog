@@ -7,7 +7,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {countSnapshots} from '../src/adapters/draftStore.mjs';
+import {countSnapshots, fingerprint} from '../src/adapters/draftStore.mjs';
 import {ЖДАТЬ_GIT, EN, ES, RU, НАСТРОЙКИ, подготовить, прочитать, сохранить, статья, убратьПесочницы} from './saveHarness.mjs';
 
 // Проверки зовут настоящий git во временной папке; почему им нужен свой предел времени — в обвязке.
@@ -35,7 +35,7 @@ async function приСоседе(среда, сосед, запрос) {
 
   const былФайл = прочитать(среда, сосед);
   const былоСостояние = fs.readFileSync(состояниеСоседа(среда, сосед), 'utf8');
-  const былоСнимков = countSnapshots(среда.editorDir, НАСТРОЙКИ, сосед);
+  const былоСнимков = countSnapshots(среда.repo, НАСТРОЙКИ, сосед);
   const папкаСоседа = path.join(среда.repo, path.dirname(сосед));
 
   const фиксации = [];
@@ -58,7 +58,7 @@ async function приСоседе(среда, сосед, запрос) {
     // Запись по пути соседа не вызывалась вовсе — ни файла, ни его состояния.
     записиКСоседу: записи.filter((file) => file.startsWith(папкаСоседа)),
     фиксацииСоседа: фиксации.filter((rel) => rel === сосед),
-    приросСнимков: countSnapshots(среда.editorDir, НАСТРОЙКИ, сосед) - былоСнимков,
+    приросСнимков: countSnapshots(среда.repo, НАСТРОЙКИ, сосед) - былоСнимков,
     состояниеПрежнее: fs.readFileSync(состояниеСоседа(среда, сосед), 'utf8') === былоСостояние,
     готовность: JSON.parse(fs.readFileSync(состояниеСоседа(среда, сосед), 'utf8'))['готовность'],
     файлПрежний: прочитать(среда, сосед) === былФайл,
@@ -152,7 +152,7 @@ describe('видимость меняется обычным сохранени�
     // Текст человека обязан доехать до файла: сохранение пишет то, что в окне, а не то, что было.
     expect(прочитать(среда, RU)).toContain('другой текст');
     expect(прочитать(среда, EN)).toBe(былоEN);
-    expect(countSnapshots(среда.editorDir, НАСТРОЙКИ, EN)).toBe(0);
+    expect(countSnapshots(среда.repo, НАСТРОЙКИ, EN)).toBe(0);
   });
 
   it('версия без шапки получает видимость только собственным открытием и сохранением', async () => {
@@ -168,18 +168,21 @@ describe('видимость меняется обычным сохранени�
     expect(прочитать(среда, EN)).toContain('unlisted: true');
   });
 
-  it('сохранение поверх внешней правки видимости трогает только открытый файл', async () => {
-    // «Сохранить поверх» значит «моё окно главнее» — но главнее только для своей версии.
+  it('внешняя правка тела сводится с правкой видимости человека и трогает только открытый файл', async () => {
+    // Снаружи переписали текст, человек в это время снял доступность. Места разные, выбирать не
+    // из чего: обе правки обязаны оказаться в файле, и только в открытой версии.
     const среда = await подготовить({
       [RU]: статья('title: A\nunlisted: true'),
       [EN]: статья('title: A\nunlisted: true'),
     });
-    // Снаружи файл переписали, пока человек работал с открытой в окне версией.
-    fs.writeFileSync(path.join(среда.repo, RU), статья('title: A\nunlisted: true', '\nчужая правка\n'), 'utf8');
+    const база = fingerprint(прочитать(среда, RU));
+    const чужое = статья('title: A\nunlisted: true', '\nчужая правка\n');
+    fs.writeFileSync(path.join(среда.repo, RU), чужое, 'utf8');
 
-    await сохранить(среда, {rel: RU, шапка: 'title: A', тело: '\nмой текст\n', поверх: true});
+    await сохранить(среда, {rel: RU, шапка: 'title: A', тело: '\nтекст статьи\n', отпечаток: база});
 
     expect(прочитать(среда, RU)).not.toContain('unlisted');
+    expect(прочитать(среда, RU)).toContain('чужая правка');
     expect(прочитать(среда, EN)).toContain('unlisted: true');
   });
 

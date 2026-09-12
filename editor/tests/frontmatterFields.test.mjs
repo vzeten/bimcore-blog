@@ -113,7 +113,10 @@ describe('поля шапки в человеческом виде', () => {
     // Места для него никто не назначал: выдуманное место расходится от статьи к статье.
     const порядок = НАСТРОЙКИ['поляСоздания']['docs']['порядок'];
     const шапка = 'title: "Проба"';
-    const fields = [...readFields(шапка, DOCS, КОРНИ), {key: 'draft', raw: '', kind: 'plain', display: 'true'}];
+    // Поле выбрано настоящее и чужое: `hide_table_of_contents` Docusaurus знает, а программа
+    // места ему в шапке не назначала. Прежде здесь стоял `draft` — с ED-025 он в порядке есть.
+    const чужое = {key: 'hide_table_of_contents', raw: '', kind: 'plain', display: 'true'};
+    const fields = [...readFields(шапка, DOCS, КОРНИ), чужое];
 
     expect(writeFields(шапка, fields, DOCS, КОРНИ, порядок)).toBe(шапка);
   });

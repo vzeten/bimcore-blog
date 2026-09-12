@@ -1,8 +1,8 @@
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import {loadArticle} from './actions';
 import {requestJson} from './api';
+import {признакиИзСвода, путиИзСвода} from './localeFacts';
 import {parseFrontmatter, type Field} from './headFields';
-import type {Deletion} from '../core/colorize';
 import type {Article, ArticleRow, PanelMode, SaveState, Settings} from './types';
 
 /**
@@ -16,7 +16,11 @@ import type {Article, ArticleRow, PanelMode, SaveState, Settings} from './types'
 export function useNavigation(deps: {
   article: Article | null;
   settingsRef: MutableRefObject<Settings | null>;
-  автосохранение: {дописать: () => Promise<boolean>};
+  автосохранение: {
+    дописать: () => Promise<boolean>;
+    /** Место для «что делать после подтверждённой сервером записи»: сюда встаёт перечитывание свода. */
+    послеЗаписи: MutableRefObject<() => void>;
+  };
   версии: {сбросить: () => void};
   текстСейчас: MutableRefObject<string>;
   шапкаСейчас: MutableRefObject<string>;
@@ -32,11 +36,9 @@ export function useNavigation(deps: {
   setArticle: Dispatch<SetStateAction<Article | null>>;
   setFields: (fields: Field[]) => void;
   setText: (text: string) => void;
-  setDeletions: (deletions: Deletion[]) => void;
   setMode: (mode: PanelMode) => void;
   setDirty: (dirty: boolean) => void;
   setОшибка: (текст: string | null) => void;
-  setКонфликтСохранения: (конфликт: boolean) => void;
   setСостояние: (state: SaveState) => void;
 }) {
   const открытие = deps.открытие;
@@ -44,9 +46,27 @@ export function useNavigation(deps: {
   const refresh = async (): Promise<void> => {
     // Провал не должен подменить список объектом ошибки — оставляем прежний.
     await deps.runSafe(async () => {
-      deps.setArticles(await requestJson<ArticleRow[]>('/api/articles'));
+      const свод = await requestJson<ArticleRow[]>('/api/articles');
+      deps.setArticles(свод);
+      // Признаки локалей в шапке — из этого же свода. Своего расчёта у шапки нет, а снимком
+      // момента открытия она была слепа: работа уходила в файл, реестр это показывал, а буквы
+      // над редактором молчали до повторного открытия статьи.
+      //
+      // Пути версий перечитываются тем же заходом. Иначе созданная снаружи версия показывалась бы
+      // как существующая, а открыть её было бы нечем: пути у шапки не было, и нажатие молчало.
+      const локали = Object.keys(deps.settingsRef.current?.локали ?? {});
+      deps.setArticle((было) => {
+        const свежие = было === null ? null : признакиИзСвода(свод, было.path, локали);
+        if (было === null || свежие === null) return было;
+        return {...было, признакиЛокалей: свежие, versions: путиИзСвода(свод, было.path) ?? было.versions};
+      });
     });
   };
+
+  // Подтверждённая сервером запись перечитывает свод сама: после автосохранения признаки версий
+  // обновляются без ручного сохранения и без перезагрузки окна. Что считать подтверждением —
+  // в `localeFacts`; здесь только место, где живёт само перечитывание.
+  deps.автосохранение.послеЗаписи.current = () => void refresh();
 
   /**
    * Открыть статью. Отвечает, состоялся ли переход: зовущий не должен рассказывать человеку
@@ -109,12 +129,10 @@ export function useNavigation(deps: {
     // успел бы пройти как актуальный и применить её текст к уже открытой другой.
     deps.статьяСейчас.current = path;
     deps.setОшибка(null);
-    deps.setКонфликтСохранения(false);
     deps.версии.сбросить(); // лента и просмотр относились к прошлому файлу
     deps.setArticle({...art, заход: открытие.current});
     deps.setFields(parseFrontmatter(art.frontmatterRaw, path, s.контент, s.сайт?.обложкаПоУмолчанию ?? null));
     deps.setText(art.body);
-    deps.setDeletions([]);
     // Исходное состояние окна: от него считается «есть несохранённое».
     deps.текстСейчас.current = art.body;
     deps.шапкаСейчас.current = art.frontmatterRaw;

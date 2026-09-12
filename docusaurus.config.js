@@ -43,12 +43,8 @@ const llmsExcludePatterns = llmsExcludeRoutePatterns(translationMap);
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  // Публичный токен Ecwid (public_...) для подгрузки цен на карточках товара.
-  // Источник: .env.local (локально) или секрет ECWID_PUBLIC_TOKEN (GitHub Actions).
-  // Это PUBLIC-токен (только чтение каталога) — попадание в бандл сайта штатно.
-  customFields: {
-    ecwidPublicToken: process.env.ECWID_PUBLIC_TOKEN || '',
-  },
+  // Токен Ecwid здесь не лежит: customFields уезжают в бандл сайта, то есть в браузер каждого
+  // читателя. Плагин цен берёт его прямо из среды сборки (ECWID_PUBLIC_TOKEN).
   title: 'BIMCORE Learn',
   tagline: 'Revit courses, guides & resources',
   favicon: 'img/favicon.ico',

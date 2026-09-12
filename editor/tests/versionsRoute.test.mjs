@@ -10,7 +10,7 @@ import {saveSnapshot} from '../src/adapters/draftStore.mjs';
 import {historyFolder} from '../src/core/history.mjs';
 
 const НАСТРОЙКИ = {
-  хранение: {папкаЧерновиков: '.drafts', папкаСнимков: '.history', черновикЖивётДней: 14, снимковНаВерсию: 50},
+  хранение: {папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', папкаСведения: '.сведение', черновикЖивётДней: 14, снимковНаВерсию: 50},
   ошибкиСервера: {плохойЗапрос: 'неверный запрос', нетСтатьи: 'нет такой статьи', нетВерсии: 'нет такой версии статьи'},
 };
 
@@ -31,14 +31,13 @@ afterEach(() => {
 
 function среда() {
   const repo = песочница('editor-repo-');
-  const editorDir = песочница('editor-store-');
 
   for (const rel of [RU, EN]) {
     fs.mkdirSync(path.join(repo, path.dirname(rel)), {recursive: true});
     fs.writeFileSync(path.join(repo, rel), СТАТЬЯ, 'utf8');
   }
 
-  return {repo, editorDir};
+  return {repo};
 }
 
 /** Один запрос к ручке. Возвращает то, чем сервер ответил. */
@@ -51,7 +50,6 @@ async function запрос(с, pathname, params) {
     res: {},
     url,
     repo: с.repo,
-    editorDir: с.editorDir,
     settings: НАСТРОЙКИ,
     insideRepo: (target) => path.resolve(target).startsWith(с.repo + path.sep),
     send: (res, code, data) => ответы.push({code, data}),
@@ -60,7 +58,7 @@ async function запрос(с, pathname, params) {
   return {взято, ...ответы[0]};
 }
 
-const снимок = (с, rel, текст, автор, iso) => saveSnapshot(с.editorDir, НАСТРОЙКИ, rel, текст, автор, iso);
+const снимок = (с, rel, текст, автор, iso) => saveSnapshot(с.repo, НАСТРОЙКИ, rel, текст, автор, iso);
 
 describe('лента версий', () => {
   it('снимков нет — лента пуста, а не ошибка', async () => {
@@ -85,7 +83,7 @@ describe('лента версий', () => {
   it('посторонний файл в папке снимков в ленту не попадает и её не роняет', async () => {
     const с = среда();
     снимок(с, RU, 'раз', 'я', '2026-08-04T10:00:00.000Z');
-    fs.writeFileSync(path.join(с.editorDir, '.history', historyFolder(RU), 'заметка.txt'), 'мусор', 'utf8');
+    fs.writeFileSync(path.join(с.repo, 'editor', '.history', historyFolder(RU), 'заметка.txt'), 'мусор', 'utf8');
 
     const {code, data} = await запрос(с, '/api/versions', {path: RU});
 
@@ -148,7 +146,7 @@ describe('содержимое одной версии', () => {
     // решает одно правило, а не два.
     const с = среда();
     снимок(с, RU, 'раз', 'я', '2026-08-04T10:00:00.000Z');
-    fs.writeFileSync(path.join(с.editorDir, '.history', historyFolder(RU), 'заметка.txt'), 'мусор', 'utf8');
+    fs.writeFileSync(path.join(с.repo, 'editor', '.history', historyFolder(RU), 'заметка.txt'), 'мусор', 'utf8');
 
     const {code} = await запрос(с, '/api/version', {path: RU, имя: 'заметка.txt'});
 
@@ -157,8 +155,8 @@ describe('содержимое одной версии', () => {
 
   it('снимок с несуществующей датой в имени версией не считается', async () => {
     const с = среда();
-    fs.mkdirSync(path.join(с.editorDir, '.history', historyFolder(RU)), {recursive: true});
-    fs.writeFileSync(path.join(с.editorDir, '.history', historyFolder(RU), '2026-02-30T10-00-00-000Z__я.mdx'), 'текст', 'utf8');
+    fs.mkdirSync(path.join(с.repo, 'editor', '.history', historyFolder(RU)), {recursive: true});
+    fs.writeFileSync(path.join(с.repo, 'editor', '.history', historyFolder(RU), '2026-02-30T10-00-00-000Z__я.mdx'), 'текст', 'utf8');
 
     const лента = await запрос(с, '/api/versions', {path: RU});
     const одна = await запрос(с, '/api/version', {path: RU, имя: '2026-02-30T10-00-00-000Z__я.mdx'});
@@ -182,7 +180,7 @@ describe('содержимое одной версии', () => {
     снимок(с, RU, 'раз', 'я', '2026-08-04T10:00:00.000Z');
     const {data: лента} = await запрос(с, '/api/versions', {path: RU});
     const имя = лента.сеансы[0].snapshots[0].имя;
-    fs.rmSync(path.join(с.editorDir, '.history', historyFolder(RU), имя));
+    fs.rmSync(path.join(с.repo, 'editor', '.history', historyFolder(RU), имя));
 
     const {code, data} = await запрос(с, '/api/version', {path: RU, имя});
 

@@ -11,8 +11,11 @@ import {newDraft, writeDraft} from '../src/core/drafts.mjs';
 import {historyFolder} from '../src/core/history.mjs';
 
 const НАСТРОЙКИ = {
-  хранение: {папкаЧерновиков: '.drafts', папкаСнимков: '.history', черновикЖивётДней: 14, снимковНаВерсию: 3},
+  хранение: {папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', папкаСведения: '.сведение', черновикЖивётДней: 14, снимковНаВерсию: 3},
 };
+
+/** Хранилище программы: папка редактора ВНУТРИ материалов (SPEC 7.1.5), а не папка кода. */
+const хранилище = (корень) => path.join(корень, 'editor');
 
 const песочницы = [];
 function песочница() {
@@ -39,10 +42,10 @@ describe('хранилище черновиков', () => {
     const dir = песочница();
     saveDraft(dir, НАСТРОЙКИ, черновик());
 
-    const файлы = fs.readdirSync(path.join(dir, '.drafts'));
+    const файлы = fs.readdirSync(path.join(хранилище(dir), '.drafts'));
     expect(файлы).toHaveLength(1);
     // Ни одного файла не появилось вне служебной папки.
-    expect(fs.readdirSync(dir)).toEqual(['.drafts']);
+    expect(fs.readdirSync(dir)).toEqual(['editor']);
   });
 
   it('записанный черновик читается обратно тем же содержимым', () => {
@@ -55,8 +58,8 @@ describe('хранилище черновиков', () => {
   it('незаписанная работа из черновика прежней схемы имён не пропадает', () => {
     // Смена схемы имён не должна стоить человеку набранного текста.
     const dir = песочница();
-    fs.mkdirSync(path.join(dir, '.drafts'), {recursive: true});
-    fs.writeFileSync(path.join(dir, '.drafts', 'docs_a_index_mdx.json'), writeDraft(черновик()), 'utf8');
+    fs.mkdirSync(path.join(хранилище(dir), '.drafts'), {recursive: true});
+    fs.writeFileSync(path.join(хранилище(dir), '.drafts', 'docs_a_index_mdx.json'), writeDraft(черновик()), 'utf8');
 
     expect(loadDraft(dir, НАСТРОЙКИ, 'docs/a/index.mdx').body).toBe('текст черновика');
   });
@@ -65,7 +68,7 @@ describe('хранилище черновиков', () => {
     // Предохранитель от старых плоских имён: в файле лежит запись с чужим путём.
     const dir = песочница();
     saveDraft(dir, НАСТРОЙКИ, черновик());
-    const файл = path.join(dir, '.drafts', fs.readdirSync(path.join(dir, '.drafts'))[0]);
+    const файл = path.join(хранилище(dir), '.drafts', fs.readdirSync(path.join(хранилище(dir), '.drafts'))[0]);
     fs.writeFileSync(файл, JSON.stringify({...черновик(), path: 'docs/чужая/index.mdx'}), 'utf8');
 
     expect(loadDraft(dir, НАСТРОЙКИ, 'docs/a/index.mdx')).toBeNull();
@@ -77,9 +80,9 @@ describe('хранилище черновиков', () => {
 
   it('битый файл черновика на диске не роняет программу', () => {
     const dir = песочница();
-    fs.mkdirSync(path.join(dir, '.drafts'), {recursive: true});
+    fs.mkdirSync(path.join(хранилище(dir), '.drafts'), {recursive: true});
     saveDraft(dir, НАСТРОЙКИ, черновик());
-    const файл = path.join(dir, '.drafts', fs.readdirSync(path.join(dir, '.drafts'))[0]);
+    const файл = path.join(хранилище(dir), '.drafts', fs.readdirSync(path.join(хранилище(dir), '.drafts'))[0]);
     fs.writeFileSync(файл, 'это не json', 'utf8');
 
     expect(loadDraft(dir, НАСТРОЙКИ, 'docs/a/index.mdx')).toBeNull();
@@ -151,7 +154,7 @@ describe('снимки при сохранении', () => {
     for (const час of ['10', '11']) {
       saveSnapshot(dir, НАСТРОЙКИ, 'docs/a/index.mdx', `текст ${час}`, 'я', `2026-08-04T${час}:00:00.000Z`);
     }
-    const папка = path.join(dir, '.history', historyFolder('docs/a/index.mdx'));
+    const папка = path.join(хранилище(dir), '.history', historyFolder('docs/a/index.mdx'));
     fs.writeFileSync(path.join(папка, 'заметка.txt'), 'мусор', 'utf8');
     saveSnapshot(dir, НАСТРОЙКИ, 'docs/a/index.mdx', 'текст 12', 'я', '2026-08-04T12:00:00.000Z');
 
@@ -183,5 +186,29 @@ describe('черновики и снимки не попадают в git', () =
       const ответ = execFileSync('git', ['check-ignore', '-q', папка], {cwd: repo, encoding: 'utf8'});
       expect(ответ).toBe(''); // код 0 = путь игнорируется; иначе execFileSync бросит
     }
+  });
+});
+
+describe('основа сравнения у отпечатка одна на всю программу', () => {
+  it('переписанные снаружи переводы строк отпечаток не меняют: ложного расхождения нет', () => {
+    expect(fingerprint('---\r\ntitle: A\r\n---\r\n\r\nтекст\r\n'))
+      .toBe(fingerprint('---\ntitle: A\n---\n\nтекст\n'));
+  });
+
+  it('невидимая метка в начале файла отпечаток не меняет: это формат файла, а не текст', () => {
+    expect(fingerprint('\uFEFF---\ntitle: A\n---\n\nтекст\n'))
+      .toBe(fingerprint('---\ntitle: A\n---\n\nтекст\n'));
+  });
+
+  it('неразрывный пробел отпечаток меняет: это правка человека, а не шум', () => {
+    expect(fingerprint('два\u00a0слова')).not.toBe(fingerprint('два слова'));
+  });
+
+  it('знак нулевой ширины внутри текста отпечаток меняет', () => {
+    expect(fingerprint('сло\u200bво')).not.toBe(fingerprint('слово'));
+  });
+
+  it('лишний пробел в конце строки отпечаток меняет: значимые пробелы считаются', () => {
+    expect(fingerprint('строка ')).not.toBe(fingerprint('строка'));
   });
 });

@@ -16,7 +16,7 @@ import {listSnapshots, snapshotText} from './draftStore.mjs';
  * Имя версии приходит от клиента, поэтому путь из него не собирается: имя сверяется с перечнем
  * известных имён этой же статьи. Иначе `имя=../../что-то` увело бы чтение за папку истории.
  */
-export async function versionsRoute({req, res, url, repo, editorDir, settings, insideRepo, send}) {
+export async function versionsRoute({req, res, url, repo, settings, insideRepo, send}) {
   const лента = url.pathname === '/api/versions';
   const одна = url.pathname === '/api/version';
   if ((!лента && !одна) || req.method !== 'GET') return false;
@@ -37,7 +37,7 @@ export async function versionsRoute({req, res, url, repo, editorDir, settings, i
   // Что считается версией — решает ядро, и решает один раз: лента и открытие версии смотрят
   // на один и тот же перечень. Иначе посторонний файл, не попавший в ленту, открывался бы
   // прямым запросом по имени.
-  const версии = версииИзИмён(listSnapshots(editorDir, settings, rel));
+  const версии = версииИзИмён(listSnapshots(repo, settings, rel));
 
   if (лента) {
     send(res, 200, {сеансы: toSessions(версии)});
@@ -52,7 +52,7 @@ export async function versionsRoute({req, res, url, repo, editorDir, settings, i
     return true;
   }
 
-  const текст = snapshotText(editorDir, settings, rel, имя);
+  const текст = snapshotText(repo, settings, rel, имя);
   if (текст === null) {
     // Снимок был в перечне, но исчез между показом ленты и открытием.
     send(res, 404, {error: тексты['нетВерсии']});

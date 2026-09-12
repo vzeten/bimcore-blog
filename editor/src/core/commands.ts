@@ -1,9 +1,24 @@
 // Что делает каждая кнопка панели. Чистые правила: на входе текст и выделение,
 // на выходе — новый текст и куда поставить курсор. Ни редактора, ни интерфейса здесь нет.
+import {знакиПары, парыЗнаков, type Пара} from './emphasisPairs';
 
 export interface Selection {
   from: number;
   to: number;
+}
+
+export interface Button {
+  группа: string;
+  подпись: string;
+  команда: string;
+  уровень?: number;
+  /** Вид списка у кнопки списка: точками или числами. */
+  вид?: 'точки' | 'числа';
+  знак?: string;
+  столбцов?: number;
+  строк?: number;
+  текст?: string;
+  блок?: string;
 }
 
 export interface Edit {
@@ -18,7 +33,7 @@ export interface Edit {
   select?: Selection;
 }
 
-function lineBounds(text: string, at: Selection): Selection {
+export function lineBounds(text: string, at: Selection): Selection {
   const from = text.lastIndexOf('\n', at.from - 1) + 1;
   const found = text.indexOf('\n', at.to);
   return {from, to: found === -1 ? text.length : found};
@@ -38,40 +53,115 @@ export function heading(text: string, at: Selection, level: number): Edit {
   return {from: bounds.from, to: bounds.to, insert, caret: insert.length};
 }
 
-/** Превращает выделенные строки в список. Повторное нажатие снимает список. */
-export function list(text: string, at: Selection, kind: 'точки' | 'числа'): Edit {
-  const bounds = lineBounds(text, at);
-  const lines = text.slice(bounds.from, bounds.to).split('\n');
-  const already = lines.every((line) => (kind === 'точки' ? /^-\s+/.test(line) : /^\d+\.\s+/.test(line)));
-
-  const changed = lines.map((line, index) => {
-    const bare = line.replace(/^(-|\d+\.)\s+/, '');
-    if (already) return bare;
-    return kind === 'точки' ? `- ${bare}` : `${index + 1}. ${bare}`;
-  });
-
-  const insert = changed.join('\n');
-  return {from: bounds.from, to: bounds.to, insert, caret: insert.length};
+/** Выделение без пробелов по краям: знаки разметки к пробелу не липнут, иначе пара не закроется. */
+function безКраёв(text: string, at: Selection): Selection {
+  let from = at.from;
+  let to = at.to;
+  while (from < to && /\s/.test(text[from])) from += 1;
+  while (to > from && /\s/.test(text[to - 1])) to -= 1;
+  return {from, to};
 }
 
-/** Оборачивает выделенное в знаки разметки. Без выделения — ставит знаки и курсор между ними. */
-export function wrap(text: string, at: Selection, sign: string): Edit {
-  const chosen = text.slice(at.from, at.to);
-  if (chosen === '') {
-    return {from: at.from, to: at.to, insert: `${sign}${sign}`, caret: sign.length};
+/** Текст области без знаков задетых пар: то, что человек видит в окне. */
+function безЗнаков(text: string, область: Selection, пары: Пара[]): string {
+  const знаки = пары.flatMap(знакиПары);
+  let итог = '';
+  for (let at = область.from; at < область.to; at += 1) {
+    if (знаки.some((знак) => at >= знак.from && at < знак.to)) continue;
+    итог += text[at];
   }
-  return {from: at.from, to: at.to, insert: `${sign}${chosen}${sign}`, caret: sign.length + chosen.length + sign.length};
+  return итог;
 }
 
 /**
- * Оборачивает выделенное слово в ссылку и выделяет место под адрес.
- * Обе видимые человеку заглушки приходят из настроек: своих строк в ядре нет.
+ * Вся ли область уже оформлена этим знаком: каждая буква либо внутри пары, либо это её знак.
+ * Пробел между двумя оформленными кусками счёт не портит — на вид человека такой кусок жирный
+ * целиком, и повторное нажатие обязано снять оформление, а не поставить его заново.
  */
-export function link(text: string, at: Selection, заглушки: {адрес: string; текст: string}): Edit {
-  const chosen = text.slice(at.from, at.to) || заглушки.текст;
-  const insert = `[${chosen}](${заглушки.адрес})`;
-  const start = chosen.length + 3;
-  return {from: at.from, to: at.to, insert, select: {from: start, to: start + заглушки.адрес.length}};
+function ужеОформлено(text: string, область: Selection, пары: Пара[]): boolean {
+  if (пары.length === 0) return false;
+  for (let at = область.from; at < область.to; at += 1) {
+    const внутри = пары.some((пара) => at >= пара.from && at < пара.to);
+    if (внутри || /\s/.test(text[at])) continue;
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Границы абзаца вокруг выделения: пара знаков живёт в одном абзаце и спокойно переживает мягкий
+ * перенос. Искать её только в строках выделения нельзя — закрывающие знаки на следующей строке не
+ * нашлись бы, и кнопка написала бы поверх ещё одну пару. Что считать продолжением абзаца, программа
+ * знает одним правилом (`переносыАбзацев`); здесь оно не повторяется, а приходит склейками строк:
+ * номер строки в наборе значит «эта строка продолжается следующей».
+ */
+function границыАбзаца(text: string, кусок: Selection, склейки: ReadonlySet<number>): Selection {
+  const начала = [0];
+  for (let at = 0; at < text.length; at += 1) if (text[at] === '\n') начала.push(at + 1);
+  const строка = (место: number): number => {
+    let i = 0;
+    while (i + 1 < начала.length && начала[i + 1] <= место) i += 1;
+    return i;
+  };
+
+  let первая = строка(кусок.from);
+  let последняя = строка(кусок.to);
+  while (первая > 0 && склейки.has(первая - 1)) первая -= 1;
+  while (последняя + 1 < начала.length && склейки.has(последняя)) последняя += 1;
+
+  return {from: начала[первая], to: последняя + 1 < начала.length ? начала[последняя + 1] - 1 : text.length};
+}
+
+/**
+ * Знаки разметки на выделенном куске: нажатие ставит их, повторное нажатие на уже оформленном
+ * куске — снимает ровно свою обёртку и оставляет текст. Одна кнопка обоих действий, потому что в
+ * окне служебных знаков не видно: человек видит только жирный или наклонный вид и нажимает ту же
+ * кнопку, чтобы его убрать.
+ *
+ * Область правки шире выделения, когда выделение задело чужие знаки: наполовину снятая пара
+ * оставила бы в тексте одинокую звёздочку. Смешанный кусок (часть уже оформлена) сначала теряет
+ * внутренние знаки и оформляется целиком — вложенных пар одного вида в markdown не бывает.
+ * Без выделения знаки просто ставятся, а курсор встаёт между ними.
+ *
+ * `склейки` — строки, продолжающиеся следующей: по ним ищется весь абзац, поэтому пара, разорванная
+ * мягким или жёстким переносом, снимается целиком, а не удваивается.
+ */
+export function wrap(text: string, at: Selection, sign: string, склейки: ReadonlySet<number>): Edit {
+  const кусок = безКраёв(text, at);
+  if (кусок.from === кусок.to) {
+    return {from: at.from, to: at.from, insert: `${sign}${sign}`, caret: sign.length};
+  }
+
+  const задетые = парыЗнаков(text, границыАбзаца(text, кусок, склейки), sign)
+    .filter((пара) => пара.to > кусок.from && пара.from < кусок.to);
+  const область = {
+    from: Math.min(кусок.from, ...задетые.map((пара) => пара.from)),
+    to: Math.max(кусок.to, ...задетые.map((пара) => пара.to)),
+  };
+  const голый = безЗнаков(text, область, задетые);
+
+  if (ужеОформлено(text, область, задетые)) {
+    return {from: область.from, to: область.to, insert: голый, select: {from: 0, to: голый.length}};
+  }
+  return {
+    from: область.from,
+    to: область.to,
+    insert: `${sign}${голый}${sign}`,
+    caret: sign.length + голый.length + sign.length,
+  };
+}
+
+/**
+ * Оборачивает выделенное слово в ссылку с пустым адресом: курсор встаёт между скобок, и адрес из
+ * буфера ложится туда одной вставкой — стирать заглушку не нужно. Без выделения текстом ссылки
+ * становится заглушка из настроек, выделенная целиком под набор; адрес и тогда пуст.
+ */
+export function link(text: string, at: Selection, заглушки: {текст: string}): Edit {
+  const chosen = text.slice(at.from, at.to);
+  const label = chosen || заглушки.текст;
+  const insert = `[${label}]()`;
+  if (chosen) return {from: at.from, to: at.to, insert, caret: label.length + 3};
+  return {from: at.from, to: at.to, insert, select: {from: 1, to: 1 + label.length}};
 }
 
 /**

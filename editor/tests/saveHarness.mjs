@@ -11,7 +11,7 @@ import {saveRoute} from '../src/adapters/saveRoute.mjs';
 import {fingerprint} from '../src/adapters/draftStore.mjs';
 
 export const НАСТРОЙКИ = {
-  хранение: {файлСостояния: '_state.json', папкаЧерновиков: '.drafts', папкаСнимков: '.history', черновикЖивётДней: 14, снимковНаВерсию: 50},
+  хранение: {файлСостояния: '_state.json', папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', папкаСведения: '.сведение', черновикЖивётДней: 14, снимковНаВерсию: 50},
   реестр: {неизвестныйАвтор: 'Неизвестный'},
   статусы: ['Черновик', 'Готова к публикации', 'Опубликована'],
   ошибкиСервера: {плохойЗапрос: 'неверный запрос', нетСтатьи: 'нет такой статьи', файлИзменёнСнаружи: 'файл изменён снаружи'},
@@ -61,7 +61,6 @@ export const статья = (шапка, тело = '\nтекст статьи\n
 /** Настоящий репозиторий с языковыми версиями статьи и пустым хранилищем редактора. */
 export async function подготовить(файлы) {
   const repo = песочница('editor-repo-');
-  const editorDir = песочница('editor-store-');
   const git = simpleGit(repo);
 
   await git.init();
@@ -76,7 +75,7 @@ export async function подготовить(файлы) {
   await git.add('.');
   await git.commit('первая версия');
 
-  return {repo, editorDir, git};
+  return {repo, git};
 }
 
 export const прочитать = (среда, rel) => fs.readFileSync(path.join(среда.repo, rel), 'utf8');
@@ -96,7 +95,6 @@ export async function сохранить(среда, {
     res: {},
     url: {pathname: '/api/article/save'},
     repo: среда.repo,
-    editorDir: среда.editorDir,
     settings: НАСТРОЙКИ,
     git: среда.git,
     тело: async () => ({
@@ -104,11 +102,13 @@ export async function сохранить(среда, {
       body: тело,
       frontmatterRaw: шапка,
       отпечатокБазы: отпечаток ?? fingerprint(прочитать(среда, rel)),
-      перезаписать: поверх,
     }),
     insideRepo: () => true,
     send: (res, code, data) => ответы.push({code, data}),
     фиксировать,
+    // Опубликованной веткой здесь служит последний коммит песочницы: по нему сервер доказывает
+    // базу у статьи, своих снимков ещё не имеющей, — ровно как у только что склонированной.
+    publishedRef: () => 'HEAD',
     последняяПравка: new Map(),
   });
 

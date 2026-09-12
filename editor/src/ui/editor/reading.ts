@@ -5,15 +5,31 @@ import {EditorState, type Extension} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
 import {markdown} from '@codemirror/lang-markdown';
 import {livePreview} from '../livePreview';
+import {поверхностьРедактирования} from './structureGuard';
 import type {КартинкаВОкне} from '../livePreview/inline';
+import type {БлокВОкне} from '../livePreview/blocks';
+import type {ОписаниеБлока} from '../types';
 
 /**
- * Общий показ: разметка, перенос строк, живой вид блоков. Путь нужен живому показу картинок.
- * `onImage` — нажатие по картинке; просмотр версии его не передаёт, и там нажатие молчит:
- * панель свойств правит текст, а в просмотре разрешено только чтение.
+ * Общий показ: разметка, перенос строк, живой вид блоков. Путь нужен живому показу картинок,
+ * `onImage` и `onБлок` — нажатие по картинке и по блоку статьи; просмотр версии их не передаёт,
+ * и там нажатие молчит: панели свойств правят текст, а в просмотре разрешено только чтение.
  */
-export function чтениеСтатьи(path: () => string, onImage?: (картинка: КартинкаВОкне) => void): Extension[] {
-  return [markdown(), EditorView.lineWrapping, livePreview(path, onImage)];
+export function чтениеСтатьи(
+  path: () => string,
+  блоки: Record<string, ОписаниеБлока>,
+  названиеСовета: Record<string, string>,
+  onImage?: (картинка: КартинкаВОкне) => void,
+  onБлок?: (блок: БлокВОкне) => void,
+): Extension[] {
+  return [
+    // Своя раскладка markdown не подключается: её `Enter` на пустом втором пункте разрежает
+    // список пустой строкой. Те же штатные команды привязаны в `listKeys.ts` с нужной настройкой.
+    markdown({addKeymap: false}),
+    EditorView.lineWrapping,
+    livePreview(path, блоки, названиеСовета, onImage, onБлок),
+    поверхностьРедактирования(блоки),
+  ];
 }
 
 /**
@@ -22,8 +38,12 @@ export function чтениеСтатьи(path: () => string, onImage?: (карт
  * иначе набранный в старой версии текст ушёл бы в автосохранение и лёг черновиком
  * поверх настоящей работы человека.
  */
-export function толькоЧтение(path: () => string): Extension[] {
-  return [...чтениеСтатьи(path), ...запретПравки()];
+export function толькоЧтение(
+  path: () => string,
+  блоки: Record<string, ОписаниеБлока>,
+  названиеСовета: Record<string, string>,
+): Extension[] {
+  return [...чтениеСтатьи(path, блоки, названиеСовета), ...запретПравки()];
 }
 
 /** Сам запрет правки: на уровне состояния редактора, а не «мы просто не слушаем изменения». */

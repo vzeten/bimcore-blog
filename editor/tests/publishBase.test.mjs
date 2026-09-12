@@ -1,113 +1,91 @@
 // Имя каждого теста повторяет формулировку правила.
 // Закреплённая основа публикации: план обещает, чем станет САЙТ, поэтому основа берётся у сервера,
-// а `HEAD` подменой не служит. Проверяется на НАСТОЯЩЕМ git с настоящим удалённым репозиторием:
-// подставной здесь не доказал бы ничего — весь смысл в вопросе к серверу.
+// а `HEAD`, ветка и местная `main` подменой не служат. Проверяется на НАСТОЯЩЕМ git с настоящим
+// удалённым репозиторием: подставной здесь не доказал бы ничего — весь смысл в вопросе к серверу.
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
 import {simpleGit} from 'simple-git';
 
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
+import {RU, СТАТЬЯ, наСервере, настройкиСервера, среда, убратьПесочницы} from './publishHarness.mjs';
 
 import {закреплённаяОснова} from '../src/adapters/publishBase.mjs';
-
-const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const НАСТРОЙКИ = JSON.parse(fs.readFileSync(path.join(EDITOR, 'settings.json'), 'utf8'));
-
-const RU = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/index.mdx';
-const СТАТЬЯ = '---\ntitle: "Проба"\n---\n\nТекст статьи.\n';
 
 // Проверки идут на настоящем git: пять секунд по умолчанию им мало, особенно когда весь набор идёт
 // разом. Предел общий с остальными git-проверками программы, а не свой.
 vi.setConfig({testTimeout: ЖДАТЬ_GIT, hookTimeout: ЖДАТЬ_GIT});
 
-const песочницы = [];
+afterEach(() => убратьПесочницы());
 
-afterEach(() => {
-  while (песочницы.length > 0) fs.rmSync(песочницы.pop(), {recursive: true, force: true});
-});
+const настройки = настройкиСервера();
 
-/** Рабочий репозиторий с настоящим удалённым: голая копия рядом, ветка `main` отправлена. */
-async function среда() {
-  const корень = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-base-'));
-  песочницы.push(корень);
+/** Кто-то другой толкнул в ветку сайта, пока человек работал. Возвращает SHA чужого коммита. */
+async function чужаяРаботаНаСервере(место) {
+  const чужой = path.join(место.корень, 'чужой');
+  await simpleGit(место.корень).raw(['clone', место.сервер, чужой]);
+  const другой = simpleGit(чужой);
+  await другой.addConfig('user.name', 'Другой');
+  await другой.addConfig('user.email', 'drugoy@example.com');
+  await другой.addConfig('commit.gpgsign', 'false');
+  fs.writeFileSync(path.join(чужой, 'README.md'), 'чужое\n', 'utf8');
+  await другой.raw(['add', '--', 'README.md']);
+  await другой.raw(['commit', '-m', 'чужое']);
+  await другой.raw(['push', 'origin', 'main']);
 
-  const сервер = path.join(корень, 'origin.git');
-  const repo = path.join(корень, 'работа');
-  fs.mkdirSync(repo, {recursive: true});
-
-  await simpleGit(корень).raw(['init', '--bare', '--initial-branch=main', сервер]);
-
-  const git = simpleGit(repo);
-  await git.init(['--initial-branch=main']);
-  await git.addConfig('user.name', 'Проверка');
-  await git.addConfig('user.email', 'proverka@example.com');
-  await git.addConfig('commit.gpgsign', 'false');
-  await git.raw(['remote', 'add', 'origin', сервер]);
-
-  fs.mkdirSync(path.join(repo, path.dirname(RU)), {recursive: true});
-  fs.writeFileSync(path.join(repo, RU), СТАТЬЯ, 'utf8');
-  fs.mkdirSync(path.join(repo, 'node_modules', 'сборщик'), {recursive: true});
-  fs.writeFileSync(path.join(repo, 'node_modules', 'сборщик', 'файл'), 'зависимость\n', 'utf8');
-  await git.raw(['add', '--', RU]);
-  await git.raw(['commit', '-m', 'начало']);
-  await git.raw(['push', 'origin', 'main']);
-
-  return {корень, repo, git, сервер};
+  return (await другой.raw(['rev-parse', 'HEAD'])).trim();
 }
 
-const настройки = {...НАСТРОЙКИ, отправка: {...НАСТРОЙКИ['отправка'], удалённый: 'origin'}};
-
 describe('закреплённая основа', () => {
-  it('голова равна опубликованной ветке — основа закреплена', async () => {
-    const {git} = await среда();
-    const итог = await закреплённаяОснова({git, settings: настройки});
+  it('основа — свежий SHA опубликованной ветки на сервере, и ничего кроме него', async () => {
+    const место = await среда();
+    const итог = await закреплённаяОснова({git: место.git, settings: настройки});
 
     expect(итог.ошибка).toBe(undefined);
-    expect(итог.основа).toBe(итог.голова);
+    expect(итог.основа).toBe(await наСервере(место));
     expect(итог.основа).toMatch(/^[0-9a-f]{40}$/);
+    expect(итог.голова).toBeUndefined();
   });
 
-  it('свой коммит ещё не уехал — новый выпуск не начинается', async () => {
-    const {repo, git} = await среда();
-    fs.writeFileSync(path.join(repo, RU), `${СТАТЬЯ}Ещё строка.\n`, 'utf8');
-    await git.raw(['add', '--', RU]);
-    await git.raw(['commit', '-m', 'правка']);
+  it('человек на своей рабочей ветке — основа та же: ветка и HEAD не спрашиваются', async () => {
+    const место = await среда(undefined, {ветка: 'feature/proba'});
+    место.положить('editor/src/что-то.mjs', 'работа над программой\n');
+    await место.git.raw(['add', '--', 'editor/src/что-то.mjs']);
+    await место.git.raw(['commit', '-m', 'своя работа']);
 
-    expect((await закреплённаяОснова({git, settings: настройки})).ошибка).toBe('естьНеотправленное');
+    const итог = await закреплённаяОснова({git: место.git, settings: настройки});
+
+    expect(итог.ошибка).toBe(undefined);
+    expect(итог.основа).toBe(место.основа);
   });
 
-  it('на сервере появилась чужая работа — публикация не начинается', async () => {
-    const {корень, repo, git, сервер} = await среда();
-    const чужой = path.join(корень, 'чужой');
-    await simpleGit(корень).raw(['clone', сервер, чужой]);
-    const чужойGit = simpleGit(чужой);
-    await чужойGit.addConfig('user.name', 'Другой');
-    await чужойGit.addConfig('user.email', 'drugoy@example.com');
-    await чужойGit.addConfig('commit.gpgsign', 'false');
-    fs.writeFileSync(path.join(чужой, 'README.md'), 'чужое\n', 'utf8');
-    await чужойGit.raw(['add', '--', 'README.md']);
-    await чужойGit.raw(['commit', '-m', 'чужое']);
-    await чужойGit.raw(['push', 'origin', 'main']);
+  it('местный коммит в main, не уехавший на сайт, основу не сдвигает: основа — сервер', async () => {
+    const место = await среда();
+    место.положить(RU, `${СТАТЬЯ}Ещё строка.\n`);
+    await место.git.raw(['add', '--', RU]);
+    await место.git.raw(['commit', '-m', 'правка']);
 
-    expect((await закреплённаяОснова({git, settings: настройки})).ошибка).toBe('ветвиРазошлись');
-    // Рабочий файл человека чужой публикацией не тронут.
-    expect(fs.readFileSync(path.join(repo, RU), 'utf8')).toBe(СТАТЬЯ);
+    const итог = await закреплённаяОснова({git: место.git, settings: настройки});
+
+    expect(итог.основа).toBe(место.основа);
+    expect(итог.основа).not.toBe((await место.git.raw(['rev-parse', 'HEAD'])).trim());
   });
 
-  it('не та ветка — отказ до всякого вопроса серверу', async () => {
-    const {git} = await среда();
-    await git.raw(['checkout', '-b', 'другая']);
+  it('на сервере появилась чужая работа — основой становится она, рабочий файл человека не тронут', async () => {
+    const место = await среда();
+    const чужой = await чужаяРаботаНаСервере(место);
 
-    expect((await закреплённаяОснова({git, settings: настройки})).ошибка).toBe('неТаВетка');
+    const итог = await закреплённаяОснова({git: место.git, settings: настройки});
+
+    expect(итог.основа).toBe(чужой);
+    expect(fs.readFileSync(path.join(место.repo, RU), 'utf8')).toBe(СТАТЬЯ);
+    expect((await место.git.raw(['rev-parse', 'HEAD'])).trim()).toBe(место.основа);
   });
 
   it('удалённой ветки не спросить — отказ, а не подмена головой', async () => {
-    const {git} = await среда();
+    const место = await среда();
     const итог = await закреплённаяОснова({
-      git,
+      git: место.git,
       settings: {...настройки, отправка: {...настройки['отправка'], удалённый: 'нетТакого'}},
     });
 

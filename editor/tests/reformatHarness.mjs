@@ -2,12 +2,12 @@
 // картинки трёх пород и один вызов ручки. Вынесено из тестов, чтобы каждый файл проверок держался
 // в пределе размера (SPEC 4.9); правил здесь нет.
 import {afterEach} from 'vitest';
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 import {assetReformatRoute} from '../src/adapters/assetReformat.mjs';
+import {fingerprint} from '../src/adapters/draftStore.mjs';
 
 export const НАСТРОЙКИ = {
   картинки: {шаблонИмени: 'img-{номер}', знаковВНомере: 2, имяОбложки: 'cover', максимумКилобайт: 500, пределГифМегабайт: 5},
@@ -44,7 +44,9 @@ export const GIF = Buffer.concat([
 /** Байты каждого рода: по ним строятся все девять переходов. */
 export const БАЙТЫ = {jpg: JPEG, png: PNG, gif: GIF};
 
-export const отпечаток = (текст) => crypto.createHash('sha1').update(текст, 'utf8').digest('hex');
+// Отпечаток считает сама программа: своя копия правила разошлась бы с ней при первом же
+// уточнении основы сравнения, и проверка ловила бы расхождение заготовки, а не поведения.
+export const отпечаток = fingerprint;
 
 const песочницы = [];
 

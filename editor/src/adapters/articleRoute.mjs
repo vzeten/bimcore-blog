@@ -5,11 +5,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {readField, splitArticle} from '../core/articleFile.mjs';
+import {nothingChanged, readField, splitArticle} from '../core/articleFile.mjs';
 import {isUnlisted} from '../core/frontmatterRules.mjs';
 import {draftDecision} from '../core/drafts.mjs';
 import {видСлоя} from '../core/authors.mjs';
 import {articleFacts} from './articleFacts.mjs';
+import {прочитатьСпор, спорДляОкна} from './conflictStore.mjs';
+import {свестиПриОткрытии} from './mergeGate.mjs';
 import {fingerprint, loadDraft} from './draftStore.mjs';
 import {gitAuthor, publishedAt, showFile} from './gitFile.mjs';
 import {historyLayers} from './layerChain.mjs';
@@ -43,7 +45,7 @@ async function версияНаСайте(git, ref, rel) {
  * `articles` приходит готовым: свод статей собирает сервер.
  */
 export async function articleRoute({
-  req, res, url, repo, editorDir, settings, git, publishedRef,
+  req, res, url, repo, settings, git, publishedRef,
   insideRepo, send, фиксировать, articles, веткаИзвестна,
 }) {
   if (url.pathname !== '/api/article' || req.method !== 'GET') return false;
@@ -66,7 +68,7 @@ export async function articleRoute({
   const факты = articleFacts(await articles(), rel, settings);
   const наСайте = await версияНаСайте(git, publishedRef, rel);
 
-  const draft = loadDraft(editorDir, settings, rel);
+  const draft = loadDraft(repo, settings, rel);
   const решение = draftDecision({
     draft,
     файл: {frontmatterRaw, body},
@@ -74,21 +76,45 @@ export async function articleRoute({
     сейчас: new Date().toISOString(),
     settings,
   });
-  const изЧерновика = решение === 'черновик';
+
+  // Работа, с которой человек продолжит. Выбора «весь черновик или весь файл» здесь больше нет:
+  // разошедшиеся стороны сводятся, и спрашивают только про пересечение.
+  let работа = решение === 'нет'
+    ? {frontmatterRaw, body}
+    : {frontmatterRaw: draft['frontmatterRaw'], body: draft['body']};
+
+  // Отложенный раньше спор этой версии: возвращаясь в статью, человек снова видит панель со
+  // сторонами, а не продолжает работу поверх нерешённого расхождения.
+  let спор = прочитатьСпор(repo, settings, rel);
+
+  if (спор === null && решение === 'конфликт') {
+    // Открытие ничего не теряет, поэтому запись версии здесь необязательная: недоступное
+    // хранилище снимков не должно мешать открыть статью.
+    const сведение = await свестиПриОткрытии({
+      repo, settings, rel, черновик: draft, git, ref: publishedRef,
+      фиксировать: (путь) => фиксировать(путь, false),
+    });
+    работа = сведение.работа;
+    спор = прочитатьСпор(repo, settings, rel);
+  }
+
+  if (спор !== null && спор['мои']) работа = спор['мои'];
 
   send(res, 200, {
     path: rel,
-    // При свежем черновике сразу продолжаем работу с него, без вопроса.
-    frontmatterRaw: изЧерновика ? draft['frontmatterRaw'] : frontmatterRaw,
-    body: изЧерновика ? draft['body'] : body,
+    // Незаписанная работа продолжается сразу, без вопроса: она уже сведена с файлом.
+    frontmatterRaw: работа.frontmatterRaw,
+    body: работа.body,
     // Тело именно ФАЙЛА, даже когда в окно пошёл черновик: на нём кончается цепочка слоёв цвета.
     // Возьми вместо него показанный текст — и незаписанная работа из черновика окрасилась бы
     // как уже сохранённая правка, хотя в файле её нет.
     телоФайла: body,
     отпечаток,
-    черновикРешение: решение,
-    // При конфликте отдаём оба варианта: файл выше, автосохранение здесь.
-    черновик: решение === 'нет' ? null : {когда: draft['когда'], frontmatterRaw: draft['frontmatterRaw'], body: draft['body']},
+    // Есть ли в окне работа, которой нет в файле. Считается сравнением, а не памятью о том,
+    // откуда текст взялся: после сведения он не равен ни файлу, ни прежнему черновику.
+    черновикРешение: nothingChanged({frontmatterRaw, body}, работа) ? 'нет' : 'черновик',
+    // Спор этой версии со всеми сторонами либо `null`. Пока он есть, версия ждёт решения человека.
+    спор: спорДляОкна(спор),
     published: наСайте.тело,
     // Каким слоем показывать то, что записал сам человек за программой. Обычно это «мои правки»,
     // но правило одно на всех: подписался именем из справочника — правка машинная (критерий 4).
@@ -96,7 +122,7 @@ export async function articleRoute({
     // Кто трогал текст между публикацией и сейчас. Считается при открытии статьи: набор текста
     // за этим на диск не ходит, иначе каждая буква стоила бы чтения истории.
     слои: historyLayers({
-      editorDir,
+      repo,
       settings,
       rel,
       публикацияОт: await publishedAt(git, publishedRef, rel),

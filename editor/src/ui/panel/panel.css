@@ -1,0 +1,181 @@
+/* Стили панели экземпляров. Свои, а не общие с окном редактора: панель — отдельная маленькая
+   программа, и тащить сюда каркас редактора значило бы связать их правки друг с другом. */
+
+:root {
+  --бумага: #ffffff;
+  --фон: #f4f5f7;
+  --полоска: #e2e6ea;
+  --текст: #14181d;
+  --тихий: #6f7883;
+  --синий: #1257d6;
+  --зелёный: #1c7a45;
+  --красный: #c8102e;
+  --янтарь: #a86a00;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  color: var(--текст);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--фон); }
+button { font: inherit; cursor: pointer; }
+
+.панель {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+}
+
+/* ---------- заголовок ---------- */
+
+.заголовок {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.заголовок h1 { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.25; }
+.заголовок p { margin: 4px 0 0; font-size: 13px; color: var(--тихий); }
+.заголовок-текст { min-width: 0; }
+
+.заголовок-справа {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.обновлено { font-size: 12px; color: var(--тихий); }
+
+/* ---------- полосы итога и беды ---------- */
+
+.полоса {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.полоса--беда { background: #fdecef; color: #8c1023; border: 1px solid #f3c6ce; }
+.полоса--итог { background: #eaf6ef; color: #14602f; border: 1px solid #c3e3d0; }
+
+.пусто { color: var(--тихий); font-size: 13px; }
+
+/* ---------- карточка экземпляра ---------- */
+
+.список { display: flex; flex-direction: column; gap: 12px; }
+
+.карточка {
+  background: var(--бумага);
+  border: 1px solid var(--полоска);
+  border-left: 3px solid var(--полоска);
+  border-radius: 10px;
+  padding: 14px 16px 12px;
+}
+
+/* Цвет несёт одно: живо, тихо или препятствие. Рабочее окно вдобавок выделено насыщенной левой
+   полосой — спутать его с испытательным нельзя (требование операции). */
+.карточка--работает { border-left-color: var(--зелёный); }
+.карточка--остановлен { border-left-color: var(--полоска); }
+.карточка--чужой { border-left-color: var(--янтарь); background: #fffcf5; }
+
+/* Рабочее окно выделено в любом состоянии, а не только пока оно живо: спутать его с испытательным
+   нельзя и тогда, когда оно остановлено и все карточки одинаково серые. */
+.карточка--рабочая { border-left-width: 5px; }
+.карточка--рабочая.карточка--остановлен { border-left-color: #9aa3ad; }
+
+.шапка {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.значок { flex: none; }
+.карточка--работает .значок { color: var(--зелёный); }
+.карточка--остановлен .значок { color: var(--тихий); }
+.карточка--чужой .значок { color: var(--янтарь); }
+
+.имя { font-weight: 600; font-size: 15px; }
+.карточка--рабочая .имя { color: var(--текст); }
+
+.порт { font-size: 12px; color: var(--тихий); }
+
+.состояние {
+  margin-left: auto;
+  font-size: 12px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--фон);
+  color: var(--тихий);
+  white-space: nowrap;
+}
+
+.карточка--работает .состояние { background: #eaf6ef; color: var(--зелёный); }
+.карточка--чужой .состояние { background: #fbf1de; color: var(--янтарь); }
+
+/* ---------- факты ---------- */
+
+.факты { margin: 0; display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 3px 12px; }
+.факт { display: contents; }
+
+.факты dt { font-size: 12px; color: var(--тихий); line-height: 1.5; }
+
+.факты dd {
+  margin: 0;
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.пояснение { margin: 0 0 10px; font-size: 12.5px; line-height: 1.5; color: var(--тихий); }
+.пояснение--тревога { color: var(--янтарь); margin: 10px 0 0; }
+
+/* ---------- действия ---------- */
+
+.действия {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--полоска);
+}
+
+.кнопка {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--полоска);
+  border-radius: 7px;
+  background: var(--бумага);
+  color: var(--текст);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.кнопка:hover:not(:disabled) { border-color: #c9d0d8; background: #fbfcfd; }
+.кнопка:disabled { color: #b3bac2; background: var(--бумага); cursor: default; }
+.значок-кнопки { flex: none; }
+.кнопка:disabled .значок-кнопки { opacity: 0.5; }
+
+.кнопка--опасная { border-color: #e7b3bd; color: var(--красный); }
+.кнопка--опасная:hover:not(:disabled) { background: #fdf3f5; border-color: #d98b9b; }
+
+.вопрос { font-size: 13px; color: var(--красный); margin-right: 2px; }
+.идёт { font-size: 12.5px; color: var(--тихий); margin-left: 4px; }
+
+/* ---------- последняя защита ---------- */
+
+.crash { max-width: 640px; margin: 60px auto; padding: 0 20px; }
+.crash h1 { font-size: 18px; }
+.crash pre { white-space: pre-wrap; font-size: 12.5px; color: var(--красный); }

@@ -25,6 +25,8 @@ describe('карта модулей', () => {
     ...кодовые(path.join(EDITOR, 'src')),
     ...кодовые(path.join(EDITOR, 'scripts')),
     path.join(EDITOR, 'server.mjs'),
+    // Панель — вторая программа этой папки: своя строка в карте нужна ей так же.
+    path.join(EDITOR, 'panel.mjs'),
   ].map((file) => path.relative(EDITOR, file).split(path.sep).join('/'));
 
   for (const файл of файлы) {
@@ -39,7 +41,7 @@ describe('карта модулей', () => {
   it('карта модулей не указывает на несуществующие файлы', () => {
     const упомянутые = [...карта.matchAll(/`([^`\n]+\.(?:mjs|ts|tsx|css))`/g)]
       .map((m) => m[1])
-      .filter((p) => p === 'server.mjs' || p.startsWith('src/') || p.startsWith('scripts/'));
+      .filter((p) => ['server.mjs', 'panel.mjs'].includes(p) || p.startsWith('src/') || p.startsWith('scripts/'));
     const мёртвые = упомянутые.filter((p) => !fs.existsSync(path.join(EDITOR, p)));
 
     expect(мёртвые).toEqual([]);

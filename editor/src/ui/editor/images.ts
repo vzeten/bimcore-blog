@@ -120,6 +120,24 @@ export function makeCoverUpload(deps: {
   };
 }
 
+/**
+ * Укладка подготовленной картинки рядом со статьёй — одна на две двери, файл человека и картинку
+ * товара: без адреса от сервера ссылаться не на что (`![](undefined)` роняет сборку сайта), а окно
+ * сменилось — уложенный файл забирается обратно. `null` и есть смена окна: это не ошибка.
+ */
+export async function уложитьПодготовленную(article: string, жетон: string, актуально: () => boolean): Promise<(PasteResult & {src: string}) | null> {
+  const уложено = await requestJson<PasteResult>('/api/asset/place', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({article, жетон}),
+  });
+  if (!уложено.src) throw new Error(label('ошибкаКартинки'));
+
+  if (актуально()) return уложено as PasteResult & {src: string};
+  await забратьОбратно(article, уложено.src);
+  return null;
+}
+
 /** Куда легла новая картинка: адрес файла и границы её узла в тексте — для панели alt-текста. */
 export interface ВставленнаяКартинка {
   src: string;
@@ -160,18 +178,8 @@ export async function вставитьКартинку(
   // Окно сменилось, пока файл ехал: он остался только в карантине и уборка унесёт его сама.
   if (!актуально() || !view.dom.isConnected) return null;
 
-  const уложено = await requestJson<PasteResult>('/api/asset/place', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({article, жетон: готово.жетон}),
-  });
-  // Без адреса от сервера ссылаться не на что: `![](undefined)` роняет сборку сайта.
-  if (!уложено.src) throw new Error(label('ошибкаКартинки'));
-
-  if (!актуально() || !view.dom.isConnected) {
-    await забратьОбратно(article, уложено.src);
-    return null;
-  }
+  const уложено = await уложитьПодготовленную(article, готово.жетон, () => актуально() && view.dom.isConnected);
+  if (уложено === null) return null;
 
   const текст = view.state.doc.toString();
   const место = местоВставкиКартинки(текст, view.state.selection.main.to, уложено.src, dominantEol(текст));
@@ -192,7 +200,7 @@ export async function вставитьКартинку(
  * показывается: разговор о картинке, которой он на экране не видел (он уже в другой статье),
  * отправил бы его искать несуществующую беду. В журнал окна она при этом попадает.
  */
-async function забратьОбратно(article: string, src: string): Promise<void> {
+export async function забратьОбратно(article: string, src: string): Promise<void> {
   try {
     await requestJson('/api/asset/withdraw', {
       method: 'POST',

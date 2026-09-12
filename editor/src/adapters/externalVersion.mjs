@@ -18,11 +18,11 @@ import {ApiError} from './httpBody.mjs';
  * При открытии статьи вызов необязателен: чтение ничего не теряет, и ломать работу
  * из-за недоступного хранилища снимков было бы хуже, чем открыть статью.
  */
-export async function фиксироватьВнешнюю({editorDir, repo, settings, git, ref, rel, обязательно = false}) {
+export async function фиксироватьВнешнюю({repo, settings, git, ref, rel, обязательно = false}) {
   try {
     // Именно `await`, а не возврат обещания: иначе сбой записи пролетит мимо перехвата,
     // и «Сохранить поверх» затрёт файл, хотя версия не записалась.
-    return await записать({editorDir, repo, settings, git, ref, rel});
+    return await записать({repo, settings, git, ref, rel});
   } catch (error) {
     console.error(error);
     if (обязательно) throw new ApiError(500, settings['ошибкиСервера']['неУдалосьЗаписатьВерсию']);
@@ -30,17 +30,17 @@ export async function фиксироватьВнешнюю({editorDir, repo, set
   }
 }
 
-async function записать({editorDir, repo, settings, git, ref, rel}) {
+async function записать({repo, settings, git, ref, rel}) {
   const file = path.join(repo, rel);
   if (!fs.existsSync(file)) return null;
 
   const текстФайла = fs.readFileSync(file, 'utf8');
-  const снимок = latestSnapshot(editorDir, settings, rel);
+  const снимок = latestSnapshot(repo, settings, rel);
   // Известное состояние: наш последний снимок, а если снимков нет — файл в опубликованной версии сайта.
   // Нет и там — известного состояния не существует, и первое увиденное содержимое надо сохранить.
   const известное = снимок === null
     ? await showFile(git, ref, rel)
-    : snapshotText(editorDir, settings, rel, снимок['имя']);
+    : snapshotText(repo, settings, rel, снимок['имя']);
 
   if (!естьВнешняяПравка({текстФайла, известное})) return null;
 
@@ -60,6 +60,6 @@ async function записать({editorDir, repo, settings, git, ref, rel}) {
     сейчас: new Date().toISOString(),
   });
 
-  saveSnapshot(editorDir, settings, rel, текстФайла, автор, когда);
+  saveSnapshot(repo, settings, rel, текстФайла, автор, когда);
   return {когда, автор};
 }

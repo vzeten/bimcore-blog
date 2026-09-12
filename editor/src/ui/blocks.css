@@ -1,0 +1,300 @@
+.md-block {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--bg-soft);
+  cursor: pointer;
+  user-select: none;
+}
+
+.md-block-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-quiet);
+}
+
+.md-block-choice {
+  font-size: 13px;
+  color: var(--ink-quiet);
+  border-left: 1px solid var(--line);
+  padding-left: 8px;
+}
+
+.block-panel {
+  position: fixed;
+  z-index: 40;
+  min-width: 260px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.block-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.block-panel-name { font-weight: 600; }
+
+.block-panel-close {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--ink-quiet);
+}
+
+.block-panel-empty {
+  font-size: 13px;
+  color: var(--ink-quiet);
+}
+
+.block-panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink-quiet);
+}
+
+.block-panel-field select {
+  padding: 5px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+
+/* Видеофайл статьи показан настоящим проигрывателем без автозапуска: человек проверяет ролик
+   на месте. Подпись под ним — ручка блока: нажатие выделяет тег целиком для удаления. */
+.md-video-file { display: block; width: 100%; margin: 6px 0; }
+.md-video-file video { display: block; width: 100%; max-height: 70vh; border: 1px solid var(--line); border-radius: 10px; background: #000; }
+.md-video-file-caption { display: flex; align-items: baseline; gap: 8px; padding: 4px 2px; cursor: pointer; user-select: none; }
+.md-video-file-caption .md-video-title { color: var(--ink-quiet); } .md-video-file-caption .md-video-file-name { color: var(--ink-quiet); opacity: 0.7; font-size: 12px; }
+
+/* Видео в статье показано так же, как его увидит читатель: полоса во всю ширину текста
+   и строгие 16:9 — те же пропорции, что у компонента сайта. */
+.md-video {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  cursor: pointer;
+  user-select: none;
+}
+
+.md-video-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Знак воспроизведения повторяет фасад сайта: на нём видно, что это видео, а не картинка. */
+.md-video-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 68px;
+  height: 48px;
+  transform: translate(-50%, -50%);
+  border-radius: 12px;
+  background: rgba(17, 20, 24, 0.72);
+}
+
+.md-video-play::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 52%;
+  transform: translate(-50%, -50%);
+  border-style: solid;
+  border-width: 9px 0 9px 15px;
+  border-color: transparent transparent transparent #ffffff;
+}
+
+.md-video-caption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 12px;
+  background: linear-gradient(transparent, rgba(17, 20, 24, 0.78));
+  color: #ffffff;
+}
+
+.md-video-caption .md-block-name { color: rgba(255, 255, 255, 0.75); }
+
+.md-video-title {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.block-panel-field input {
+  padding: 5px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.block-panel-field + .block-panel-field { margin-top: 8px; }
+
+/* Флажок («Без звука», «Повтор») — в одну строку с подписью; файл блока — имя и кнопка замены над свойствами, как у картинки. */
+.block-panel-flag { flex-direction: row; align-items: center; gap: 8px; } .block-panel-flag input { margin: 0; }
+.block-panel-file { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+.block-panel-file-name { color: var(--ink-quiet); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.block-panel-file button { flex: none; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper, #fff); font: inherit; cursor: pointer; } .block-panel-file button:disabled { cursor: default; opacity: 0.6; }
+
+.block-panel-duration {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.block-panel-pair {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.block-panel-pair input { width: 64px; }
+
+.block-panel-bad {
+  color: #8a1f1f;
+  line-height: 1.35;
+}
+
+/* Совет статьи (`:::tip`): тот же смысловой блок, каким его покажет сайт. Служебные строки
+   закрыты показом, поэтому рамку рисуют сами строки текста. Отступы только внутренние:
+   по внешним CodeMirror промахивается при нажатии (SPEC 3.4). */
+/* Цвета линии и её толщина — те же, что у admonition на сайте (infima: `--ifm-color-*-dark`,
+   `--ifm-alert-border-left-width: 5px`, `--ifm-global-radius: 0.4rem`). */
+.md-tip-note { --tip: rgb(212, 213, 216); } .md-tip-tip { --tip: rgb(0, 148, 0); } .md-tip-info { --tip: rgb(76, 179, 212); } .md-tip-warning { --tip: rgb(230, 167, 0); } .md-tip-danger { --tip: rgb(225, 50, 56); }
+.md-tip { background: var(--bg-soft); border-left: 5px solid var(--tip); padding-left: 12px; padding-right: 12px; }
+.md-tip-head { padding-top: 6px; border-radius: 0.4rem 0.4rem 0 0; }
+.md-tip-foot { padding-bottom: 6px; border-radius: 0 0 0.4rem 0.4rem; }
+.md-tip-name { font-size: 13px; font-weight: 600; color: var(--tip); user-select: none; }
+
+/* Карточка товара в тексте статьи: тот же вид, каким её увидит читатель, — картинка,
+   надзаголовок, название, описание и две кнопки. Цены здесь нет: её ставит сборка сайта. */
+.md-card {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-soft);
+  cursor: pointer;
+  user-select: none;
+}
+
+.md-card-media {
+  flex: 0 0 132px;
+  height: 132px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.md-card-media img { width: 100%; height: 100%; object-fit: contain; }
+
+.md-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.md-card-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-quiet);
+}
+
+.md-card-title { font-size: 16px; font-weight: 600; color: var(--ink); }
+
+.md-card-desc { font-size: 13px; color: var(--ink-quiet); }
+
+.md-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+/* Надпись кнопки — своя из тега либо штатная подпись компонента сайта: пустых кнопок не бывает. */
+.md-card-btn {
+  min-width: 104px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 13px;
+  text-align: center;
+  color: var(--ink);
+}
+
+.md-card-btn-main {
+  border-color: transparent;
+  background: var(--accent);
+  color: #ffffff;
+}
+
+/* Окно выбора товара. Оно перекрывает статью, а не встаёт у курсора, как панель блока: список
+   магазина в узкую панель не помещается. Голова, поля и отказ берутся у панели блока — свои были
+   бы вторым видом того же самого. */
+.product-pick-back {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(17, 20, 24, 0.28);
+}
+
+.product-pick {
+  position: static;
+  width: 460px;
+  max-height: calc(100vh - 64px);
+  overflow: auto;
+}
+
+.product-pick-row {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.product-pick-row:hover { background: var(--bg-soft); }
+.product-pick-name { display: block; font-size: 14px; font-weight: 600; color: var(--ink); }
+.product-pick-buttons { display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; }
+.product-pick-buttons button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; }
+/* Вид главной кнопки записан вместе с соседкой по ряду: у правила рядом (`.product-pick-buttons
+   button`) сила выше, и в одиночку `.product-pick-go` проигрывало ему фон — белое слово вставало
+   на белую кнопку и пропадало. */
+.product-pick-buttons .product-pick-go { border-color: transparent; background: var(--accent); color: #ffffff; }
+.product-pick-buttons button:disabled { opacity: 0.5; cursor: default; }
