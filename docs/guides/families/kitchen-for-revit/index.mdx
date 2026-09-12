@@ -129,7 +129,7 @@ For **built-in handles** you need to set the **Handle.Offset** = 2mm so that it 
 
 ![Kitchen Revit Families — Handles type](./img-06.png)
 
-The **T-bar** display changes with different handle lengths (Handle.Length).
+The **T-bar** display changes with different handle lengths (**Handle.Length**).
 
 #### Handles position
 
@@ -236,15 +236,15 @@ There are gray parameters that cannot be controlled. But they are needed to unde
 
 Due to the fact that there are 4 family types in the family, which means there are 4 doors; you can change individual parameters specifically for each.
 
-If family type **x1** is selected, then we change all the parameters with the number 1: D1.Height (in x1 it is equal to the height of the frame), E1.Type, E1.Closed, D1.Type, D1.Opening, H1.Position. If **x2** is selected, then we change all parameters with numbers 1 and 2.
+If family type **x1** is selected, then we change all the parameters with the number 1: **D1.Height** (in x1 it is equal to the height of the frame), **E1.Type**, **E1.Closed**, **D1.Type**, **D1.Opening**, **H1.Position**. If **x2** is selected, then we change all parameters with numbers 1 and 2.
 
 ![Kitchen Revit Families — Dimensions](./img-17.png)
 
-It is better to start building D.Height from the lower, first door. Because D.Height of the last, upper door does not work.
+It is better to start building **D.Height** from the lower, first door. Because **D.Height** of the last, upper door does not work.
 
 For example, family type x3 is selected, **D1.Height** and **D2.Height** will be changeable, and **D3.Height** is calculated based on the first two heights.
 
-If D.Height is more than frame Height, there will be an error. If this happens, simply go back and put smaller values in D.Height.
+If **D.Height** is more than frame Height, there will be an error. If this happens, simply go back and put smaller values in **D.Height**.
 
 #### Hob
 
@@ -642,15 +642,15 @@ To change the number of doors in the Base unit, you need to select the appropria
 
 Due to the fact that there are 6 family types in the family, which means there are 6 doors; you can change individual parameters specifically for each.
 
-If family type **x1** is selected, then we change all the parameters with the number 1: D1.Height (in x1 it is equal to the height of the frame), E1.Type, E1.Closed, D1.Type, D1.Opening, H1.Position. If **x2** is selected, then we change all parameters with numbers 1 and 2.
+If family type **x1** is selected, then we change all the parameters with the number 1: **D1.Height** (in x1 it is equal to the height of the frame), **E1.Type**, **E1.Closed**, **D1.Type**, **D1.Opening**, **H1.Position**. If **x2** is selected, then we change all parameters with numbers 1 and 2.
 
 ![Kitchen Revit Families — Dimensions](./img-56.png)
 
-It is better to start building D.Height from the lower, first door. Because D.Height of the last, upper door does not work.
+It is better to start building **D.Height** from the lower, first door. Because **D.Height** of the last, upper door does not work.
 
 For example, family type x3 is selected, **D1.Height** and **D2.Height** will be changeable, and **D3.Height** is calculated based on the first two heights.
 
-If D.Height is more than frame Height, there will be an error. If this happens, simply go back and put smaller values in D.Height.
+If **D.Height** is more than frame Height, there will be an error. If this happens, simply go back and put smaller values in **D.Height**.
 
 #### Gola
 
@@ -664,11 +664,11 @@ The numbers of the Gola handles go in order from bottom to top, where Gola 1 is 
 
 ![Kitchen Revit Families — Gola](./img-59.png)
 
-Parameter Gola inside - moves Gola inside the frame, that is the Ends of the Frame become visible.
+Parameter **Gola inside** - moves **Gola inside** the frame, that is the Ends of the Frame become visible.
 
 #### Equipment
 
-Equipment can be installed in place of the door. To do this, you need to select the serial number of the door, where to place the equipment (E.Position) and the equipment type from the drop-down list. Heading - INT 02 E.
+Equipment can be installed in place of the door. To do this, you need to select the serial number of the door, where to place the equipment (**E.Position**) and the equipment type from the drop-down list. Heading - INT 02 E.
 
 There are several types of equipment:
 
@@ -700,7 +700,7 @@ Integrated equipment:
 
 ![Kitchen Revit Families — Equipment](./img-62.png)
 
-By default, the equipment has the door height in which it is installed. But if you need to change the dimensions, then put the number 0 in the E.Position parameter and the equipment is freely placed as needed for a specific case. To do this, change E.Base and E.Height.
+By default, the equipment has the door height in which it is installed. But if you need to change the dimensions, then put the number 0 in the **E.Position** parameter and the equipment is freely placed as needed for a specific case. To do this, change **E.Base** and **E.Height**.
 
 #### Materials
 
