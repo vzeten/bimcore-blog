@@ -55,3 +55,5 @@ scripts/knowledge-redirect/dist/
 /editor/.publish
 # Временный обмен Claude и Codex: отчёты, доказательства и ID локальной сессии проверяющего
 /editor/.coordination/
+# Панель экземпляров редактора: журналы и список запусков, не содержимое проекта
+/editor/.panel/
