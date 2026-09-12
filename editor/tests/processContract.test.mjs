@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -149,5 +149,18 @@ describe('короткий контракт процесса', () => {
 
     expect(read('editor/TASKS.md')).toContain('Claude создаёт его до кода');
 
+  });
+it('держит две инструкции владельца о ветках и папках и проверку порядка', () => {
+    const claude = read('CLAUDE.md');
+    const agents = read('AGENTS.md');
+
+    for (const marker of ['Запрос «статья»', 'Запрос «код редактора»', 'npm run repo:check', 'копий ровно две', 'удаление временной копии и ветки, до отчёта']) {
+      expect(claude).toContain(marker);
+    }
+    expect(agents).toContain('repo:check');
+    expect(claude).not.toMatch(/копи[яю] (репозитория )?для публикации/i);
+    expect(existsSync(resolve(repoRoot, 'scripts/repo-check.mjs'))).toBe(true);
+    expect(read('package.json')).toContain('"repo:check"');
+    expect(read('.claude/settings.json')).toContain('repo-check.mjs');
   });
 });
