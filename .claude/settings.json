@@ -13,6 +13,18 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/scripts/repo-check.mjs\" --hook",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }
