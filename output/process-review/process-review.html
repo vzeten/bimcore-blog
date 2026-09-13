@@ -1,0 +1,33 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Моя работа с ИИ и проекты</title><style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#f5f7f9;color:#1f2a33;font-family:"Segoe UI",Arial,sans-serif;font-size:17px;line-height:1.45}
+  main{max-width:1180px;margin:0 auto;padding:22px 24px 60px}
+  .crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:15px;color:#5b6770;margin-bottom:16px}
+  .crumbs a{color:#1257d6;text-decoration:none}
+  .crumbs .cur{color:#1f2a33;font-weight:700}
+  .crumbs .back{margin-left:auto;border:1px solid #d5dce2;border-radius:999px;padding:6px 14px;background:#fff}
+  h1{font-size:28px;margin:0 0 6px}
+  .lead{color:#3a4550;max-width:78ch;margin:0 0 16px;font-size:17px}
+  .fig{background:#fff;border:1px solid #d5dce2;border-radius:14px;padding:16px}
+  .fig svg{display:block;width:100%;height:auto}
+  .fig .v{display:none}
+  @media (max-width:820px){.fig .w{display:none}.fig .v{display:block}}
+  .notes{margin:14px 0 0;padding-left:20px;color:#3a4550;font-size:16px}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:14px;font-size:14px;color:#3a4550}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:14px;height:14px;border-radius:3px;border:2px solid;display:inline-block}
+  .pill{display:inline-block;font-size:11px;font-weight:700;color:#fff;border-radius:9px;padding:1px 8px}
+  .areas{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
+  @media (max-width:820px){.areas{grid-template-columns:1fr}}
+  .area{background:#fff;border:1px solid #d5dce2;border-radius:14px;padding:18px 20px}
+  .area h2{font-size:22px;margin:0 0 4px}
+  .area p{margin:0 0 12px;color:#3a4550}
+  .topics{display:flex;flex-direction:column;gap:8px}
+  .topic{display:block;border:1px solid #d5dce2;border-radius:10px;padding:10px 14px;text-decoration:none;color:#1f2a33;background:#fafbfc}
+  .topic b{display:block;font-size:17px;color:#1257d6}
+  .topic span{font-size:14px;color:#5b6770}
+  .proj{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#5b6770;font-weight:700;margin:6px 0 6px}
+  .next{margin-top:18px;display:flex;flex-wrap:wrap;gap:10px}
+  .next a{border:1px solid #d5dce2;border-radius:999px;padding:7px 14px;background:#fff;text-decoration:none;color:#1257d6;font-size:15px}
+  .stamp{font-size:13px;color:#5b6770;margin-top:22px}
+</style></head><body><main><div class="crumbs"><span class="cur">Обзор</span></div><h1>Моя работа с ИИ и проекты</h1><p class="lead">Две области. Выберите тему — откроется одна схема со связями и короткими подписями.</p><div class="areas"><section class="area"><h2>Работа с ИИ</h2><p>Общее для любой задачи: где я пишу, кто что делает, что происходит при лимите.</p><div class="topics"><a class="topic" href="ai-places.html"><b>Где я работаю</b><span>Рабочее место — это чат в приложении. В Codex место задаёт проект, в Claude Code — папка. Что видно и доступно, зависит от места и от приложения.</span></a><a class="topic" href="ai-roles.html"><b>Кто что делает</b><span>На одну задачу одна ведущая сессия. Остальные роли появляются только там, где нужны. Постоянных посредников нет.</span></a><a class="topic" href="ai-continue.html"><b>Лимит или новый чат</b><span>Состояние задачи должно быть записано в карточке и в файлах, а не только в памяти чата. Тогда продолжить может другой чат; помощник проверяет запись и о пропуске говорит прямо.</span></a><a class="topic" href="ai-research.html"><b>Исследовать: плагин, конкуренты, сайты</b><span>Изучение — не разработка. Помощник сначала находит доступ к существующему коду или сайтам, изучает, ничего не меняя, и отдаёт выводы. Разработка начинается только отдельным поручением.</span></a><a class="topic" href="ai-base.html"><b>Как ведётся база</b><span>Новое сначала попадает во входящие, потом сверяется с принятым и раскладывается обратимо. Вопрос вам — только при настоящей неясности.</span></a></div></section><section class="area"><h2>Проекты</h2><p>Устройство каждого проекта отдельно. Сейчас один проект: сайт learn (bimcore-blog).</p><div class="proj">Сайт learn · bimcore-blog</div><div class="topics"><a class="topic" href="blog-overview.html"><b>Обзор: bimcore-blog</b><span>Одна папка на диске, три разных объекта с разным порядком изменения и выпуска. Плагин Revit — отдельный проект со своей схемой; здесь он ещё не настроен.</span></a><a class="topic" href="blog-articles.html"><b>Где статьи и как они доходят до сайта</b><span>Статья — это файл в рабочей папке сайта. Ветки и копии для неё не создаются. Вы видите её в окне редактора и решаете, публиковать ли.</span></a><a class="topic" href="blog-publish.html"><b>Как публикуем</b><span>Публикация отправляет на GitHub только выбранную статью. Сайт пересобирается сам; помощник проверяет результат.</span></a><a class="topic" href="blog-editor.html"><b>Как меняем редактор</b><span>Живая версия не трогается. Доработка идёт в отдельной ветке и временной копии, вы пробуете на отдельном адресе, после «принято» версия ставится у вас.</span></a><a class="topic" href="blog-site.html"><b>Код сайта Docusaurus: как меняем</b><span>Третий объект в той же папке со своим порядком: ветка от main и временная копия по одобрению, свои проверки, точный выпуск по разрешению, уборка. Основная папка с материалами не переключается.</span></a></div></section></div><div class="legend"><span><i class="sw" style="background:#e4ecfb;border-color:#1257d6"></i>ваш шаг</span><span><i class="sw" style="background:#e3f2e9;border-color:#1c7a45"></i>шаг помощника</span><span><i class="sw" style="background:#ffffff;border-color:#8a939b"></i>место или состояние</span><span><i class="sw" style="background:#fbeadd;border-color:#b4541a"></i>остановка или запрет</span><span><i class="sw" style="background:#fff6d6;border-color:#b8860b"></i>пробел</span><span><i class="sw" style="background:#f3f4f6;border-color:#9aa5ae"></i>будущее</span><span><i class="pill" style="background:#1c7a45">Сейчас</i>так уже работает</span><span><i class="pill" style="background:#b8860b">Пробел</i>правила или решения ещё нет</span><span><i class="pill" style="background:#b4541a">Не проверено</i>не подтверждено пробой</span><span><i class="pill" style="background:#6b7680">Будущее</i>ещё не создано</span></div><p class="stamp">Факты сверены 13 сентября 2026. Это обучающие схемы, не инструкция для помощников.</p></main></body></html>

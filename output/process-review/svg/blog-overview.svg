@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1154 367" width="1154" height="367" font-family="Segoe UI, Arial, sans-serif" font-size="16" role="img" aria-label="Обзор: bimcore-blog">
+<defs><marker id="blog-overview-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#5b6770"/></marker></defs>
+<rect x="0" y="0" width="1154" height="367" fill="#ffffff"/>
+<rect x="16" y="12" width="800" height="181" rx="12" fill="#f7f8fa" stroke="#c5cad0"/>
+<text x="28" y="32" font-size="12.5" font-weight="700" fill="#5b6770" letter-spacing="0.5">ПАПКА C:\MY_CODE\BIMCORE-BLOG · GITHUB VZETEN/BIMCORE-BLOG</text>
+<path d="M 268 112.5 L 282 112.5 L 282 287.7 L 296 287.7" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-overview-arr)"/>
+<path d="M 564 112.5 L 550 112.5 L 550 287.7 L 536 287.7" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-overview-arr)"/>
+<rect x="28" y="44" width="240" height="137" rx="10" fill="#ffffff" stroke="#8a939b" stroke-width="2"/>
+<rect x="38" y="52" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="64.48" y="65" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="148" y="88" text-anchor="middle" font-weight="700" fill="#1f2a33">Статьи</text>
+<text x="148" y="109" text-anchor="middle" font-size="14" fill="#3a4550">материалы сайта; меняет</text>
+<text x="148" y="127" text-anchor="middle" font-size="14" fill="#3a4550">исполнитель, выпускает</text>
+<text x="148" y="145" text-anchor="middle" font-size="14" fill="#3a4550">редактор по вашему</text>
+<text x="148" y="163" text-anchor="middle" font-size="14" fill="#3a4550">разрешению</text>
+<rect x="296" y="44" width="240" height="119" rx="10" fill="#ffffff" stroke="#8a939b" stroke-width="2"/>
+<rect x="306" y="52" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="332.48" y="65" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="416" y="88" text-anchor="middle" font-weight="700" fill="#1f2a33">Редактор</text>
+<text x="416" y="109" text-anchor="middle" font-size="14" fill="#3a4550">программа; меняется в</text>
+<text x="416" y="127" text-anchor="middle" font-size="14" fill="#3a4550">отдельной ветке, ставится у</text>
+<text x="416" y="145" text-anchor="middle" font-size="14" fill="#3a4550">вас после «принято»</text>
+<rect x="564" y="44" width="240" height="137" rx="10" fill="#ffffff" stroke="#8a939b" stroke-width="2"/>
+<rect x="574" y="52" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="600.48" y="65" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="684" y="88" text-anchor="middle" font-weight="700" fill="#1f2a33">Код сайта Docusaurus</text>
+<text x="684" y="109" text-anchor="middle" font-size="14" fill="#3a4550">настройки и оформление;</text>
+<text x="684" y="127" text-anchor="middle" font-size="14" fill="#3a4550">своя ветка от main по</text>
+<text x="684" y="145" text-anchor="middle" font-size="14" fill="#3a4550">одобрению, свои проверки,</text>
+<text x="684" y="163" text-anchor="middle" font-size="14" fill="#3a4550">выпуск по разрешению</text>
+<rect x="885.6" y="44" width="240" height="119" rx="10" fill="#f3f4f6" stroke="#9aa5ae" stroke-width="2" stroke-dasharray="7 5"/>
+<rect x="895.6" y="52" width="59.120000000000005" height="18" rx="9" fill="#6b7680"/>
+<text x="925.1600000000001" y="65" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Будущее</text>
+<text x="1005.6" y="88" text-anchor="middle" font-weight="700" fill="#1f2a33">Плагин Revit (C#)</text>
+<text x="1005.6" y="109" text-anchor="middle" font-size="14" fill="#3a4550">своя папка и свой порядок;</text>
+<text x="1005.6" y="127" text-anchor="middle" font-size="14" fill="#3a4550">блог не меняет; проект</text>
+<text x="1005.6" y="145" text-anchor="middle" font-size="14" fill="#3a4550">здесь ещё не настроен</text>
+<rect x="296" y="237.2" width="240" height="101" rx="10" fill="#ffffff" stroke="#8a939b" stroke-width="2"/>
+<rect x="306" y="245.2" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="332.48" y="258.2" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="416" y="281.2" text-anchor="middle" font-weight="700" fill="#1f2a33">Сайт learn.bimcore.one</text>
+<text x="416" y="302.2" text-anchor="middle" font-size="14" fill="#3a4550">выкладывается из GitHub</text>
+<text x="416" y="320.2" text-anchor="middle" font-size="14" fill="#3a4550">main после успешной сборки</text>
+<rect x="241.4" y="190.1" width="81.2" height="20" rx="4" fill="#ffffff" stroke="#e1e5ea"/>
+<text x="282" y="204.1" text-anchor="middle" font-size="12" fill="#3a4550">публикация</text>
+<rect x="472.44" y="190.1" width="155.12" height="20" rx="4" fill="#ffffff" stroke="#e1e5ea"/>
+<text x="550" y="204.1" text-anchor="middle" font-size="12" fill="#3a4550">выпуск после проверок</text>
+</svg>
