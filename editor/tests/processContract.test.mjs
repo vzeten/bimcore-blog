@@ -45,8 +45,10 @@ describe('структура входов процесса', () => {
     // Скрипт запускается из копии (accepted-editor или временной): корень берётся у git, а не у пути скрипта.
     const script = read('scripts/repo-check.mjs');
     expect(script).toMatch(/--git-common-dir/);
+    // Основная папка — родитель общего каталога .git; тест может идти и из основной папки, и из копии.
+    const mainFolder = resolve(repoRoot, execFileSync('git', ['rev-parse', '--git-common-dir'], { cwd: repoRoot, encoding: 'utf8' }).trim(), '..');
     const copies = execFileSync('git', ['worktree', 'list', '--porcelain'], { cwd: repoRoot, encoding: 'utf8' })
-      .split('\n').filter(l => l.startsWith('worktree ')).map(l => l.slice(9)).filter(p => resolve(p) !== resolve(repoRoot));
+      .split('\n').filter(l => l.startsWith('worktree ')).map(l => l.slice(9)).filter(p => resolve(p) !== mainFolder);
     if (copies.length === 0) return; // копий нет — сценарий не воспроизводим
     const probe = script.replace(/const HERE = [^\n]+;/, 'const HERE = ' + JSON.stringify(copies[0].replace(/\\/g, '/')) + ';');
     expect(probe).not.toBe(script);
