@@ -20,9 +20,13 @@ import {fileURLToPath} from 'node:url';
 // Корень — основная папка репозитория, а не папка самого скрипта: из копии (accepted-editor или временной)
 // скрипт проверяет ту же основную папку и не принимает копию за неё.
 const HERE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ROOT = path.resolve(HERE, execFileSync('git', ['-C', HERE, 'rev-parse', '--git-common-dir'], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim(), '..');
-const git = (...args) => execFileSync('git', args, {cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
-const gitIn = (dir, ...args) => execFileSync('git', ['-C', dir, ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
+// Каждый вызов git получает адресное safe.directory именно той папки, которую проверяет: в чужой среде (владелец папки
+// считается другим, safe.directory задан только для копии) git иначе отвергает основную папку. Глобальные настройки не меняются.
+const gitAt = (dir, args, opts = {}) => execFileSync('git', ['-c', 'safe.directory=' + path.resolve(dir).split(path.sep).join('/'), '-C', dir, ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], ...opts});
+const ROOT = path.resolve(HERE, gitAt(HERE, ['rev-parse', '--git-common-dir']).trim(), '..');
+const git = (...args) => gitAt(ROOT, args).trim();
+const gitIn = (dir, ...args) => gitAt(dir, args).trim();
+const предок = (ветка, цель) => { try { gitAt(ROOT, ['merge-base', '--is-ancestor', ветка, цель], {stdio: 'ignore'}); return 'да'; } catch { return 'НЕТ'; } };
 const norm = (p) => path.resolve(p).replace(/\\/g, '/').toLowerCase();
 const ACCEPTED = norm(path.join(ROOT, 'editor/.coordination/worktrees/accepted-editor'));
 // Рабочая ветка одной одобренной операции: код редактора (`…/editor-…`, цель editor) или код сайта
@@ -79,7 +83,7 @@ for (const к of копии) {
     let перенесена = 'нет ветки';
     const цель = к.branch && /\/site-/.test(к.branch) ? 'main' : 'editor';
     if (к.branch) {
-      try { execFileSync('git', ['merge-base', '--is-ancestor', к.branch, цель], {cwd: ROOT, stdio: 'ignore'}); перенесена = 'да'; } catch { перенесена = 'НЕТ'; }
+      перенесена = предок(к.branch, цель);
     }
     const владелец = текущаяОперация && текущаяОперация.branch === к.branch ? `операция ${текущаяОперация.operation} (${текущаяОперация.state})` : 'операция не записана';
     описание += `: ${владелец}; ветка перенесена в ${цель}: ${перенесена}; незакоммиченных файлов: ${незакоммич}; игнорируемых (черновики/история/передача): ${игнорируемые}`;
@@ -95,7 +99,7 @@ if (копии.length === 2) ok('рабочих копий две: основн�
 const ветки = git('branch', '--format=%(refname:short)').split('\n').filter(Boolean);
 const лишние = ветки.filter((b) => !(b === 'main' || b === 'editor' || b.startsWith('backup/') || (текущаяОперация && b === текущаяОперация.branch && WORK.test(b))));
 if (лишние.length === 0) ok(`ветки: ${ветки.join(', ')}`);
-else for (const b of лишние) { const цель = /\/site-/.test(b) ? 'main' : 'editor'; bad(`ветка вне схемы: ${b} (перенесена в ${цель}: ${(() => { try { execFileSync('git', ['merge-base', '--is-ancestor', b, цель], {cwd: ROOT, stdio: 'ignore'}); return 'да'; } catch { return 'НЕТ'; } })()})`); }
+else for (const b of лишние) { const цель = /\/site-/.test(b) ? 'main' : 'editor'; bad(`ветка вне схемы: ${b} (перенесена в ${цель}: ${предок(b, цель)})`); }
 
 // 4. экземпляр 4780
 try {
