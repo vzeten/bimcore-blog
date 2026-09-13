@@ -23,11 +23,11 @@
 <rect x="288" y="214" width="232" height="61" rx="10" fill="#ffffff" stroke="#8a939b" stroke-width="2"/>
 <text x="404" y="238" text-anchor="middle" font-weight="700" fill="#1f2a33">ВНЖ Великобритании</text>
 <text x="404" y="259" text-anchor="middle" font-size="14" fill="#3a4550">личные документы</text>
-<rect x="28" y="384" width="460" height="83" rx="10" fill="#fff6d6" stroke="#b8860b" stroke-width="2"/>
-<rect x="38" y="392" width="52.96" height="18" rx="9" fill="#b8860b"/>
-<text x="64.48" y="405" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Пробел</text>
-<text x="258" y="428" text-anchor="middle" font-weight="700" fill="#1f2a33">My_work в проекты Codex не добавлена</text>
-<text x="258" y="449" text-anchor="middle" font-size="14" fill="#3a4550">папка есть; добавить её — одно действие владельца</text>
+<rect x="28" y="384" width="460" height="83" rx="10" fill="#ffffff" stroke="#8a939b" stroke-width="2"/>
+<rect x="38" y="392" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="64.48" y="405" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="258" y="428" text-anchor="middle" font-weight="700" fill="#1f2a33">My_work</text>
+<text x="258" y="449" text-anchor="middle" font-size="14" fill="#3a4550">планы и вопросы, если не знаете, куда писать</text>
 <rect x="28" y="622" width="232" height="101" rx="10" fill="#ffffff" stroke="#8a939b" stroke-width="2"/>
 <rect x="38" y="630" width="52.96" height="18" rx="9" fill="#1c7a45"/>
 <text x="64.48" y="643" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
