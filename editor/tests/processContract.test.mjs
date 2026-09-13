@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync, writeFileSync, rmSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
@@ -59,6 +59,12 @@ describe('структура входов процесса', () => {
       expect(out).toMatch(/запущено из копии/);
       expect(out).toMatch(/основная папка на main/);
       expect(out).not.toMatch(/посторонняя рабочая копия/);
+      // Среда с чужим владельцем папок и safe.directory только для копии (как у Codex): скрипт должен
+      // проверять основную папку адресным safe.directory, не меняя глобальных настроек.
+      const env = { ...process.env, GIT_TEST_ASSUME_DIFFERENT_OWNER: '1', GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'safe.directory', GIT_CONFIG_VALUE_0: resolve(copies[0]).split(sep).join('/') };
+      const restricted = execFileSync('node', [tmp], { cwd: copies[0], encoding: 'utf8', env });
+      expect(restricted).toMatch(/основная папка на main/);
+      expect(restricted).not.toMatch(/посторонняя рабочая копия/);
     } finally { rmSync(tmp, { force: true }); }
-  });
+  }, 30000); // два запуска скрипта с проверкой портов через PowerShell
 });
