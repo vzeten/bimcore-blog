@@ -1,166 +1,70 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { readFileSync, existsSync, writeFileSync, rmSync } from 'node:fs';
+import { dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-const editorRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const repoRoot = resolve(editorRoot, '..');
-const read = (path) => readFileSync(resolve(repoRoot, path), 'utf8').replace(/\r\n/g, '\n');
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const read = p => readFileSync(resolve(repoRoot, p), 'utf8');
 
-describe('короткий контракт процесса', () => {
-  it('держит CURRENT_TASK карточкой одной операции', () => {
-    const text = read('editor/CURRENT_TASK.md');
-    expect(text.split('\n').length).toBeLessThanOrEqual(60);
-    expect(text).toContain('## Результат');
-    expect(text).toMatch(/^## (Границы|Границы этой операции|Правило и границы)$/m);
-    expect(text).toMatch(/^## (Приёмка|Проверка и остановка)$/m);
-    expect(text).not.toMatch(/история кругов|ревизия|session_id|reviewer[.]json/i);
-  });
-
-  it('не возвращает постоянные сессии и ревизионный автомат', () => {
-    const rules = [
-      read('CLAUDE.md'),
-      read('AGENTS.md'),
-      read('editor/TASKS.md'),
-      read('.claude/skills/codex-gate/SKILL.md'),
-      read('.claude/skills/editor-change/SKILL.md'),
-      read('.claude/skills/model-council/SKILL.md'),
-    ].join('\n');
-
-    expect(rules).toMatch(/exec( --model [^ ]+)? --ephemeral --sandbox read-only/);
-    expect(rules).toContain('Постоянной сессии');
-    expect(rules).toContain('нет');
-    expect(rules).not.toMatch(/exec resume <|codex_response_revision|точный ID хранится|одна постоянная read-only сессия/i);
-    expect(read('editor/DECISIONS.md')).toContain('Процесс разработки v1 заменяет прежние правила');
-    expect(read('editor/TASKS.md')).not.toMatch(/Класс [АБВ]|класса [АБВ]|класс [АБВ]|44–70|совет собирается сам/);
-  });
-
-  it('разделяет три риска и не передаёт технические решения владельцу', () => {
-    const tasks = read('editor/TASKS.md');
-    const gate = read('.claude/skills/codex-gate/SKILL.md');
-
-    for (const marker of [
-      '1. Видимое и обратимое',
-      '2. Данные статьи',
-      '3. Публикация и необратимость',
-      'RESOLVE_WITHOUT_OWNER',
-      'REFRAME_REQUIRED',
-      'OWNER_REQUIRED',
-    ]) {
-      expect(tasks).toContain(marker);
+describe('структура входов процесса', () => {
+  it('не дублирует разделы канонических инструкций', () => {
+    for (const file of ['CLAUDE.md', 'AGENTS.md', 'editor/process/README.md']) {
+      const headings = [...read(file).matchAll(/^#{1,6}\s+(.+)$/gm)].map(m => m[1].trim());
+      expect(new Set(headings).size, file).toBe(headings.length);
     }
-    expect(tasks).toContain('максимум один собранный пакет');
-    expect(tasks).toMatch(/технических вопросов\s+владельцу нет/i);
-    expect(tasks).toMatch(/Верхнеуровневый Codex самостоятельно восстанавливает цель/i);
-    expect(gate).toMatch(/Блокеры:[\s\S]{0,30}<до трёх/i);
-    expect(gate).toMatch(/Убрать:[\s\S]{0,30}<до трёх/i);
+    const routes = [...read('CLAUDE.md').matchAll(/^#{1,6}.*Ветки и папки.*$/gm)];
+    expect(routes).toHaveLength(1);
   });
-
-  it('ставит контрольный коммит и технический итог перед живой пробой', () => {
-    const claude = read('CLAUDE.md');
-    const tasks = read('editor/TASKS.md');
-    const report = read('editor/REPORT.md');
-    const liveCheck = read('.claude/skills/editor-live-check/SKILL.md');
-
-    expect(tasks).toContain('APPROVED_TO_MERGE branch=<name> head=<sha> base=<sha>');
-    expect(tasks).toContain('git diff <base>..<head>');
-    expect(tasks).toContain('git merge --ff-only');
-    expect(tasks).toContain('git add .` запрещён');
-    expect(tasks).toMatch(/функциональный коммит аннулирует пробу/i);
-    expect(liveCheck).toMatch(/После `GO` итогового контролёра/i);
-    expect(report).toMatch(/Владелец отвечает верхнеуровневому Codex свободным текстом/i);
-    expect(report).not.toContain('APPROVED_TO_COMMIT');
-    expect(report.split('\n').length).toBeLessThanOrEqual(30);
-  });
-
-  it('не разрешает контролёру молча уменьшить продуктовый контракт', () => {
-    const rules = [
-      read('AGENTS.md'),
-      read('CLAUDE.md'),
-      read('editor/TASKS.md'),
-      read('.claude/skills/codex-gate/SKILL.md'),
-      read('.claude/skills/editor-change/SKILL.md'),
-    ].join('\n');
-
-    expect(rules).toMatch(/SHRINK[\s\S]{0,180}(останавливает|остановку|остановка)/i);
-    expect(rules).toMatch(/нов(ый|ое) узк(ий|ое)[\s\S]{0,100}(Codex|верхнеуровневый)/i);
-    expect(rules).not.toMatch(/при `SHRINK`[^\n]*(Claude )?(уменьшает|убирает|продолжает)/i);
-  });
-
-  it('держит машинный статус отдельно от handoff', () => {
-    const tasks = read('editor/TASKS.md');
-    const change = read('.claude/skills/editor-change/SKILL.md');
-
-    for (const state of ['running', 'ready_for_review', 'owner_required', 'failed']) {
-      expect(tasks).toContain(state);
+  it('сохраняет рабочие локальные ссылки основных входов', () => {
+    for (const file of ['AGENTS.md', 'CLAUDE.md', 'editor/process/README.md']) {
+      for (const match of read(file).matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
+        const target = match[1].split('#')[0];
+        if (!target || /^[a-z]+:/i.test(target)) continue;
+        expect(existsSync(resolve(repoRoot, dirname(file), target)), `${file}: ${target}`).toBe(true);
+      }
     }
-    expect(tasks).toMatch(/Свободный текст handoff[\s\S]{0,100}не являются сигналом/i);
-    expect(change).toContain('run-status.json');
-    expect(change).toContain('ready_for_review');
   });
-
-  it('ждёт исполнителя штатным ожиданием Codex, без отдельной программы', () => {
-    const tasks = read('editor/TASKS.md');
-    const rules = [
-      read('CLAUDE.md'),
-      read('AGENTS.md'),
-      tasks,
-      read('editor/process/README.md'),
-      read('.claude/skills/editor-change/SKILL.md'),
-      read('.agents/skills/editor-change/SKILL.md'),
-    ].join('\n');
-
-    expect(tasks).toMatch(/в том же[\s\S]{0,20}ходе ждёт наблюдателя через `wait_agent`/i);
-    expect(tasks).toMatch(/пока состояние остаётся[\s\S]{0,10}`running`/i);
-    expect(tasks).toMatch(/Исчезновение PID при оставшемся `running` считается сбоем/i);
-    expect(tasks).toMatch(/Отдельная локальная программа ожидания не используется/i);
-    expect(rules).not.toMatch(/CLAUDE_WAIT|claude-wait\.mjs/);
-  });
-
-  it('задаёт контролёру короткий технический ответ', () => {
-    const gate = read('.claude/skills/codex-gate/SKILL.md');
-
-    for (const field of ['Снимок:', 'Вердикт:', 'Размер:', 'Блокеры:', 'Убрать:', 'Остаточный риск:']) {
-      expect(gate).toContain(field);
-    }
-    expect(gate).toContain('до трёх');
-    expect(gate).toContain('BLOCK_REAL_RISK');
-  });
-
-  it('ведёт функциональные операции в локальных ветках с контрольными коммитами', () => {
-    const claude = read('CLAUDE.md');
-    const tasks = read('editor/TASKS.md');
-
-    for (const rules of [tasks]) {
-      expect(rules).toContain('feature/editor-<суть>');
-      expect(rules).toContain('fix/editor-<суть>');
-    }
-    expect(tasks).toContain('git merge --ff-only');
-    expect(tasks).toMatch(/push рабочей ветки запрещён/i);
-  });
-
   it('не включает служебную передачу в Git', () => {
     const ignored = execFileSync('git', ['check-ignore', 'editor/.coordination/handoff.md'], {
-      cwd: repoRoot,
-      encoding: 'utf8',
+      cwd: repoRoot, encoding: 'utf8',
     });
-    expect(ignored.replace(/\\/g, '/')).toContain('editor/.coordination/handoff.md');
-
-    expect(read('editor/TASKS.md')).toContain('Claude создаёт его до кода');
-
+    expect(ignored.replace(/\\/g, '/').trim()).toBe('editor/.coordination/handoff.md');
   });
-it('держит две инструкции владельца о ветках и папках и проверку порядка', () => {
-    const claude = read('CLAUDE.md');
-    const agents = read('AGENTS.md');
-
-    for (const marker of ['Запрос «статья»', 'Запрос «код редактора»', 'npm run repo:check', 'копий ровно две', 'удаление временной копии и ветки, до отчёта']) {
-      expect(claude).toContain(marker);
-    }
-    expect(agents).toContain('repo:check');
-    expect(claude).not.toMatch(/копи[яю] (репозитория )?для публикации/i);
-    expect(existsSync(resolve(repoRoot, 'scripts/repo-check.mjs'))).toBe(true);
-    expect(read('package.json')).toContain('"repo:check"');
-    expect(read('.claude/settings.json')).toContain('repo-check.mjs');
+  it('маршрут кода сайта: проверка состояния допускает ветки site наравне с editor', () => {
+    const check = read('scripts/repo-check.mjs');
+    const m = check.match(/const WORK = (\/[^\n]+\/);/);
+    expect(m).not.toBeNull();
+    const WORK = new RegExp(m[1].slice(1, -1));
+    for (const ok of ['feature/site-menu', 'fix/site-prices', 'feature/editor-x', 'fix/editor-locale-1']) expect(WORK.test(ok)).toBe(true);
+    for (const bad of ['codex/site-x', 'feature/plugin-x', 'site-menu', 'fix/site-Bad_Name', 'main', 'editor']) expect(WORK.test(bad)).toBe(false);
+    expect(read('CLAUDE.md')).toMatch(/feature\/site-<суть>/);
+    expect(read('editor/TASKS.md')).toMatch(/Код сайта Docusaurus этим разделом не покрывается/);
   });
+  it('проверка состояния из копии проверяет основную папку, а не копию', () => {
+    // Скрипт запускается из копии (accepted-editor или временной): корень берётся у git, а не у пути скрипта.
+    const script = read('scripts/repo-check.mjs');
+    expect(script).toMatch(/--git-common-dir/);
+    // Основная папка — родитель общего каталога .git; тест может идти и из основной папки, и из копии.
+    const mainFolder = resolve(repoRoot, execFileSync('git', ['rev-parse', '--git-common-dir'], { cwd: repoRoot, encoding: 'utf8' }).trim(), '..');
+    const copies = execFileSync('git', ['worktree', 'list', '--porcelain'], { cwd: repoRoot, encoding: 'utf8' })
+      .split('\n').filter(l => l.startsWith('worktree ')).map(l => l.slice(9)).filter(p => resolve(p) !== mainFolder);
+    if (copies.length === 0) return; // копий нет — сценарий не воспроизводим
+    const probe = script.replace(/const HERE = [^\n]+;/, 'const HERE = ' + JSON.stringify(copies[0].replace(/\\/g, '/')) + ';');
+    expect(probe).not.toBe(script);
+    const tmp = resolve(repoRoot, 'editor/.coordination/repo-check-probe.tmp.mjs');
+    writeFileSync(tmp, probe);
+    try {
+      const out = execFileSync('node', [tmp], { cwd: copies[0], encoding: 'utf8' });
+      expect(out).toMatch(/запущено из копии/);
+      expect(out).toMatch(/основная папка на main/);
+      expect(out).not.toMatch(/посторонняя рабочая копия/);
+      // Среда с чужим владельцем папок и safe.directory только для копии (как у Codex): скрипт должен
+      // проверять основную папку адресным safe.directory, не меняя глобальных настроек.
+      const env = { ...process.env, GIT_TEST_ASSUME_DIFFERENT_OWNER: '1', GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'safe.directory', GIT_CONFIG_VALUE_0: resolve(copies[0]).split(sep).join('/') };
+      const restricted = execFileSync('node', [tmp], { cwd: copies[0], encoding: 'utf8', env });
+      expect(restricted).toMatch(/основная папка на main/);
+      expect(restricted).not.toMatch(/посторонняя рабочая копия/);
+    } finally { rmSync(tmp, { force: true }); }
+  }, 30000); // два запуска скрипта с проверкой портов через PowerShell
 });

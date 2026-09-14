@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 288 1399" width="288" height="1399" font-family="Segoe UI, Arial, sans-serif" font-size="16" role="img" aria-label="Как меняем редактор">
+<defs><marker id="blog-editor-v-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#5b6770"/></marker></defs>
+<rect x="0" y="0" width="288" height="1399" fill="#ffffff"/>
+<path d="M 144 123 L 144 214" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-editor-v-arr)"/>
+<path d="M 144 351 L 144 384" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-editor-v-arr)"/>
+<path d="M 144 521 L 144 554" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-editor-v-arr)"/>
+<path d="M 144 633 L 144 724" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-editor-v-arr)"/>
+<path d="M 144 843 L 144 894" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-editor-v-arr)"/>
+<path d="M 144 1013 L 144 1064" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-editor-v-arr)"/>
+<path d="M 144 1182 L 144 1234" fill="none" stroke="#5b6770" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#blog-editor-v-arr)"/>
+<rect x="28" y="44" width="232" height="79" rx="10" fill="#e4ecfb" stroke="#1257d6" stroke-width="2.5"/>
+<text x="144" y="68" text-anchor="middle" font-weight="700" fill="#1f2a33">Вы одобрили доработку</text>
+<text x="144" y="89" text-anchor="middle" font-size="14" fill="#3a4550">это и есть разрешение на</text>
+<text x="144" y="107" text-anchor="middle" font-size="14" fill="#3a4550">одну ветку и одну копию</text>
+<rect x="28" y="214" width="232" height="137" rx="10" fill="#ffffff" stroke="#8a939b" stroke-width="2"/>
+<rect x="38" y="222" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="64.48" y="235" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="144" y="258" text-anchor="middle" font-weight="700" fill="#1f2a33">Ветка и временная копия</text>
+<text x="144" y="279" text-anchor="middle" font-size="14" fill="#3a4550">fix/editor-… от editor;</text>
+<text x="144" y="297" text-anchor="middle" font-size="14" fill="#3a4550">копия внутри папки;</text>
+<text x="144" y="315" text-anchor="middle" font-size="14" fill="#3a4550">пробный адрес на своём</text>
+<text x="144" y="333" text-anchor="middle" font-size="14" fill="#3a4550">порту</text>
+<rect x="28" y="384" width="232" height="137" rx="10" fill="#e3f2e9" stroke="#1c7a45" stroke-width="2"/>
+<rect x="38" y="392" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="64.48" y="405" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="144" y="428" text-anchor="middle" font-weight="700" fill="#1f2a33">Claude выполняет правку</text>
+<text x="144" y="449" text-anchor="middle" font-size="14" fill="#3a4550">серьёзные изменения</text>
+<text x="144" y="467" text-anchor="middle" font-size="14" fill="#3a4550">проверяет другая система:</text>
+<text x="144" y="485" text-anchor="middle" font-size="14" fill="#3a4550">код, хранение, публикация,</text>
+<text x="144" y="503" text-anchor="middle" font-size="14" fill="#3a4550">массовые операции</text>
+<rect x="28" y="554" width="232" height="79" rx="10" fill="#e4ecfb" stroke="#1257d6" stroke-width="2.5"/>
+<text x="144" y="578" text-anchor="middle" font-weight="700" fill="#1f2a33">Вы пробуете</text>
+<text x="144" y="599" text-anchor="middle" font-size="14" fill="#3a4550">на пробном адресе;</text>
+<text x="144" y="617" text-anchor="middle" font-size="14" fill="#3a4550">«принято» или что не так</text>
+<rect x="28" y="724" width="232" height="119" rx="10" fill="#e3f2e9" stroke="#1c7a45" stroke-width="2"/>
+<rect x="38" y="732" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="64.48" y="745" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="144" y="768" text-anchor="middle" font-weight="700" fill="#1f2a33">Перенос в editor</text>
+<text x="144" y="789" text-anchor="middle" font-size="14" fill="#3a4550">копия accepted-editor</text>
+<text x="144" y="807" text-anchor="middle" font-size="14" fill="#3a4550">внутри папки; только</text>
+<text x="144" y="825" text-anchor="middle" font-size="14" fill="#3a4550">вперёд</text>
+<rect x="28" y="894" width="232" height="119" rx="10" fill="#ffffff" stroke="#8a939b" stroke-width="2"/>
+<rect x="38" y="902" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="64.48" y="915" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="144" y="938" text-anchor="middle" font-weight="700" fill="#1f2a33">Рабочее окно 4780</text>
+<text x="144" y="959" text-anchor="middle" font-size="14" fill="#3a4550">запущено из</text>
+<text x="144" y="977" text-anchor="middle" font-size="14" fill="#3a4550">accepted-editor; статьи</text>
+<text x="144" y="995" text-anchor="middle" font-size="14" fill="#3a4550">читает из рабочей папки</text>
+<rect x="28" y="1064" width="232" height="118" rx="10" fill="#fbeadd" stroke="#b4541a" stroke-width="2"/>
+<text x="144" y="1088" text-anchor="middle" font-weight="700" fill="#1f2a33">В копии осталась</text>
+<text x="144" y="1109" text-anchor="middle" font-weight="700" fill="#1f2a33">работа?</text>
+<text x="144" y="1130" text-anchor="middle" font-size="14" fill="#3a4550">да — стоп и сообщить вам;</text>
+<text x="144" y="1148" text-anchor="middle" font-size="14" fill="#3a4550">нет — удалить копию и</text>
+<text x="144" y="1166" text-anchor="middle" font-size="14" fill="#3a4550">ветку</text>
+<rect x="28" y="1234" width="232" height="137" rx="10" fill="#e4ecfb" stroke="#1257d6" stroke-width="2.5"/>
+<rect x="38" y="1242" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="64.48" y="1255" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="144" y="1278" text-anchor="middle" font-weight="700" fill="#1f2a33">Выпуск editor → main</text>
+<text x="144" y="1299" text-anchor="middle" font-size="14" fill="#3a4550">только по вашему</text>
+<text x="144" y="1317" text-anchor="middle" font-size="14" fill="#3a4550">отдельному слову;</text>
+<text x="144" y="1335" text-anchor="middle" font-size="14" fill="#3a4550">«принято» этого не</text>
+<text x="144" y="1353" text-anchor="middle" font-size="14" fill="#3a4550">означает</text>
+<rect x="106.75999999999999" y="668.5" width="74.48" height="20" rx="4" fill="#ffffff" stroke="#e1e5ea"/>
+<text x="144" y="682.5" text-anchor="middle" font-size="12" fill="#3a4550">«принято»</text>
+</svg>

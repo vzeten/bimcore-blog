@@ -1,119 +1,180 @@
 #!/usr/bin/env node
-// Проверка порядка в репозитории сайта (правило владельца 2026-09-12, CLAUDE.md «Ветки и папки»).
-// Запуск: `npm run repo:check` из корня. Помощник запускает её в начале сессии и перед отчётом.
-// Красный итог означает: сначала убрать лишнее, потом работать. Скрипт ничего не меняет и не удаляет.
+// Отчёт о состоянии репозитория сайта и редактора (CLAUDE.md «Ветки и папки», решение владельца 2026-09-12).
+// Запуск: `npm run repo:check` из корня. Помощник смотрит его в начале сессии и перед отчётом.
 //
-// Что считается порядком:
-//   1. основная папка стоит на `main`;
-//   2. рабочих копий (worktree) ровно две — основная и `accepted-editor` на `editor` — и не больше
-//      одной временной для текущей операции `feature/editor-*` или `fix/editor-*`;
-//   3. веток не больше: `main`, `editor`, страховки `backup/*` и одна рабочая `feature/editor-*` | `fix/editor-*`;
-//   4. в корне нет кэш-копий `.cache-*`, в `editor/.coordination/worktrees` нет посторонних папок;
-//   5. копия `accepted-editor` без незакоммиченных правок;
-//   6. серверы редактора запущены только из основной папки, `accepted-editor` или разрешённой временной копии.
+// Скрипт только показывает. Он ничего не исправляет и не удаляет, а найденное несоответствие не является
+// разрешением что-либо удалять: решение о лишнем принимает владелец. Показывает:
+//   1. на какой ветке основная папка;
+//   2. какие рабочие копии есть, на каких ветках, и есть ли у временной копии владелец-операция
+//      (`editor/.coordination/run-status.json`), перенесена ли её ветка в `editor` (или в `main` для кода сайта), осталась ли в ней
+//      несохранённая работа (незакоммиченные, неотслеживаемые и игнорируемые файлы);
+//   3. какие ветки есть, кроме `main`, `editor`, `backup/*`;
+//   4. откуда работает экземпляр 4780 и какую папку материалов он читает (`/api/identity`);
+//   5. кто ещё слушает порты редактора 4779–4799 и из какой папки;
+//   6. посторонние папки в `editor/.coordination/worktrees` и кэш-копии в корне;
+//   7. совпадает ли локальная main с настоящей серверной (ls-remote с ограничением времени, без fetch).
+// `--release-site` — строгая сверка main, одно из условий завершения выпуска кода сайта (CLAUDE.md, «Код сайта
+// Docusaurus», п. 4); выкладку, проверку сайта и приёмку не подтверждает. Ненулевой выход при другой ветке,
+// расхождении или неизвестности сервера, незакоммиченном коде, непрочитанном состоянии или ошибке помощника.
 import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const git = (...args) => execFileSync('git', args, {cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
+// Корень — основная папка репозитория, а не папка самого скрипта: из копии (accepted-editor или временной)
+// скрипт проверяет ту же основную папку и не принимает копию за неё.
+const HERE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// Каждый вызов git получает адресное safe.directory именно той папки, которую проверяет: в чужой среде (владелец папки
+// считается другим, safe.directory задан только для копии) git иначе отвергает основную папку. Глобальные настройки не меняются.
+// `--no-optional-locks`: status и прочие чтения не обновляют индекс, скрипт не пишет в .git.
+const gitAt = (dir, args, opts = {}) => execFileSync('git', ['--no-optional-locks', '-c', 'safe.directory=' + path.resolve(dir).split(path.sep).join('/'), '-C', dir, ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], ...opts});
+const ROOT = path.resolve(HERE, gitAt(HERE, ['rev-parse', '--git-common-dir']).trim(), '..');
+const git = (...args) => gitAt(ROOT, args).trim();
+const gitIn = (dir, ...args) => gitAt(dir, args).trim();
+const предок = (ветка, цель) => { try { gitAt(ROOT, ['merge-base', '--is-ancestor', ветка, цель], {stdio: 'ignore'}); return 'да'; } catch { return 'НЕТ'; } };
 const norm = (p) => path.resolve(p).replace(/\\/g, '/').toLowerCase();
 const ACCEPTED = norm(path.join(ROOT, 'editor/.coordination/worktrees/accepted-editor'));
-const WORK = /^(feature|fix)\/editor-[a-z0-9-]+$/;
+// Рабочая ветка одной одобренной операции: код редактора (`…/editor-…`, цель editor) или код сайта
+// (`…/site-…`, цель main). Оба вида живут в одной временной папке внутри editor/.coordination/worktrees.
+const WORK = /^(feature|fix)\/(editor|site)-[a-z0-9-]+$/;
 
-const плохо = [];
-const хорошо = [];
+const строки = [];
+const несоответствия = [];
+const ok = (s) => строки.push(`  ✓ ${s}`);
+const info = (s) => строки.push(`  · ${s}`);
+const bad = (s) => { строки.push(`  ✗ ${s}`); несоответствия.push(s); };
+
+// 0. откуда запущен
+if (norm(HERE) !== norm(ROOT)) info(`запущено из копии ${HERE}; проверяется основная папка ${ROOT}`);
 
 // 1. ветка основной папки
 const ветка = git('rev-parse', '--abbrev-ref', 'HEAD');
-if (ветка === 'main') хорошо.push('основная папка на main');
-else плохо.push(`основная папка стоит на «${ветка}», а должна на main`);
+if (ветка === 'main') ok('основная папка на main'); else bad(`основная папка на «${ветка}», по схеме должна быть на main`);
+const изменённые = git('status', '--short').split('\n').filter((l) => l && !l.startsWith('??'));
+const неотслеж = git('ls-files', '--others', '--exclude-standard').split('\n').filter(Boolean);
+info(`в основной папке изменённых отслеживаемых файлов: ${изменённые.length}, неотслеживаемых (черновики и т.п.): ${неотслеж.length}`);
 
 // 2. рабочие копии
-const копии = [];
-let текущая = null;
-for (const line of git('worktree', 'list', '--porcelain').split('\n')) {
-  if (line.startsWith('worktree ')) текущая = {path: line.slice(9), branch: null};
-  else if (line.startsWith('branch ') && текущая) текущая.branch = line.slice(7).replace('refs/heads/', '');
-  else if (line === '' && текущая) { копии.push(текущая); текущая = null; }
+let текущаяОперация = null;
+const statusPath = path.join(ROOT, 'editor/.coordination/run-status.json');
+if (fs.existsSync(statusPath)) {
+  try { текущаяОперация = JSON.parse(fs.readFileSync(statusPath, 'utf8')); } catch { /* сломанный файл покажем ниже */ }
+  if (текущаяОперация) info(`последняя записанная операция: ${текущаяОперация.operation ?? '?'} на ${текущаяОперация.branch ?? '?'}, состояние ${текущаяОперация.state ?? '?'}`);
+  else bad('editor/.coordination/run-status.json не читается');
 }
-if (текущая) копии.push(текущая);
-let временных = 0;
+const копии = [];
+let cur = null;
+for (const line of git('worktree', 'list', '--porcelain').split('\n')) {
+  if (line.startsWith('worktree ')) cur = {path: line.slice(9), branch: null};
+  else if (line.startsWith('branch ') && cur) cur.branch = line.slice(7).replace('refs/heads/', '');
+  else if (line === '' && cur) { копии.push(cur); cur = null; }
+}
+if (cur) копии.push(cur);
 for (const к of копии) {
   const p = norm(к.path);
   if (p === norm(ROOT)) continue;
   if (p === ACCEPTED) {
-    if (к.branch === 'editor') хорошо.push('копия accepted-editor на editor');
-    else плохо.push(`копия accepted-editor стоит на «${к.branch}», а должна на editor`);
+    const st = fs.existsSync(к.path) ? gitIn(к.path, 'status', '--short') : 'НЕТ НА ДИСКЕ';
+    if (к.branch === 'editor' && st === '') ok(`accepted-editor на editor, без незакоммиченных правок`);
+    else bad(`accepted-editor: ветка «${к.branch}», незакоммиченных файлов: ${st === '' ? 0 : st.split('\n').length}`);
     continue;
   }
   const внутри = p.startsWith(norm(path.join(ROOT, 'editor/.coordination/worktrees')) + '/');
-  if (внутри && к.branch && WORK.test(к.branch)) {
-    временных += 1;
-    if (временных === 1) хорошо.push(`одна временная копия операции: ${к.branch}`);
-    else плохо.push(`лишняя временная копия: ${к.path} (${к.branch})`);
+  const рабочая = !!(к.branch && WORK.test(к.branch));
+  let описание = `копия ${к.path} (${к.branch ?? 'без ветки'})`;
+  if (fs.existsSync(к.path)) {
+    const незакоммич = gitIn(к.path, 'status', '--short').split('\n').filter(Boolean).length;
+    const игнорируемые = gitIn(к.path, 'ls-files', '--others', '--ignored', '--exclude-standard', '--directory').split('\n').filter(Boolean).length;
+    let перенесена = 'нет ветки';
+    const цель = к.branch && /\/site-/.test(к.branch) ? 'main' : 'editor';
+    if (к.branch) {
+      перенесена = предок(к.branch, цель);
+    }
+    const владелец = текущаяОперация && текущаяОперация.branch === к.branch ? `операция ${текущаяОперация.operation} (${текущаяОперация.state})` : 'операция не записана';
+    описание += `: ${владелец}; ветка перенесена в ${цель}: ${перенесена}; незакоммиченных файлов: ${незакоммич}; игнорируемых (черновики/история/передача): ${игнорируемые}`;
   } else {
-    плохо.push(`посторонняя рабочая копия: ${к.path} (${к.branch ?? 'без ветки'})`);
+    описание += ': папки нет на диске';
   }
+  if (внутри && рабочая && текущаяОперация && текущаяОперация.branch === к.branch) info(описание);
+  else bad(описание + ' — по схеме такой копии быть не должно; решает владелец');
 }
+if (копии.length === 2) ok('рабочих копий две: основная и accepted-editor');
 
 // 3. ветки
 const ветки = git('branch', '--format=%(refname:short)').split('\n').filter(Boolean);
-let рабочих = 0;
-for (const b of ветки) {
-  if (b === 'main' || b === 'editor' || b.startsWith('backup/')) continue;
-  if (WORK.test(b)) { рабочих += 1; if (рабочих > 1) плохо.push(`лишняя рабочая ветка: ${b}`); continue; }
-  плохо.push(`посторонняя ветка: ${b}`);
-}
-if (рабочих <= 1 && !плохо.some((s) => s.includes('ветка'))) хорошо.push(`веток: ${ветки.length} (${ветки.join(', ')})`);
+const лишние = ветки.filter((b) => !(b === 'main' || b === 'editor' || b.startsWith('backup/') || (текущаяОперация && b === текущаяОперация.branch && WORK.test(b))));
+if (лишние.length === 0) ok(`ветки: ${ветки.join(', ')}`);
+else for (const b of лишние) { const цель = /\/site-/.test(b) ? 'main' : 'editor'; bad(`ветка вне схемы: ${b} (перенесена в ${цель}: ${предок(b, цель)})`); }
 
-// 4. кэш-копии и посторонние папки
-for (const name of fs.readdirSync(ROOT)) {
-  if (/^\.cache-/.test(name) && name !== '.cache-loader' && fs.statSync(path.join(ROOT, name)).isDirectory()) плохо.push(`кэш-копия в корне: ${name}`);
-}
-const wtDir = path.join(ROOT, 'editor/.coordination/worktrees');
-if (fs.existsSync(wtDir)) {
-  const разрешённые = new Set(копии.map((к) => norm(к.path)));
-  for (const name of fs.readdirSync(wtDir)) {
-    const full = norm(path.join(wtDir, name));
-    if (!разрешённые.has(full)) плохо.push(`посторонняя папка в worktrees: ${name} (не числится рабочей копией)`);
-  }
+// 4. экземпляр 4780
+try {
+  const r = execFileSync('curl', ['-s', '--max-time', '4', 'http://localhost:4780/api/identity'], {encoding: 'utf8'});
+  const id = JSON.parse(r);
+  const кодOk = norm(id.code ?? '').startsWith(ACCEPTED + '/');
+  const матOk = norm(id.materials ?? '') === norm(ROOT);
+  const s = `экземпляр 4780: код ${id.branch}@${id.commit} из ${id.code}, материалы ${id.materials}, принят: ${id.accepted}`;
+  if (кодOk && матOk && id.accepted) ok(s); else bad(s + ' — код или материалы не из схемы');
+} catch {
+  info('экземпляр 4780 не отвечает (редактор не запущен)');
 }
 
-// 5. чистота accepted-editor
-if (fs.existsSync(ACCEPTED)) {
-  const st = execFileSync('git', ['-C', ACCEPTED, 'status', '--short'], {encoding: 'utf8'}).trim();
-  if (st === '') хорошо.push('accepted-editor без незакоммиченных правок');
-  else плохо.push(`в accepted-editor незакоммиченные правки: ${st.split('\n').length} файл(ов)`);
-} else {
-  плохо.push('копии accepted-editor нет на диске');
-}
-const stMain = git('status', '--short').split('\n').filter((l) => l && !l.startsWith('??'));
-if (stMain.length > 0) хорошо.push(`в основной папке ${stMain.length} изменённых отслеживаемых файл(ов) — допустимо только во время текущей операции`);
-
-// 6. экземпляры редактора: кто слушает порты 4779–4799 и из какой папки запущен (Windows)
+// 5. порты редактора (Windows)
 try {
   const out = execFileSync('powershell', ['-NoProfile', '-Command',
     "$l = Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -ge 4779 -and $_.LocalPort -le 4799 } | Select-Object -Unique LocalPort, OwningProcess; foreach ($c in $l) { $p = Get-CimInstance Win32_Process -Filter \"ProcessId = $($c.OwningProcess)\"; Write-Output (\"$($c.LocalPort)`t$($c.OwningProcess)`t$($p.CommandLine)\") }"],
   {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
-  const строки = out ? out.split('\n').map((s) => s.trim()).filter(Boolean) : [];
-  const разрешённые = new Set([norm(ROOT), ACCEPTED, ...копии.map((к) => norm(к.path))]);
-  let чужих = 0;
-  for (const line of строки) {
+  const порты = out ? out.split('\n').map((s) => s.trim()).filter(Boolean) : [];
+  const разрешённые = [norm(ROOT), ...копии.map((к) => norm(к.path))];
+  for (const line of порты) {
     const [port, pid, cmd = ''] = line.split('\t');
     const путь = (cmd.match(/[A-Za-z]:[^"]*?(server|panel)\.mjs/) ?? [''])[0];
-    const ok = путь && [...разрешённые].some((r) => norm(путь).startsWith(r + '/'));
-    if (!ok) { чужих += 1; плохо.push(`порт ${port}: экземпляр редактора вне разрешённых папок (PID ${pid}): ${cmd.slice(0, 100)}`); }
+    const свой = путь && разрешённые.some((r) => norm(путь).startsWith(r + '/'));
+    if (свой) info(`порт ${port}: ${путь}`); else bad(`порт ${port} (PID ${pid}) занят процессом вне известных копий: ${cmd.slice(0, 100)}`);
   }
-  if (чужих === 0) хорошо.push(`экземпляры редактора только из разрешённых папок (портов занято: ${строки.length})`);
+  if (порты.length === 0) info('порты редактора 4779–4799 свободны');
 } catch {
-  хорошо.push('проверка экземпляров пропущена (нет PowerShell)');
+  info('проверка портов пропущена (нет PowerShell)');
 }
 
-const hook = process.argv.includes('--hook');
-console.log(плохо.length === 0 ? 'repo-check: порядок' : `repo-check: НЕПОРЯДОК (${плохо.length})`);
-for (const s of хорошо) console.log(`  ✓ ${s}`);
-for (const s of плохо) console.log(`  ✗ ${s}`);
-if (плохо.length > 0) console.log('  → сначала убрать лишнее по CLAUDE.md «Ветки и папки», потом работать.');
-process.exit(плохо.length === 0 || hook ? 0 : 1);
+// 6. посторонние папки
+const wtDir = path.join(ROOT, 'editor/.coordination/worktrees');
+if (fs.existsSync(wtDir)) {
+  const известные = new Set(копии.map((к) => norm(к.path)));
+  for (const name of fs.readdirSync(wtDir)) {
+    if (!известные.has(norm(path.join(wtDir, name)))) bad(`папка в worktrees без рабочей копии: ${name} (что внутри — смотреть перед любым решением)`);
+  }
+}
+for (const name of fs.readdirSync(ROOT)) {
+  if (/^\.cache-/.test(name) && name !== '.cache-loader' && fs.statSync(path.join(ROOT, name)).isDirectory()) bad(`кэш-копия в корне: ${name}`);
+}
+
+// 7. серверная main. Помощник лежит рядом со скриптом; копия скрипта без него честно сообщает о пропуске.
+const строгий = process.argv.includes('--release-site');
+let выпуск = null;
+let ошибкаСверки = null;
+const помощник = path.join(HERE, 'scripts/repo-check-release.mjs');
+if (!fs.existsSync(помощник)) {
+  info('сверка с серверной main пропущена: нет scripts/repo-check-release.mjs');
+} else try {
+  const r = await import(pathToFileURL(помощник).href);
+  const состояние = r.collectRelease((args, opts) => gitAt(ROOT, args, opts));
+  const сводка = r.remoteSummary(состояние);
+  if (сводка.ok === true) ok(сводка.text); else if (сводка.ok === false) bad(сводка.text); else info(сводка.text);
+  выпуск = r.evaluateRelease(состояние);
+} catch (e) {
+  ошибкаСверки = `сверка с серверной main не выполнена: ошибка помощника (${e?.message ?? e})`;
+  info(ошибкаСверки);
+}
+
+console.log(несоответствия.length === 0 ? 'repo-check: состояние по схеме' : `repo-check: несоответствий схеме: ${несоответствия.length} (ничего не удалять без решения владельца)`);
+for (const s of строки) console.log(s);
+if (строгий) {
+  const препятствия = выпуск ? выпуск.problems : [ошибкаСверки ?? 'сверка не выполнена: нет scripts/repo-check-release.mjs'];
+  console.log(препятствия.length === 0
+    ? 'release-site: сверка main пройдена — локальная main равна серверной, незакоммиченного кода нет (выкладку, проверку сайта и приёмку не подтверждает)'
+    : `release-site: сверка main НЕ пройдена, препятствий: ${препятствия.length}`);
+  for (const s of препятствия) console.log(`  ✗ ${s}`);
+  for (const s of выпуск?.notes ?? []) console.log(`  · ${s}`);
+  process.exit(препятствия.length === 0 ? 0 : 1);
+}
+process.exit(0);

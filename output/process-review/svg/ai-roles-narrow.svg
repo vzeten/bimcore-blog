@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 548 783" width="548" height="783" font-family="Segoe UI, Arial, sans-serif" font-size="16" role="img" aria-label="Кто что делает">
+<defs><marker id="ai-roles-v-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#5b6770"/></marker></defs>
+<rect x="0" y="0" width="548" height="783" fill="#ffffff"/>
+<path d="M 144 123 L 144 214" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#ai-roles-v-arr)"/>
+<path d="M 260 273.5 L 274 273.5 L 274 300.5 L 288 300.5" fill="none" stroke="#5b6770" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ai-roles-v-arr)"/>
+<path d="M 144 333 L 144 418.00000000000006" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#ai-roles-v-arr)"/>
+<path d="M 144 537 L 144 622" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#ai-roles-v-arr)"/>
+<path d="M 260 477.50000000000006 L 274 477.50000000000006 L 274 506.00000000000006 L 288 506.00000000000006" fill="none" stroke="#5b6770" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ai-roles-v-arr)"/>
+<path d="M 288 506.00000000000006 L 274 506.00000000000006 L 274 688.5 L 260 688.5" fill="none" stroke="#5b6770" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ai-roles-v-arr)"/>
+<rect x="28" y="44" width="232" height="79" rx="10" fill="#e4ecfb" stroke="#1257d6" stroke-width="2.5"/>
+<text x="144" y="68" text-anchor="middle" font-weight="700" fill="#1f2a33">Вы ставите задачу</text>
+<text x="144" y="89" text-anchor="middle" font-size="14" fill="#3a4550">своими словами, в нужном</text>
+<text x="144" y="107" text-anchor="middle" font-size="14" fill="#3a4550">месте</text>
+<rect x="28" y="214" width="232" height="119" rx="10" fill="#e3f2e9" stroke="#1c7a45" stroke-width="2"/>
+<rect x="38" y="222" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="64.48" y="235" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="144" y="258" text-anchor="middle" font-weight="700" fill="#1f2a33">Ведущая видимая сессия</text>
+<text x="144" y="279" text-anchor="middle" font-size="14" fill="#3a4550">та, куда вы написали;</text>
+<text x="144" y="297" text-anchor="middle" font-size="14" fill="#3a4550">отвечает за доведение до</text>
+<text x="144" y="315" text-anchor="middle" font-size="14" fill="#3a4550">результата</text>
+<rect x="288" y="214" width="232" height="173" rx="10" fill="#e3f2e9" stroke="#1c7a45" stroke-width="2"/>
+<rect x="298" y="222" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="324.48" y="235" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="404" y="258" text-anchor="middle" font-weight="700" fill="#1f2a33">Менеджер</text>
+<text x="404" y="279" text-anchor="middle" font-size="14" fill="#3a4550">чат «Менеджер проекта» или</text>
+<text x="404" y="297" text-anchor="middle" font-size="14" fill="#3a4550">разовый агент; только</text>
+<text x="404" y="315" text-anchor="middle" font-size="14" fill="#3a4550">новая или расширенная</text>
+<text x="404" y="333" text-anchor="middle" font-size="14" fill="#3a4550">работа по редактору; итог</text>
+<text x="404" y="351" text-anchor="middle" font-size="14" fill="#3a4550">возвращает ведущей сессии;</text>
+<text x="404" y="369" text-anchor="middle" font-size="14" fill="#3a4550">ведущим сам не становится</text>
+<rect x="28" y="418.00000000000006" width="232" height="119" rx="10" fill="#e3f2e9" stroke="#1c7a45" stroke-width="2"/>
+<rect x="38" y="426.00000000000006" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="64.48" y="439.00000000000006" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="144" y="462.00000000000006" text-anchor="middle" font-weight="700" fill="#1f2a33">Исполнитель</text>
+<text x="144" y="483.00000000000006" text-anchor="middle" font-size="14" fill="#3a4550">статья: та же сессия · код</text>
+<text x="144" y="501.00000000000006" text-anchor="middle" font-size="14" fill="#3a4550">редактора: Claude, при его</text>
+<text x="144" y="519" text-anchor="middle" font-size="14" fill="#3a4550">лимите замена по правилу</text>
+<rect x="288" y="418.00000000000006" width="232" height="176" rx="10" fill="#e3f2e9" stroke="#1c7a45" stroke-width="2"/>
+<rect x="298" y="426.00000000000006" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="324.48" y="439.00000000000006" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="404" y="462.00000000000006" text-anchor="middle" font-weight="700" fill="#1f2a33">Проверяет другая</text>
+<text x="404" y="483.00000000000006" text-anchor="middle" font-weight="700" fill="#1f2a33">система</text>
+<text x="404" y="504.00000000000006" text-anchor="middle" font-size="14" fill="#3a4550">Codex ↔ Claude: общие</text>
+<text x="404" y="522" text-anchor="middle" font-size="14" fill="#3a4550">правила, процессы,</text>
+<text x="404" y="540" text-anchor="middle" font-size="14" fill="#3a4550">хранение, публикация и</text>
+<text x="404" y="558" text-anchor="middle" font-size="14" fill="#3a4550">массовые изменения; без</text>
+<text x="404" y="576" text-anchor="middle" font-size="14" fill="#3a4550">повторения всей работы</text>
+<rect x="28" y="622" width="232" height="133" rx="10" fill="#e4ecfb" stroke="#1257d6" stroke-width="2.5"/>
+<text x="144" y="646" text-anchor="middle" font-weight="700" fill="#1f2a33">Вы смотрите и решаете</text>
+<text x="144" y="667" text-anchor="middle" font-size="14" fill="#3a4550">статья приходит к вам</text>
+<text x="144" y="685" text-anchor="middle" font-size="14" fill="#3a4550">сразу; код — после</text>
+<text x="144" y="703" text-anchor="middle" font-size="14" fill="#3a4550">контроля. Принимаете,</text>
+<text x="144" y="721" text-anchor="middle" font-size="14" fill="#3a4550">разрешаете публикацию или</text>
+<text x="144" y="739" text-anchor="middle" font-size="14" fill="#3a4550">называете, что не так</text>
+</svg>
