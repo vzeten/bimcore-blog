@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 353" width="1100" height="353" font-family="Segoe UI, Arial, sans-serif" font-size="16" role="img" aria-label="Как ведётся база">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 596" width="1100" height="596" font-family="Segoe UI, Arial, sans-serif" font-size="16" role="img" aria-label="Как ведётся база">
 <defs><marker id="ai-base-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#5b6770"/></marker></defs>
-<rect x="0" y="0" width="1100" height="353" fill="#ffffff"/>
+<rect x="0" y="0" width="1100" height="596" fill="#ffffff"/>
 <path d="M 268 103.5 L 282 103.5 L 282 112.5 L 296 112.5" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#ai-base-arr)"/>
 <path d="M 536 112.5 L 564 114" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#ai-base-arr)"/>
 <path d="M 804 114 L 818 114 L 818 92.5 L 832 92.5" fill="none" stroke="#5b6770" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ai-base-arr)"/>
@@ -38,4 +38,12 @@
 <text x="526" y="267.4" text-anchor="middle" font-weight="700" fill="#1f2a33">Старые входящие</text>
 <text x="526" y="288.4" text-anchor="middle" font-size="14" fill="#3a4550">процессные записи разобраны; остаток других тем —</text>
 <text x="526" y="306.4" text-anchor="middle" font-size="14" fill="#3a4550">отдельная работа; ночной автоматики нет</text>
+<rect x="296" y="430.4" width="460" height="137" rx="10" fill="#ffffff" stroke="#8a939b" stroke-width="2"/>
+<rect x="306" y="438.4" width="52.96" height="18" rx="9" fill="#1c7a45"/>
+<text x="332.48" y="451.4" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
+<text x="526" y="474.4" text-anchor="middle" font-weight="700" fill="#1f2a33">Git — история заметок на компьютере</text>
+<text x="526" y="495.4" text-anchor="middle" font-size="14" fill="#3a4550">Планировщик Windows сохраняет изменения каждые 15</text>
+<text x="526" y="513.4" text-anchor="middle" font-size="14" fill="#3a4550">минут. Ветка obsidan-main. GitHub запрещён. ИИ могут</text>
+<text x="526" y="531.4" text-anchor="middle" font-size="14" fill="#3a4550">читать прошлые версии; восстановление — с вашего</text>
+<text x="526" y="549.4" text-anchor="middle" font-size="14" fill="#3a4550">разрешения.</text>
 </svg>
