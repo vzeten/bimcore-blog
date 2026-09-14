@@ -8,7 +8,8 @@
 //
 // Отсутствие перевода — РАЗРЕШЁННОЕ состояние, сборку оно не валит. Задача
 // карты — дать всем потребителям одинаковый ответ, чтобы они не разошлись:
-//   • index.mjs   → globalData → src/theme/SiteMetadata (noindex + hreflang)
+//   • index.mjs   → globalData → src/theme/SiteMetadata (noindex + hreflang;
+//                   план языковых ссылок считает hreflangByRoute ниже)
 //   • docusaurus.config.js      → excludeRoutes плагина llms.txt
 //   • scripts/seo-audit.mjs     → проверка готовой папки build после сборки
 //
@@ -56,7 +57,10 @@ function listContentFiles(root) {
   });
 }
 
-/** Шапка статьи: нужны только slug и unlisted, весь файл не парсим. */
+/**
+ * Шапка статьи: нужны только slug, unlisted и draft, весь файл не парсим.
+ * draft и unlisted — строго булево `true`: `draft: false` черновиком не является.
+ */
 function readFrontmatter(file) {
   let text;
   try {
@@ -70,6 +74,7 @@ function readFrontmatter(file) {
   const slug = fm.match(/^slug:\s*["']?([^"'\r\n]+?)["']?\s*$/m);
   return {
     unlisted: /^unlisted:\s*true\s*$/m.test(fm),
+    draft: /^draft:\s*true\s*$/m.test(fm),
     slug: slug ? slug[1].trim() : null,
   };
 }
@@ -129,11 +134,16 @@ const CONTENT_KINDS = [
  * сборку не попадает вовсе (инвариант F.15 базы знаний). Такие «сироты»
  * возвращаются отдельным списком — аудит показывает их предупреждением.
  *
+ * Три признака по каждой локали: translated (свой файл есть), unlisted
+ * (страница собирается, но закрыта noindex) и draft (в production-сборке
+ * страницы нет вовсе — так Docusaurus понимает `draft: true`). Пара
+ * draft + unlisted противоречива, сам Docusaurus такую шапку отвергает.
+ *
  * @returns {{
  *   defaultLocale: string,
  *   locales: string[],
  *   entries: {route: string, kind: string, translated: Record<string, boolean>,
- *             unlisted: Record<string, boolean>}[],
+ *             unlisted: Record<string, boolean>, draft: Record<string, boolean>}[],
  *   orphans: {locale: string, file: string}[],
  * }}
  */
@@ -168,6 +178,7 @@ export function buildTranslationMap({siteDir, locales, defaultLocale}) {
     for (const rel of defaultRels) {
       const translated = {};
       const unlisted = {};
+      const draft = {};
 
       const defaultFrontmatter = readFrontmatter(
         path.join(rootFor(defaultLocale), ...rel.split('/')),
@@ -193,9 +204,10 @@ export function buildTranslationMap({siteDir, locales, defaultLocale}) {
         // именно его текст Docusaurus туда и подставляет.
         const effective = fileExists ? readFrontmatter(file) : defaultFrontmatter;
         unlisted[locale] = Boolean(effective?.unlisted);
+        draft[locale] = Boolean(effective?.draft);
       }
 
-      entries.push({route, kind, translated, unlisted});
+      entries.push({route, kind, translated, unlisted, draft});
     }
   }
 
@@ -246,6 +258,46 @@ export function llmsExcludeRoutePatterns(map) {
 }
 
 /**
+ * Локали, где адрес открыт для индексации: есть свой файл, он не unlisted
+ * и не draft. Противоречивая пара draft + unlisted индексируемой не бывает.
+ */
+export function indexableLocales(entry, locales) {
+  return locales.filter(
+    (locale) =>
+      entry.translated[locale] &&
+      !entry.unlisted[locale] &&
+      !entry.draft[locale],
+  );
+}
+
+/**
+ * Языковые ссылки каждого адреса — ЕДИНСТВЕННОЕ место, где решается, какие
+ * hreflang и какой x-default получает страница. Тот же план читают свизл
+ * SiteMetadata (через globalData) и проверка сборки.
+ *
+ * Правило: hreflang обещает только индексируемые версии — закрытая (noindex)
+ * страница в языковой связи участвовать не может, поиск такую ссылку считает
+ * ошибкой. x-default указывает на локаль по умолчанию, а если она закрыта —
+ * на первую индексируемую в порядке locales (у статьи на одном языке это её
+ * единственная версия). Без индексируемых версий ссылок нет вовсе.
+ *
+ * @returns {Record<string, {locales: string[], xDefault: string | null}>}
+ */
+export function hreflangByRoute(map) {
+  const plan = {};
+  for (const entry of map.entries) {
+    const open = indexableLocales(entry, map.locales);
+    plan[entry.route] = {
+      locales: open,
+      xDefault: open.includes(map.defaultLocale)
+        ? map.defaultLocale
+        : (open[0] ?? null),
+    };
+  }
+  return plan;
+}
+
+/**
  * Компактный вид для браузера: только то, что нужно SiteMetadata.
  * Заглушки идут отдельным списком — им noindex ставит сам Docusaurus
  * (unlisted → «noindex, nofollow»), и второй тег там не нужен.
@@ -256,5 +308,6 @@ export function toClientData(map) {
     locales: map.locales,
     untranslated: untranslatedRoutesByLocale(map),
     unlisted: unlistedRoutesByLocale(map),
+    alternates: hreflangByRoute(map),
   };
 }

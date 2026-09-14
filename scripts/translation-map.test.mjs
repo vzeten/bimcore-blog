@@ -22,6 +22,8 @@ import {
   buildTranslationMap,
   untranslatedRoutesByLocale,
   llmsExcludeRoutePatterns,
+  hreflangByRoute,
+  toClientData,
 } from '../plugins/translation-map/map.mjs';
 
 // ---------- временный сайт-образец ----------
@@ -58,6 +60,15 @@ write(`${docs(DEFAULT_LOCALE)}/plain/index.mdx`, withFrontmatter());
 write(`${docs(DEFAULT_LOCALE)}/missing/index.mdx`, withFrontmatter());
 write(`${docs(DEFAULT_LOCALE)}/hidden/index.mdx`, withFrontmatter('unlisted: true'));
 write(`${docs(DEFAULT_LOCALE)}/slugged/index.mdx`, withFrontmatter('slug: /custom/address'));
+write(`${docs(DEFAULT_LOCALE)}/closed/index.mdx`, withFrontmatter('unlisted: true'));
+// draft: EN-черновик, ES опубликован, DE без файла наследует черновик
+write(`${docs(DEFAULT_LOCALE)}/drafted/index.mdx`, withFrontmatter('draft: true'));
+// черновики во всех локалях
+write(`${docs(DEFAULT_LOCALE)}/all-draft/index.mdx`, withFrontmatter('draft: true'));
+// `draft: false` — не черновик
+write(`${docs(DEFAULT_LOCALE)}/not-draft/index.mdx`, withFrontmatter('draft: false'));
+// противоречивая пара, которую Docusaurus отвергает
+write(`${docs(DEFAULT_LOCALE)}/both/index.mdx`, withFrontmatter('draft: true\nunlisted: true'));
 write(`${blog(DEFAULT_LOCALE)}/post/index.mdx`, withFrontmatter('slug: post'));
 
 // ES — переводы разного вида.
@@ -67,6 +78,9 @@ write(`${docs('es')}/hidden/index.mdx`, withoutFrontmatter); // свой фай�
 write(`${docs('es')}/slugged/index.mdx`, withFrontmatter('slug: /custom/address'));
 // docs/missing и весь блог по-испански не переведены — файлов нет.
 write(`${docs('es')}/orphan/index.mdx`, withFrontmatter()); // перевода без EN-двойника не бывает
+write(`${docs('es')}/closed/index.mdx`, withFrontmatter('unlisted: true')); // закрыт везде
+write(`${docs('es')}/drafted/index.mdx`, withFrontmatter()); // опубликованный перевод черновика
+write(`${docs('es')}/all-draft/index.mdx`, withFrontmatter('draft: true'));
 
 // DE — переведён только блог, тоже без шапки.
 write(`${blog('de')}/post/index.mdx`, withoutFrontmatter);
@@ -157,4 +171,73 @@ test('производные списки повторяют решение ка
     !patterns.includes('/es/bare/'),
     'полноценный перевод из llms.txt убирать нельзя',
   );
+});
+
+test('языковые ссылки обещают только индексируемые версии', () => {
+  const plan = hreflangByRoute(map);
+
+  // обычная статья: ES снят с публикации, DE не переведён → только EN
+  assert.deepEqual(plan['/plain'], {locales: ['en'], xDefault: 'en'});
+  // перевод без шапки — полноценная версия
+  assert.deepEqual(plan['/bare'], {locales: ['en', 'es'], xDefault: 'en'});
+  // локаль по умолчанию закрыта, открыт только ES → x-default на ES
+  assert.deepEqual(plan['/hidden'], {locales: ['es'], xDefault: 'es'});
+  // закрыт везде (DE наследует unlisted) → ссылок нет вовсе
+  assert.deepEqual(plan['/closed'], {locales: [], xDefault: null});
+  // блог: EN и DE
+  assert.deepEqual(plan['/blog/post'], {locales: ['en', 'de'], xDefault: 'en'});
+});
+
+test('план языковых ссылок уезжает в браузер вместе со списками', () => {
+  const client = toClientData(map);
+  assert.deepEqual(client.alternates, hreflangByRoute(map));
+  assert.deepEqual(client.alternates['/hidden'], {locales: ['es'], xDefault: 'es'});
+});
+
+test('draft читается по локалям как строгое булево, без файла наследуется', () => {
+  const drafted = entry('/drafted');
+  assert.deepEqual(drafted.draft, {en: true, es: false, de: true});
+  assert.deepEqual(drafted.unlisted, {en: false, es: false, de: false});
+  assert.deepEqual(entry('/not-draft').draft, {en: false, es: false, de: false});
+  assert.deepEqual(entry('/all-draft').draft, {en: true, es: true, de: true});
+});
+
+test('черновик не индексируем: EN draft + ES public → только es, x-default es', () => {
+  const plan = hreflangByRoute(map);
+  assert.deepEqual(plan['/drafted'], {locales: ['es'], xDefault: 'es'});
+  assert.deepEqual(plan['/all-draft'], {locales: [], xDefault: null});
+  assert.deepEqual(plan['/not-draft'], {locales: ['en'], xDefault: 'en'});
+});
+
+test('пара draft + unlisted индексируемой версией не считается', () => {
+  const both = entry('/both');
+  assert.equal(both.draft.en, true);
+  assert.equal(both.unlisted.en, true);
+  assert.deepEqual(hreflangByRoute(map)['/both'], {locales: [], xDefault: null});
+});
+
+test('переход: снятие draft с EN возвращает en в hreflang и x-default', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'translation-map-draft-'));
+  const at = (rel) => path.join(dir, ...rel.split('/'));
+  const put = (rel, content) => {
+    fs.mkdirSync(path.dirname(at(rel)), {recursive: true});
+    fs.writeFileSync(at(rel), content, 'utf8');
+  };
+  const build = () =>
+    hreflangByRoute(
+      buildTranslationMap({siteDir: dir, locales: LOCALES, defaultLocale: DEFAULT_LOCALE}),
+    )['/article'];
+  try {
+    put(`${docs(DEFAULT_LOCALE)}/article/index.mdx`, withFrontmatter('draft: true'));
+    put(`${docs('es')}/article/index.mdx`, withFrontmatter());
+    assert.deepEqual(build(), {locales: ['es'], xDefault: 'es'}, 'пока EN черновик');
+
+    put(`${docs(DEFAULT_LOCALE)}/article/index.mdx`, withFrontmatter());
+    assert.deepEqual(build(), {locales: ['en', 'es'], xDefault: 'en'}, 'EN опубликован');
+
+    put(`${docs(DEFAULT_LOCALE)}/article/index.mdx`, withFrontmatter('unlisted: true'));
+    assert.deepEqual(build(), {locales: ['es'], xDefault: 'es'}, 'EN снят с публикации');
+  } finally {
+    fs.rmSync(dir, {recursive: true, force: true});
+  }
 });

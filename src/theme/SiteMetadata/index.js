@@ -10,12 +10,15 @@
  * Что меняем:
  *   • на самой непереведённой странице — <meta name="robots" content="noindex, follow">
  *     (ссылки на ней остаются полезными, поэтому follow, а не nofollow);
- *   • языковые ссылки hreflang и og:locale:alternate на такие адреса не выдаём
- *     ни с этой страницы, ни с её двойников в других локалях;
- *   • x-default остаётся и указывает на локаль по умолчанию.
+ *   • языковые ссылки hreflang и og:locale:alternate выдаём только на
+ *     индексируемые версии: ни на непереведённый адрес, ни на заглушку
+ *     (unlisted), ни с этой страницы, ни с её двойников в других локалях;
+ *   • x-default указывает на локаль по умолчанию, а если та закрыта — на
+ *     первую индексируемую версию (у статьи только на русском — на русскую).
  *
- * Список непереведённых адресов приходит из globalData плагина
- * translation-map — того же, что кормит llms.txt и проверку сборки
+ * Списки непереведённых адресов и заглушек и готовый план языковых ссылок
+ * приходят из globalData плагина translation-map (hreflangByRoute в
+ * map.mjs) — того же, что кормит llms.txt и проверку сборки
  * (scripts/seo-audit.mjs). Второго источника правды нет.
  *
  * Файл — свизл (полная копия компонента темы). При обновлении Docusaurus
@@ -64,15 +67,24 @@ function useSharedRoute() {
   return trimmed === '' ? '/' : trimmed;
 }
 
-/** Есть ли у текущего адреса собственный файл в каждой из локалей. */
+/**
+ * Есть ли у текущего адреса собственный файл в каждой из локалей и какие
+ * языковые ссылки ему положены.
+ */
 function useTranslationAvailability() {
-  const {untranslated, unlisted} = usePluginData('translation-map');
+  const {untranslated, unlisted, alternates} = usePluginData('translation-map');
+  const {
+    i18n: {locales, defaultLocale},
+  } = useDocusaurusContext();
   const route = useSharedRoute();
 
   const isTranslated = (locale) => !untranslated[locale]?.includes(route);
   const isUnlisted = (locale) => Boolean(unlisted[locale]?.includes(route));
+  // Адрес вне карты (главная, поиск, списки блога) существует во всех
+  // локалях одинаково — для него остаётся штатное поведение темы.
+  const plan = alternates[route] ?? {locales, xDefault: defaultLocale};
 
-  return {isTranslated, isUnlisted};
+  return {isTranslated, isUnlisted, plan};
 }
 
 // TODO move to SiteMetadataDefaults or theme-common ?
@@ -81,10 +93,10 @@ function useTranslationAvailability() {
 // See https://github.com/facebook/docusaurus/issues/3317
 function AlternateLangHeaders() {
   const {
-    i18n: {currentLocale, defaultLocale, localeConfigs},
+    i18n: {currentLocale, localeConfigs},
   } = useDocusaurusContext();
   const alternatePageUtils = useAlternatePageUtils();
-  const {isTranslated} = useTranslationAvailability();
+  const {plan} = useTranslationAvailability();
   const currentHtmlLang = localeConfigs[currentLocale].htmlLang;
   // HTML lang is a BCP 47 tag, but the Open Graph protocol requires
   // using underscores instead of dashes.
@@ -94,12 +106,14 @@ function AlternateLangHeaders() {
   // Note: it is fine to use both "x-default" and "en" to target the same url
   // See https://www.searchviu.com/en/multiple-hreflang-tags-one-url/
 
-  // Обещаем поиску только те языки, где у страницы есть свой файл. Локаль по
-  // умолчанию остаётся всегда: без неё не на что ставить x-default, а её файл
-  // существует по определению (перевод без двойника в сборку не попадает).
-  const alternateLocales = Object.entries(localeConfigs).filter(
-    ([locale]) => locale === defaultLocale || isTranslated(locale),
-  );
+  // Обещаем поиску только индексируемые версии — список и x-default
+  // приходят готовыми из карты переводов (hreflangByRoute). Заглушка или
+  // непереведённый адрес закрыты noindex, и языковая ссылка на них — ошибка.
+  const alternateLocales = plan.locales.map((locale) => [
+    locale,
+    localeConfigs[locale],
+  ]);
+  const xDefaultLocale = plan.xDefault;
 
   return (
     <Head>
@@ -114,14 +128,16 @@ function AlternateLangHeaders() {
           hrefLang={htmlLang}
         />
       ))}
-      <link
-        rel="alternate"
-        href={alternatePageUtils.createUrl({
-          locale: defaultLocale,
-          fullyQualified: true,
-        })}
-        hrefLang="x-default"
-      />
+      {xDefaultLocale !== null && (
+        <link
+          rel="alternate"
+          href={alternatePageUtils.createUrl({
+            locale: xDefaultLocale,
+            fullyQualified: true,
+          })}
+          hrefLang="x-default"
+        />
+      )}
 
       <meta
         property="og:locale"
