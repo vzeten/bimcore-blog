@@ -2,7 +2,7 @@
 <defs><marker id="blog-editor-v-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#5b6770"/></marker></defs>
 <rect x="0" y="0" width="288" height="1399" fill="#ffffff"/>
 <path d="M 144 123 L 144 214" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-editor-v-arr)"/>
-<path d="M 144 351 L 144 384" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-editor-v-arr)"/>
+<path d="M 144 333 L 144 384" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-editor-v-arr)"/>
 <path d="M 144 521 L 144 554" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-editor-v-arr)"/>
 <path d="M 144 633 L 144 724" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-editor-v-arr)"/>
 <path d="M 144 843 L 144 894" fill="none" stroke="#5b6770" stroke-width="2" marker-end="url(#blog-editor-v-arr)"/>
@@ -12,14 +12,13 @@
 <text x="144" y="68" text-anchor="middle" font-weight="700" fill="#1f2a33">Вы одобрили доработку</text>
 <text x="144" y="89" text-anchor="middle" font-size="14" fill="#3a4550">это и есть разрешение на</text>
 <text x="144" y="107" text-anchor="middle" font-size="14" fill="#3a4550">одну ветку и одну копию</text>
-<rect x="28" y="214" width="232" height="137" rx="10" fill="#ffffff" stroke="#8a939b" stroke-width="2"/>
+<rect x="28" y="214" width="232" height="119" rx="10" fill="#ffffff" stroke="#8a939b" stroke-width="2"/>
 <rect x="38" y="222" width="52.96" height="18" rx="9" fill="#1c7a45"/>
 <text x="64.48" y="235" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
 <text x="144" y="258" text-anchor="middle" font-weight="700" fill="#1f2a33">Ветка и временная копия</text>
 <text x="144" y="279" text-anchor="middle" font-size="14" fill="#3a4550">fix/editor-… от editor;</text>
-<text x="144" y="297" text-anchor="middle" font-size="14" fill="#3a4550">копия внутри папки;</text>
-<text x="144" y="315" text-anchor="middle" font-size="14" fill="#3a4550">пробный адрес на своём</text>
-<text x="144" y="333" text-anchor="middle" font-size="14" fill="#3a4550">порту</text>
+<text x="144" y="297" text-anchor="middle" font-size="14" fill="#3a4550">установка зависимостей</text>
+<text x="144" y="315" text-anchor="middle" font-size="14" fill="#3a4550">согласована заранее</text>
 <rect x="28" y="384" width="232" height="137" rx="10" fill="#e3f2e9" stroke="#1c7a45" stroke-width="2"/>
 <rect x="38" y="392" width="52.96" height="18" rx="9" fill="#1c7a45"/>
 <text x="64.48" y="405" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Сейчас</text>
