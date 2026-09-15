@@ -22,6 +22,10 @@ jobs:
       INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Полная история: даты изменения статей берутся из Git. С неполной
+          # историей у всех статей была бы дата сборки.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20

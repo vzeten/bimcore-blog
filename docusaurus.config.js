@@ -77,9 +77,17 @@ const config = {
         docs: {
           sidebarPath: './sidebars.js',
           routeBasePath: '/',
+          // Дата последнего изменения из истории Git файла статьи: строка под статьёй,
+          // dateModified в разметке и lastmod в sitemap. Ручной ввод не нужен
+          // (решение владельца 2026-09-15). На GitHub нужна полная история — deploy.yml.
+          showLastUpdateTime: true,
         },
         blog: {
           showReadingTime: true,
+          // Дата изменения — автоматически из Git (строка на странице статьи, dateModified
+          // в BlogPosting, lastmod в sitemap). Лента по-прежнему сортируется по date —
+          // дате первой публикации, которую изменения не трогают.
+          showLastUpdateTime: true,
           // Meta description ленты /blog/ (дефолт — бесполезное «Blog»).
           // Переводы — i18n/<l>/docusaurus-plugin-content-blog/options.json.
           blogDescription:
@@ -99,6 +107,8 @@ const config = {
           // неправильным тегом (property= вместо name=), поэтому для него
           // ignorePatterns обязателен.
           ignorePatterns: serviceRoutePatterns,
+          // lastmod берётся из той же даты изменения статьи (Git).
+          lastmod: 'date',
         },
       }),
     ],

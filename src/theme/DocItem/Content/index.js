@@ -26,6 +26,8 @@ function ArticleStructuredData() {
     mainEntityOfPage: url,
     image,
     inLanguage: i18n.currentLocale,
+    // Дата изменения из Git (showLastUpdateTime). Даты публикации у docs нет — не выдумываем.
+    ...(metadata.lastUpdatedAt && {dateModified: new Date(metadata.lastUpdatedAt).toISOString()}),
     ...(isLesson && {learningResourceType: 'Lesson'}),
     author: {
       '@type': 'Organization',
