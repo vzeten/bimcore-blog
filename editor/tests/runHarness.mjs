@@ -14,7 +14,7 @@ import {simpleGit} from 'simple-git';
 import {поставитьЗависимости} from './depsFixture.mjs';
 
 import {splitArticle} from '../src/core/articleFile.mjs';
-import {дописатьПоля, заменитьШапку} from '../src/core/refineHead.mjs';
+import {дописатьПоля, заменитьШапку, строкаПоля} from '../src/core/refineHead.mjs';
 
 import {releaseRoute} from '../src/adapters/releaseRoute.mjs';
 import {срезОднойВерсии} from '../src/adapters/prepareStamp.mjs';
@@ -22,6 +22,7 @@ import {закреплённаяОснова} from '../src/adapters/publishBase.
 import {готовыйПлан} from '../src/adapters/publishFacts.mjs';
 import {отпечатокПлана} from '../src/adapters/planBytes.mjs';
 import {publishDateRoute} from '../src/adapters/publishDateRoute.mjs';
+import {publishCoverRoute} from '../src/adapters/publishCoverRoute.mjs';
 import {publishRoute} from '../src/adapters/publishRoute.mjs';
 import {pushRoute} from '../src/adapters/pushRoute.mjs';
 
@@ -177,7 +178,7 @@ export function дверь({repo, editorDir, git}, записка, {безСни
       },
     };
 
-    const взято = await publishDateRoute(общее) || await releaseRoute(общее)
+    const взято = await publishDateRoute(общее) || await publishCoverRoute(общее) || await releaseRoute(общее)
       || await publishRoute(общее) || await pushRoute(общее);
     if (!взято) throw new Error(`ручки нет: ${адрес}`);
 
@@ -197,13 +198,15 @@ export function дверь({repo, editorDir, git}, записка, {безСни
  *
  * `поставитьДату` подставляется наборами про блог: в окне эту строку пишет сама программа и кладёт
  * её на диск обычным сохранением, и проверять надо именно то, что дальше по ходу файл уже с датой.
- * Умолчание отвечает «записано», ничего не меняя: у документации даты не бывает вовсе.
+ * Умолчание отвечает «записано», ничего не меняя: у документации даты не бывает вовсе. Обложка — так же:
+ * у статьи без картинок её не бывает, а наборы про обложку подставляют `поставитьПолеВФайл`.
  */
-export function ход(дверьСервера, шаги, поставитьДату = async () => true) {
+export function ход(дверьСервера, шаги, поставитьДату = async () => true, поставитьОбложку = async () => true) {
   return {
     запрос: дверьСервера,
     сохранить: async () => true,
     поставитьДату,
+    поставитьОбложку,
     шаг: (шаг) => шаги.push(шаг),
     жива: () => true,
   };
@@ -215,11 +218,20 @@ export function ход(дверьСервера, шаги, поставитьД�
  * проверка иначе доказывала бы выдумку обвязки, а не поведение программы.
  */
 export function поставитьДатуВФайл(repo, rel) {
-  return async (дата) => {
+  return поставитьПолеВФайл(repo, rel, 'date', (дата) => `date: ${дата}`);
+}
+
+/** Как окно ставит обложку: строка поля той же записью, что у обработчика «обложка». */
+export function поставитьОбложкуВФайл(repo, rel) {
+  return поставитьПолеВФайл(repo, rel, 'image', (адрес) => строкаПоля('image', адрес));
+}
+
+function поставитьПолеВФайл(repo, rel, ключ, строка) {
+  return async (значение) => {
     const полный = path.join(repo, rel);
     const исходный = fs.readFileSync(полный, 'utf8');
     const {frontmatterRaw} = splitArticle(исходный);
-    const шапка = дописатьПоля(frontmatterRaw, [{ключ: 'date', строка: `date: ${дата}`}], ПОРЯДОК_БЛОГА);
+    const шапка = дописатьПоля(frontmatterRaw, [{ключ, строка: строка(значение)}], ПОРЯДОК_БЛОГА);
     fs.writeFileSync(полный, заменитьШапку(исходный, шапка), 'utf8');
 
     return true;

@@ -2,7 +2,7 @@ import {useRef, useState} from 'react';
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import {buildFrontmatter, parseFrontmatter, порядокПолей, type Field} from './headFields';
 import {nothingChanged} from '../core/articleFile.mjs';
-import {дописатьПоля, полеПишетсяСтрокой} from '../core/refineHead.mjs';
+import {дописатьПоля, полеПишетсяСтрокой, строкаПоля} from '../core/refineHead.mjs';
 import type {Пара} from './restore';
 import type {DraftPayload} from './useAutosave';
 import type {Article, Root, SaveState, Settings} from './types';
@@ -139,7 +139,17 @@ export function useWindowText(deps: {
    * в зависимости от того, кто его записал. Дальше всё как у обычной правки свойств: пара «тело +
    * шапка» уходит одной дорогой, а на диск её кладёт обычное сохранение.
    */
-  const поставитьДату = (дата: string, settings: Settings): boolean => {
+  const поставитьДату = (дата: string, settings: Settings): boolean => поставитьПоле('date', `date: ${дата}`, settings);
+
+  /**
+   * Поставить адрес обложки, которую публикация положила рядом со статьёй (решение владельца
+   * 2026-09-16). Строка поля — той же записью, что у обработчика «обложка» в «Доработать».
+   */
+  const поставитьОбложку = (адрес: string, settings: Settings): boolean => (
+    поставитьПоле('image', (строкаПоля as (поле: string, сырое: string) => string)('image', адрес), settings)
+  );
+
+  const поставитьПоле = (ключ: string, строка: string, settings: Settings): boolean => {
     const article = deps.article;
     if (!article) return false;
 
@@ -147,11 +157,11 @@ export function useWindowText(deps: {
     // **Поле, записанное в файле несколькими строками, не переписывается.** Запись строкой заменяет
     // кусок целиком, и продолжение многострочного значения пропало бы молча — это потеря чужого
     // текста. Такую шапку правит человек, а публикация останавливается своим отказом.
-    if (!(полеПишетсяСтрокой as (raw: string, ключ: string) => boolean)(образец, 'date')) return false;
+    if (!(полеПишетсяСтрокой as (raw: string, ключ: string) => boolean)(образец, ключ)) return false;
 
     const шапка = дописатьПоля(
       образец,
-      [{ключ: 'date', строка: `date: ${дата}`}],
+      [{ключ, строка}],
       порядокПолей(settings, article.path) as string[],
     ) as string;
 
@@ -168,6 +178,7 @@ export function useWindowText(deps: {
     правка,
     правитьПоля,
     поставитьДату,
+    поставитьОбложку,
     отметить,
     положитьПару,
   };
