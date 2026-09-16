@@ -212,6 +212,7 @@ function CanonicalUrlHeaders({permalink}) {
 }
 export default function SiteMetadata() {
   const {
+    siteConfig: {noIndex},
     i18n: {currentLocale},
   } = useDocusaurusContext();
   // TODO maybe move these 2 themeConfig to siteConfig?
@@ -231,10 +232,14 @@ export default function SiteMetadata() {
           noindex: одноимённый meta из более позднего <Head> перебивает ранний,
           поэтому закрытые страницы (непереведённые ниже, заглушки, архив и
           метки блога в своих темах) получают свой noindex, а не этот тег.
+          Закрытый целиком сайт (siteConfig.noIndex) тег не получает: его
+          noindex стоит раньше, и этот тег перебил бы его.
         */}
-      <Head>
-        <meta name="robots" content="max-image-preview:large" />
-      </Head>
+      {!noIndex && (
+        <Head>
+          <meta name="robots" content="max-image-preview:large" />
+        </Head>
+      )}
 
       {defaultImage && <PageMetadata image={defaultImage} />}
 
