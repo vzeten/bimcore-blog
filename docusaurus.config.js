@@ -42,8 +42,9 @@ const llmsExcludePatterns = llmsExcludeRoutePatterns(translationMap);
 
 // Название ленты блога (RSS/Atom) на языке локали. Docusaurus собирает каждую
 // локаль отдельным проходом и сообщает её в DOCUSAURUS_CURRENT_LOCALE; переводов
-// для ленты в options.json нет. У EN остаётся штатное «BIMCORE Learn Blog».
-const feedTitles = {ru: 'Блог BIMCORE Learn', es: 'Blog de BIMCORE Learn'};
+// для ленты в options.json нет. У EN и ES пока штатное «BIMCORE Learn Blog»:
+// испанскую формулировку даёт владелец.
+const feedTitles = {ru: 'Блог BIMCORE Learn'};
 const feedTitle = feedTitles[process.env.DOCUSAURUS_CURRENT_LOCALE ?? defaultLocale];
 
 
