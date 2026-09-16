@@ -18,7 +18,8 @@ import {именаМедиа} from '../core/refineText.mjs';
 import {afterEdit} from '../core/articleState.mjs';
 import {папкаСтатьи, цельВнутриСтатьи} from './assetGuards.mjs';
 import {dropDraft, fingerprint, saveSnapshot} from './draftStore.mjs';
-import {detectPublishedRef, gitAuthor} from './gitFile.mjs';
+import {gitAuthor} from './gitFile.mjs';
+import {закреплённаяОснова} from './publishBase.mjs';
 import {естьВОснове} from './publishFacts.mjs';
 import {ApiError, badFields} from './httpBody.mjs';
 import {инструментыМедиа} from './imagePrep.mjs';
@@ -48,7 +49,7 @@ export async function refineRoute({req, res, url, repo, settings, git, тело,
   const выбранные = набор(payload['выбранные']);
 
   if (план) {
-    const снимок = собратьСнимок(repo, rel, dir, await фактыСайта(git, repo, rel, dir));
+    const снимок = собратьСнимок(repo, rel, dir, await фактыСайта(git, settings, rel, dir));
     const {отчёт} = await выполнить(снимок, выбранные, settings, ИНСТРУМЕНТЫ_ПЛАНА);
     send(res, 200, {path: rel, отпечаток: снимок.отпечаток, обработчики: отчёт});
     return true;
@@ -83,7 +84,7 @@ async function применить({repo, settings, git, rel, dir, выбранн
   // неизвестен, и обещать человеку «картинки оставлены как есть»; применение при вернувшемся
   // доступе обработало бы их — то есть сделало бы не то, на что человек согласился. Расхождение
   // отпечатка останавливает операцию тем же отказом, что и правка файла снаружи.
-  const снимок = собратьСнимок(repo, rel, dir, await фактыСайта(git, repo, rel, dir));
+  const снимок = собратьСнимок(repo, rel, dir, await фактыСайта(git, settings, rel, dir));
   if (снимок.отпечаток !== ждали) return send(res, 409, {error: ошибки['доработкаСнимокУстарел']});
 
   const {копия, отчёт, изменения} = await выполнить(снимок, выбранные, settings, инструментыМедиа({repo, settings}));
@@ -164,17 +165,19 @@ export function собратьСнимок(repo, rel, dir, наСайте = null
  * Какие файлы папки статьи уже лежат на сайте. Возвращает `Set` местных имён либо `null` —
  * «спросить не удалось»; правило обработки картинок различает эти ответы (`core/refineFiles.mjs`).
  *
- * Спрашивается опубликованная ветка `origin/main` — тот же источник, по которому окно показывает,
- * какие языковые версии на сайте есть. Местная ветка сюда не подставляется: она говорит о том, что
- * человек готовит, а не о том, что на сайте уже стоит.
+ * Спрашивается ЗАКРЕПЛЁННАЯ основа — свежая опубликованная ветка у сервера, та же, по которой
+ * считается план публикации. Местная ссылка `origin/main` сюда не подставляется: она показывает
+ * сайт таким, каким его видели при последнем обмене с сервером, и по устаревшей ссылке программа
+ * пережала бы картинку, которая на сайте уже стоит. Сервер недоступен — `null`, то есть «не знаю»:
+ * тогда обработка не трогает ни одного файла.
  */
-async function фактыСайта(git, repo, rel, dir) {
-  const ref = await detectPublishedRef(git);
-  if (ref === null) return null;
+async function фактыСайта(git, settings, rel, dir) {
+  const основа = await закреплённаяОснова({git, settings});
+  if (основа.ошибка) return null;
 
   const папка = path.posix.dirname(rel);
   const имена = перечень(dir);
-  const ответ = await естьВОснове(git, ref, имена.map((имя) => `${папка}/${имя}`));
+  const ответ = await естьВОснове(git, основа.основа, имена.map((имя) => `${папка}/${имя}`));
   if (ответ === null) return null;
 
   // Путь, по которому в ветке лежит не обычный файл, в «на сайте» не попадает: обработка такого

@@ -2,7 +2,7 @@ import {useRef, useState} from 'react';
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import {buildFrontmatter, parseFrontmatter, порядокПолей, type Field} from './headFields';
 import {nothingChanged} from '../core/articleFile.mjs';
-import {дописатьПоля} from '../core/refineHead.mjs';
+import {дописатьПоля, полеПишетсяСтрокой} from '../core/refineHead.mjs';
 import type {Пара} from './restore';
 import type {DraftPayload} from './useAutosave';
 import type {Article, Root, SaveState, Settings} from './types';
@@ -144,6 +144,11 @@ export function useWindowText(deps: {
     if (!article) return false;
 
     const образец = deps.шапкаСейчас.current || article.frontmatterRaw;
+    // **Поле, записанное в файле несколькими строками, не переписывается.** Запись строкой заменяет
+    // кусок целиком, и продолжение многострочного значения пропало бы молча — это потеря чужого
+    // текста. Такую шапку правит человек, а публикация останавливается своим отказом.
+    if (!(полеПишетсяСтрокой as (raw: string, ключ: string) => boolean)(образец, 'date')) return false;
+
     const шапка = дописатьПоля(
       образец,
       [{ключ: 'date', строка: `date: ${дата}`}],
