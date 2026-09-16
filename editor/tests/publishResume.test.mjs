@@ -113,11 +113,14 @@ describe('прошлая запись не уехала на сайт', () => {
     await проверитьИСобрать(RU, false, х);
 
     expect(записка.map((шаг) => шаг.адрес)).toEqual([
+      // Дата записи спрашивается в начале каждого хода: у документации она всегда пуста.
+      '/api/publish/date',
       '/api/prepare',
       '/api/release',
       '/api/publish/plan',
       '/api/publish/push',
       // Дальше обычный ход: он и убедится, что публиковать больше нечего.
+      '/api/publish/date',
       '/api/prepare',
       '/api/release',
     ]);

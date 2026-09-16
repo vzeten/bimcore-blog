@@ -22,6 +22,7 @@ import fs from 'node:fs';
 import {СОЗДАНО, УДАЛЕНО, публикацияВозможна} from '../core/publishPlan.mjs';
 import {годныйПуть, отпечатокИсточников} from './releaseFacts.mjs';
 import {сверитьПодготовку} from './prepareStamp.mjs';
+import {датаРазошлась} from './publishDateFacts.mjs';
 import {закреплённаяОснова} from './publishBase.mjs';
 import {готовыйПлан} from './publishFacts.mjs';
 import {отпечатокПлана} from './planBytes.mjs';
@@ -134,6 +135,13 @@ async function записатьСтатью({rel, payload, repo, editorDir, sett
     send(res, 409, {error: settings['отказыКоммита'][снова.код], код: снова.код, находки: снова.блокеры});
     return true;
   }
+
+  // Дата записи блога сверяется с этой же закреплённой основой и по байтам того же снимка проверок:
+  // в коммит обязана уехать ровно та дата, которую видели проверки и сборка.
+  const датаНеТа = await датаРазошлась({
+    git, repo, rel, settings, основа: основа.основа, срез: снова.подготовка.срез,
+  });
+  if (датаНеТа) return отказ(датаНеТа);
 
   if (план.ошибка || !публикацияВозможна(план)) {
     return отказ('составНеДоказан', {отказ: план.отказ ?? null, разрывы: план.разрывы ?? []});

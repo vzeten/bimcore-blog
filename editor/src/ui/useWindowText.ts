@@ -2,6 +2,7 @@ import {useRef, useState} from 'react';
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import {buildFrontmatter, parseFrontmatter, порядокПолей, type Field} from './headFields';
 import {nothingChanged} from '../core/articleFile.mjs';
+import {дописатьПоля} from '../core/refineHead.mjs';
 import type {Пара} from './restore';
 import type {DraftPayload} from './useAutosave';
 import type {Article, Root, SaveState, Settings} from './types';
@@ -129,12 +130,39 @@ export function useWindowText(deps: {
     ));
   };
 
+  /**
+   * Поставить дату записи блога в шапку окна. Зовётся только публикацией: дата блога — это день
+   * первой публикации, и человек её не пишет (`core/publishDate.mjs`).
+   *
+   * Строку поля кладёт ядро (`дописатьПоля`) — тем же правилом, каким она ложится при создании
+   * статьи и при доработке шапки: своя сборка строки здесь развела бы вид одного и того же поля
+   * в зависимости от того, кто его записал. Дальше всё как у обычной правки свойств: пара «тело +
+   * шапка» уходит одной дорогой, а на диск её кладёт обычное сохранение.
+   */
+  const поставитьДату = (дата: string, settings: Settings): boolean => {
+    const article = deps.article;
+    if (!article) return false;
+
+    const образец = deps.шапкаСейчас.current || article.frontmatterRaw;
+    const шапка = дописатьПоля(
+      образец,
+      [{ключ: 'date', строка: `date: ${дата}`}],
+      порядокПолей(settings, article.path) as string[],
+    ) as string;
+
+    deps.setFields(parseFrontmatter(шапка, article.path, deps.roots, deps.общаяОбложка));
+    правка(deps.текстСейчас.current, шапка);
+
+    return true;
+  };
+
   return {
     // Наружу уходит только подстановка своего окна: чужая молча превращается в её отсутствие.
     подстановка: подстановка !== null && подстановка.ключ === ключОкна() ? подстановка : null,
     вЧерновик,
     правка,
     правитьПоля,
+    поставитьДату,
     отметить,
     положитьПару,
   };

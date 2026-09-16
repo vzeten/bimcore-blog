@@ -5,7 +5,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {ПО_УМОЛЧАНИЮ} from '../src/core/refine.mjs';
-import {EN, RU, НАСТРОЙКИ, jpg, png, запрос, настройкиСоСкриптом, репозиторий, снимокДиска} from './refineHarness.mjs';
+import {
+  EN, RU, НАСТРОЙКИ, gitСВеткой, jpg, png, запрос, настройкиСоСкриптом, репозиторий, снимокДиска,
+} from './refineHarness.mjs';
 
 const ТЕКСТ = '---\ntitle: "Розетки"\nslug: /lessons/proba\ndescription: "Описание"\n---\n\n![](./img/photo.jpg)\n';
 const ПАПКА = path.posix.dirname(RU);
@@ -127,14 +129,66 @@ describe('применение доработки', () => {
   it('правка статьи во время чтения автора из git (последний await) — отказ без записей и истории', async () => {
     const среда = репозиторий(ФАЙЛЫ());
     const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU});
-    const git = {raw: async () => {
-      fs.appendFileSync(path.join(среда.repo, RU), '\nПравка во время git.\n');
-      return 'Проверка';
-    }};
+    // Про сайт этот git отвечает как обычный: иначе факты сайта разошлись бы с планом, ручка
+    // отказала бы раньше по другой причине, и гонка на последнем `await` осталась бы непроверенной.
+    // Правку в файл вносит только чтение автора — тот самый последний `await`.
+    const обычный = gitСВеткой();
+    const git = {
+      ...обычный,
+      raw: async (аргументы) => {
+        if (Array.isArray(аргументы) && аргументы.includes('ls-tree')) return обычный.raw(аргументы);
+        fs.appendFileSync(path.join(среда.repo, RU), '\nПравка во время git.\n');
+        return 'Проверка';
+      },
+    };
     const {code} = await запрос(среда, '/api/refine/apply', {path: RU, выбранные: ['подписиМедиа'], отпечаток: план.отпечаток}, НАСТРОЙКИ, git);
     expect(code).toBe(409);
     expect(fs.readFileSync(path.join(среда.repo, RU), 'utf8')).toBe(`${ТЕКСТ}\nПравка во время git.\n`);
     expect(снимков(среда)).toEqual([]);
+  });
+
+  it('картинка, лежащая на сайте, не трогается применением: байты на диске остаются прежними', async () => {
+    const среда = репозиторий(ФАЙЛЫ());
+    const наСайте = `${ПАПКА}/img/photo.jpg`;
+    const settings = настройкиСоСкриптом(среда.repo, РЕЗУЛЬТАТ);
+    const git = gitСВеткой([наСайте]);
+    const до = снимокДиска(среда.repo);
+    const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU}, settings, git);
+
+    expect(план.обработчики.find((з) => з.код === 'медиа').оставлено)
+      .toEqual([{что: 'img/photo.jpg', причина: 'наСайте'}]);
+
+    const {code, data} = await запрос(
+      среда,
+      '/api/refine/apply',
+      {path: RU, выбранные: ['медиа'], отпечаток: план.отпечаток},
+      settings,
+      git,
+    );
+
+    expect(code).toBe(200);
+    expect(data.применено).toBe(false);
+    expect(снимокДиска(среда.repo)).toBe(до);
+  });
+
+  it('сайт стал известен между планом и применением — отказ: человек соглашался на другое', async () => {
+    const среда = репозиторий(ФАЙЛЫ());
+    const settings = настройкиСоСкриптом(среда.repo, РЕЗУЛЬТАТ);
+    // План сложился, когда опубликованной ветки не видно вовсе: он обещал не трогать ни одной картинки.
+    const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU}, settings, gitСВеткой(null));
+    const до = снимокДиска(среда.repo);
+
+    const {code, data} = await запрос(
+      среда,
+      '/api/refine/apply',
+      {path: RU, выбранные: ПО_УМОЛЧАНИЮ, отпечаток: план.отпечаток},
+      settings,
+      gitСВеткой([]),
+    );
+
+    expect(code).toBe(409);
+    expect(data.error).toBe(НАСТРОЙКИ['ошибкиСервера']['доработкаСнимокУстарел']);
+    expect(снимокДиска(среда.repo)).toBe(до);
   });
 
   it('после последней сверки до истории и файлов нет ни одного await (предохранитель по исходнику)', () => {

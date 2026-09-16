@@ -18,12 +18,16 @@ export const RU = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/
 export const EN = 'docs/lessons/proba/index.mdx';
 export const BLOG = 'blog/proba/index.mdx';
 
-/** Целый PNG с заданными размерами в IHDR; данных кадра нет — программе важны заголовок и хвост. */
-export function png(ширина, высота, хвост = 0) {
+/**
+ * Целый PNG с заданными размерами в IHDR; данных кадра нет — программе важны заголовок и хвост.
+ * `строение` — байт строения кадра: `0` обычный цвет, `3` палитра (такой даёт медиастандарт сайта).
+ */
+export function png(ширина, высота, хвост = 0, строение = 0) {
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(ширина, 0);
   ihdr.writeUInt32BE(высота, 4);
   ihdr[8] = 8;
+  ihdr[9] = строение;
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]),
     Buffer.from('IHDR'), ihdr, Buffer.alloc(4),
@@ -48,9 +52,20 @@ export const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.from([16, 0, 0, 0
 export const GIF = ГИФ;
 export const WEBM = ВИДЕО;
 
-/** Рабочая копия без диска: текст и файлы папки статьи. */
-export function копия(текст, файлы = {}, путь = RU) {
-  return {путь, текст, файлы: new Map(Object.entries(файлы)), имена: new Set(Object.keys(файлы))};
+/**
+ * Рабочая копия без диска: текст и файлы папки статьи.
+ *
+ * `наСайте` — имена, которые уже лежат в опубликованной ветке; `null` означает «спросить не
+ * удалось». По умолчанию сайт известен и пуст: так выглядит статья, которой на сайте ещё нет.
+ */
+export function копия(текст, файлы = {}, путь = RU, наСайте = new Set()) {
+  return {
+    путь,
+    текст,
+    файлы: new Map(Object.entries(файлы)),
+    имена: new Set(Object.keys(файлы)),
+    наСайте,
+  };
 }
 
 /** Инструменты применения без Python: отдают те же байты либо подставленный результат. */
@@ -100,8 +115,31 @@ export function настройкиСоСкриптом(repo, результат)
   return {...НАСТРОЙКИ, доработка: {...НАСТРОЙКИ['доработка'], команда: {python: process.execPath, скрипт: 'editor/подмена-image-prep.mjs', пределСекунд: 30}}};
 }
 
+/**
+ * Подставной git для ручки: опубликованная ветка есть, а названные пути в ней лежат или нет.
+ *
+ * Без него ручка сочла бы сайт неизвестным и не тронула бы ни одной картинки — правильное
+ * поведение программы, но проверять на нём обработку нечего.
+ *
+ * `опубликованные` — пути от корня репозитория, лежащие в ветке. `null` вместо перечня означает
+ * «ветки нет»: так проверяется случай, когда про сайт не известно ничего.
+ */
+export function gitСВеткой(опубликованные = []) {
+  return {
+    revparse: async () => (опубликованные === null ? Promise.reject(new Error('нет ветки')) : 'origin/main'),
+    raw: async (аргументы) => {
+      if (!Array.isArray(аргументы) || !аргументы.includes('ls-tree')) return 'Проверка';
+      const свои = аргументы.slice(аргументы.indexOf('--') + 1);
+      return (опубликованные ?? [])
+        .filter((путь) => свои.includes(путь))
+        .map((путь) => `100644 blob 0000000000000000000000000000000000000000\t${путь}\0`)
+        .join('');
+    },
+  };
+}
+
 /** Один запрос к ручке. Возвращает код ответа и разобранный JSON. */
-export async function запрос({repo, editorDir}, pathname, тело, settings = НАСТРОЙКИ, git = {raw: async () => 'Проверка'}) {
+export async function запрос({repo, editorDir}, pathname, тело, settings = НАСТРОЙКИ, git = gitСВеткой()) {
   const ответ = {};
   const последняяПравка = new Map();
   const взято = await refineRoute({

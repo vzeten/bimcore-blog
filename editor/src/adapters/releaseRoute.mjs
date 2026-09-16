@@ -15,6 +15,7 @@ import {ВЕРСИЯ, СОЗДАНО, публикацияВозможна} from
 import {итогВыпуска} from '../core/releaseSummary.mjs';
 import {годныйПуть} from './releaseFacts.mjs';
 import {сверитьПодготовку} from './prepareStamp.mjs';
+import {датаРазошлась} from './publishDateFacts.mjs';
 import {закреплённаяОснова} from './publishBase.mjs';
 import {разобратьОчередь} from './publishRepair.mjs';
 import {взятьЗамок, отпустить} from './publishLock.mjs';
@@ -103,6 +104,16 @@ export async function releaseRoute({req, res, url, repo, editorDir, settings, gi
     return true;
   }
   const срез = снимок.подготовка.срез;
+
+  // **Дата записи блога сверяется с той же закреплённой основой.** Окно проставило её до проверок по
+  // основе, закреплённой тогда; пока человек читал, сайт мог уйти вперёд — например, туда уехал
+  // соседний язык этой же записи. Считать состав и собирать сайт по дате от вчерашнего сайта значит
+  // обещать одно, а зафиксировать другое. Расхождение — отказ с честным кодом, а не молчаливая правка.
+  const датаНеТа = await датаРазошлась({git, repo, rel, settings, основа: основа.основа, срез});
+  if (датаНеТа) {
+    send(res, 409, {error: settings['отказыКоммита'][датаНеТа], код: датаНеТа});
+    return true;
+  }
 
   const план = await готовыйПлан({git, repo, settings, rel, основа: основа.основа});
   if (план.ошибка) {

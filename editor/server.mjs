@@ -24,6 +24,7 @@ import {localeRoute} from './src/adapters/localeRoute.mjs';
 import {saveRoute} from './src/adapters/saveRoute.mjs';
 import {prepareRoute} from './src/adapters/prepareRoute.mjs';
 import {refineRoute} from './src/adapters/refineRoute.mjs';
+import {publishDateRoute} from './src/adapters/publishDateRoute.mjs';
 import {releaseRoute} from './src/adapters/releaseRoute.mjs';
 import {publishRoute} from './src/adapters/publishRoute.mjs';
 import {pushRoute} from './src/adapters/pushRoute.mjs';
@@ -193,16 +194,14 @@ async function api(req, res, url) {
     req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send, articles,
   })) return;
 
-  // Предварительный выпуск: план публикации и полная сборка его точной копии. Git только читается:
-  // ни индекс, ни объектная база до согласия человека не меняются.
-  if (await releaseRoute({
-    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, insideRepo, send,
-  })) return;
+  // Один набор на все ручки публикации: настройки на заход читаются один раз, иначе правка файла
+  // настроек посреди запроса развела бы шаги одного решения по разным правилам. Дата записи блога —
+  // только счёт, без записи; следом состав выпуска, полная сборка его копии и запись статьи.
+  const дляВыпуска = {req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, insideRepo, send};
+  if (await publishDateRoute(дляВыпуска) || await releaseRoute(дляВыпуска)) return;
 
   // Запись статьи — единственная ручка, меняющая местный git. Отправки в ней нет.
-  if (await publishRoute({
-    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, insideRepo, send,
-  })) return;
+  if (await publishRoute(дляВыпуска)) return;
 
   // Отправка на сайт: сначала показ того, что уедет, и только отдельным заходом сама отправка.
   if (await pushRoute({

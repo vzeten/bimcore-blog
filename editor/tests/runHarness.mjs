@@ -13,11 +13,15 @@ import {simpleGit} from 'simple-git';
 
 import {поставитьЗависимости} from './depsFixture.mjs';
 
+import {splitArticle} from '../src/core/articleFile.mjs';
+import {дописатьПоля, заменитьШапку} from '../src/core/refineHead.mjs';
+
 import {releaseRoute} from '../src/adapters/releaseRoute.mjs';
 import {срезОднойВерсии} from '../src/adapters/prepareStamp.mjs';
 import {закреплённаяОснова} from '../src/adapters/publishBase.mjs';
 import {готовыйПлан} from '../src/adapters/publishFacts.mjs';
 import {отпечатокПлана} from '../src/adapters/planBytes.mjs';
+import {publishDateRoute} from '../src/adapters/publishDateRoute.mjs';
 import {publishRoute} from '../src/adapters/publishRoute.mjs';
 import {pushRoute} from '../src/adapters/pushRoute.mjs';
 
@@ -173,7 +177,8 @@ export function дверь({repo, editorDir, git}, записка, {безСни
       },
     };
 
-    const взято = await releaseRoute(общее) || await publishRoute(общее) || await pushRoute(общее);
+    const взято = await publishDateRoute(общее) || await releaseRoute(общее)
+      || await publishRoute(общее) || await pushRoute(общее);
     if (!взято) throw new Error(`ручки нет: ${адрес}`);
 
     const {status, payload} = ответы[0];
@@ -187,15 +192,42 @@ export function дверь({repo, editorDir, git}, записка, {безСни
   };
 }
 
-/** Ход окна: пишущих действий, кроме самих ручек, нет — сохранять здесь нечего. */
-export function ход(дверьСервера, шаги) {
+/**
+ * Ход окна: пишущих действий, кроме самих ручек, нет — сохранять здесь нечего.
+ *
+ * `поставитьДату` подставляется наборами про блог: в окне эту строку пишет сама программа и кладёт
+ * её на диск обычным сохранением, и проверять надо именно то, что дальше по ходу файл уже с датой.
+ * Умолчание отвечает «записано», ничего не меняя: у документации даты не бывает вовсе.
+ */
+export function ход(дверьСервера, шаги, поставитьДату = async () => true) {
   return {
     запрос: дверьСервера,
     сохранить: async () => true,
+    поставитьДату,
     шаг: (шаг) => шаги.push(шаг),
     жива: () => true,
   };
 }
+
+/**
+ * Как окно ставит дату: строку кладёт ядро (`дописатьПоля`) тем же правилом, что при создании
+ * статьи, а на диск она уходит обычной записью файла. Своей сборки строки здесь нет намеренно —
+ * проверка иначе доказывала бы выдумку обвязки, а не поведение программы.
+ */
+export function поставитьДатуВФайл(repo, rel) {
+  return async (дата) => {
+    const полный = path.join(repo, rel);
+    const исходный = fs.readFileSync(полный, 'utf8');
+    const {frontmatterRaw} = splitArticle(исходный);
+    const шапка = дописатьПоля(frontmatterRaw, [{ключ: 'date', строка: `date: ${дата}`}], ПОРЯДОК_БЛОГА);
+    fs.writeFileSync(полный, заменитьШапку(исходный, шапка), 'utf8');
+
+    return true;
+  };
+}
+
+/** Принятый порядок полей записи блога: по нему строка даты встаёт на своё место в шапке. */
+const ПОРЯДОК_БЛОГА = НАСТРОЙКИ['поляСоздания']['blog']['порядок'];
 
 /** Отпечаток плана, который окно получило бы от `/api/release`. Считается тем же кодом сервера. */
 export async function отпечатокПоказанного({repo, git, rel}) {
