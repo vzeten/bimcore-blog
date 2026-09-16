@@ -8,6 +8,8 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 import {refineRoute} from '../src/adapters/refineRoute.mjs';
+import {подменитьБиблиотекуДляПроверки} from '../src/adapters/imageOptimize.mjs';
+import {типКартинки} from '../src/core/imageType.mjs';
 import {ГИФ} from './gifFixture.mjs';
 import {WEBM as ВИДЕО} from './webmFixture.mjs';
 
@@ -68,12 +70,20 @@ export function копия(текст, файлы = {}, путь = RU, наСа�
   };
 }
 
-/** Инструменты применения без Python: отдают те же байты либо подставленный результат. */
-export const инструменты = (результат = null) => ({
+/**
+ * Инструменты применения без библиотеки картинок: отдают итог «заменить» с подставленным результатом
+ * (или теми же байтами). Род результата узнаётся по байтам — так же, как у настоящего конвертера.
+ * `итоги` — готовый перечень итогов по порядку, когда проверке нужен «оставить» или «отказ».
+ */
+export const инструменты = (результат = null, итоги = null) => ({
   вызовов: 0,
   async подготовить(набор) {
     this.вызовов += 1;
-    return набор.map(({байты}) => ({байты: результат ?? байты}));
+    if (итоги !== null) return итоги;
+    return набор.map(({байты}) => {
+      const байтыИтога = результат ?? байты;
+      return {итог: 'заменить', байты: байтыИтога, род: типКартинки(байтыИтога), было: 0, стало: 0};
+    });
   },
 });
 
@@ -97,23 +107,34 @@ export function репозиторий(файлы) {
 }
 
 /**
- * Настройки с подставной командой медиаподготовки: скрипт на node копирует заданные байты в `.png`.
- * Переменные `ПОДМЕНА_ТРОНУТЬ` и `ПОДМЕНА_ТРОНУТЬ_БАЙТЫ` (base64) велят скрипту по ходу работы
- * изменить названный файл — так проверяется гонка «правка во время image-prep».
+ * Подставная библиотека картинок для проверок ручки: цепочка вызовов та же, что у `sharp`, но
+ * представления заданы заранее — `png` и `jpg` (целые байты своего рода). Выбирается то, что легче,
+ * настоящим кодом конвертера. `тронуть()` зовётся в момент кодирования: так проверяется гонка
+ * «правка файла во время обработки». Настоящая библиотека проверяется своим набором на настоящих
+ * картинках (`imageOptimize.test.mjs`).
  */
-export function настройкиСоСкриптом(repo, результат) {
-  const скрипт = path.join(repo, 'editor', 'подмена-image-prep.mjs');
-  fs.writeFileSync(скрипт, [
-    "import fs from 'node:fs'; import path from 'node:path';",
-    'const dir = process.argv[2];',
-    "if (process.env.ПОДМЕНА_ТРОНУТЬ) fs.writeFileSync(process.env.ПОДМЕНА_ТРОНУТЬ, Buffer.from(process.env.ПОДМЕНА_ТРОНУТЬ_БАЙТЫ, 'base64'));",
-    "for (const f of fs.readdirSync(dir)) { if (f.endsWith('.png')) continue; const out = path.join(dir, f.replace(/\\.[^.]+$/, '.png'));",
-    "fs.writeFileSync(out, Buffer.from(process.env.ПОДМЕНА_PNG, 'base64')); fs.rmSync(path.join(dir, f)); }",
-  ].join('\n'));
-  process.env.ПОДМЕНА_PNG = результат.toString('base64');
-  delete process.env.ПОДМЕНА_ТРОНУТЬ;
-  return {...НАСТРОЙКИ, доработка: {...НАСТРОЙКИ['доработка'], команда: {python: process.execPath, скрипт: 'editor/подмена-image-prep.mjs', пределСекунд: 30}}};
+export function подставнаяБиблиотека({png: результатPng, jpg: результатJpg, ширина = 1000, высота = 667, тронуть = null}) {
+  const цепочка = {
+    timeout: () => цепочка,
+    autoOrient: () => цепочка,
+    toColourspace: () => цепочка,
+    resize: () => цепочка,
+    metadata: async () => ({width: ширина, height: высота, hasAlpha: false}),
+    stats: async () => ({isOpaque: true}),
+    png: () => ({toBuffer: async () => {
+      тронуть?.();
+      return результатPng;
+    }}),
+    jpeg: () => ({toBuffer: async () => результатJpg}),
+  };
+  return () => цепочка;
 }
+
+/** Поставить подставную библиотеку на время проверки; после каждой проверки она снимается. */
+export function сБиблиотекой(библиотека) {
+  подменитьБиблиотекуДляПроверки(библиотека);
+}
+afterEach(() => подменитьБиблиотекуДляПроверки(undefined));
 
 /**
  * Подставной git для ручки: сервер сайта отвечает, и названные пути в опубликованной ветке лежат

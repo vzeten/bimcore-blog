@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import {ПО_УМОЛЧАНИЮ} from '../src/core/refine.mjs';
 import {
-  EN, RU, НАСТРОЙКИ, gitСВеткой, jpg, png, запрос, настройкиСоСкриптом, репозиторий, снимокДиска,
+  EN, RU, НАСТРОЙКИ, gitСВеткой, jpg, png, запрос, подставнаяБиблиотека, репозиторий, сБиблиотекой, снимокДиска,
 } from './refineHarness.mjs';
 
 const ТЕКСТ = '---\ntitle: "Розетки"\nslug: /lessons/proba\ndescription: "Описание"\n---\n\n![](./img/photo.jpg)\n';
@@ -19,6 +19,13 @@ const ФАЙЛЫ = () => ({
   [`${path.posix.dirname(EN)}/img/photo.jpg`]: jpg(1200, 800),
 });
 const РЕЗУЛЬТАТ = png(1000, 667, 8);
+/**
+ * Подставная библиотека, у которой PNG легче JPEG: результатом становится `РЕЗУЛЬТАТ`. Исходник шире
+ * страницы (1200 px), поэтому обработка обязательна и порог выигрыша не вмешивается.
+ */
+const ЛЕГЧЕ_PNG = (тронуть = null) => подставнаяБиблиотека({
+  png: РЕЗУЛЬТАТ, jpg: jpg(1000, 667, 400), ширина: 1200, высота: 800, тронуть,
+});
 const история = (среда) => path.join(среда.editorDir, НАСТРОЙКИ['хранение']['папкаСнимков']);
 const снимков = (среда) => (fs.existsSync(история(среда)) ? fs.readdirSync(история(среда)).flatMap((п) => fs.readdirSync(path.join(история(среда), п))) : []);
 
@@ -54,7 +61,8 @@ describe('план доработки', () => {
 describe('применение доработки', () => {
   it('выбранные действия применяются одной операцией: версия до и после в истории, состояние, порог черновика', async () => {
     const среда = репозиторий(ФАЙЛЫ());
-    const settings = настройкиСоСкриптом(среда.repo, РЕЗУЛЬТАТ);
+    сБиблиотекой(ЛЕГЧЕ_PNG());
+    const settings = НАСТРОЙКИ;
     const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU}, settings);
     const {code, data, последняяПравка} = await запрос(среда, '/api/refine/apply', {path: RU, выбранные: ПО_УМОЛЧАНИЮ, отпечаток: план.отпечаток}, settings);
 
@@ -72,12 +80,25 @@ describe('применение доработки', () => {
     expect(fs.readFileSync(path.join(папкаИстории, версии[0]), 'utf8')).toBe(ТЕКСТ);
     expect(fs.readFileSync(path.join(среда.repo, ПАПКА, '_state.json'), 'utf8')).toContain('"готовность": "Черновик"');
     expect(последняяПравка.has(RU)).toBe(true);
-    expect(fs.readdirSync(path.join(среда.repo, 'editor', '.tmp'))).toEqual([]);
+
+    // Оригиналы легли до записи: исходная картинка и текст статьи побайтно, манифест с отпечатком после.
+    const папкаОригиналов = path.join(среда.editorDir, НАСТРОЙКИ['хранение']['папкаОригиналов']);
+    const [статья] = fs.readdirSync(папкаОригиналов);
+    const [операция] = fs.readdirSync(path.join(папкаОригиналов, статья));
+    const место = path.join(папкаОригиналов, статья, операция);
+    expect(fs.readFileSync(path.join(место, 'files', 'img', 'photo.jpg'))).toEqual(jpg(1200, 800));
+    expect(fs.readFileSync(path.join(место, 'article.mdx'), 'utf8')).toBe(ТЕКСТ);
+    const манифест = JSON.parse(fs.readFileSync(path.join(место, 'manifest.json'), 'utf8'));
+    expect(манифест.статья).toBe(RU);
+    expect(манифест.было.map((з) => з.имя)).toEqual(['img/photo.jpg']);
+    expect(манифест.стало.map((з) => з.имя).sort()).toEqual(['img/photo.jpg', 'img/photo.png']);
+    expect(typeof манифест.отпечатокПосле).toBe('string');
   });
 
   it('меняется только открытая локаль и её файлы: соседняя версия побайтово прежняя', async () => {
     const среда = репозиторий(ФАЙЛЫ());
-    const settings = настройкиСоСкриптом(среда.repo, РЕЗУЛЬТАТ);
+    сБиблиотекой(ЛЕГЧЕ_PNG());
+    const settings = НАСТРОЙКИ;
     const en = path.join(среда.repo, path.dirname(EN));
     const до = JSON.stringify([fs.readFileSync(path.join(среда.repo, EN), 'utf8'), fs.readFileSync(path.join(en, 'img', 'photo.jpg')).toString('base64')]);
     const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU}, settings);
@@ -104,25 +125,20 @@ describe('применение доработки', () => {
     ['статья', RU, Buffer.from(`${ТЕКСТ}\nПравка во время скрипта.\n`)],
     ['исходное медиа', `${ПАПКА}/img/photo.jpg`, jpg(7, 7)],
   ]) {
-    it(`правка (${что}) во время image-prep — отказ без постоянных записей, включая историю`, async () => {
+    it(`правка (${что}) во время обработки картинок — отказ без постоянных записей, включая историю и оригиналы`, async () => {
       const среда = репозиторий(ФАЙЛЫ());
-      const settings = настройкиСоСкриптом(среда.repo, РЕЗУЛЬТАТ);
+      const settings = НАСТРОЙКИ;
       const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU}, settings);
-      process.env.ПОДМЕНА_ТРОНУТЬ = path.join(среда.repo, файл);
-      process.env.ПОДМЕНА_ТРОНУТЬ_БАЙТЫ = байты.toString('base64');
-      try {
-        const {code, data} = await запрос(среда, '/api/refine/apply', {path: RU, выбранные: ПО_УМОЛЧАНИЮ, отпечаток: план.отпечаток}, settings);
-        expect(code).toBe(409);
-        expect(data.error).toBe(НАСТРОЙКИ['ошибкиСервера']['доработкаСнимокУстарел']);
-      } finally {
-        delete process.env.ПОДМЕНА_ТРОНУТЬ;
-      }
-      // На диске ровно внешняя правка и ничего от операции: ни png, ни истории, ни состояния.
+      сБиблиотекой(ЛЕГЧЕ_PNG(() => fs.writeFileSync(path.join(среда.repo, файл), байты)));
+      const {code, data} = await запрос(среда, '/api/refine/apply', {path: RU, выбранные: ПО_УМОЛЧАНИЮ, отпечаток: план.отпечаток}, settings);
+      expect(code).toBe(409);
+      expect(data.error).toBe(НАСТРОЙКИ['ошибкиСервера']['доработкаСнимокУстарел']);
+      // На диске ровно внешняя правка и ничего от операции: ни png, ни истории, ни состояния, ни оригиналов.
       expect(fs.readFileSync(path.join(среда.repo, файл))).toEqual(байты);
       expect(fs.readdirSync(path.join(среда.repo, ПАПКА, 'img'))).toEqual(['photo.jpg']);
       expect(снимков(среда)).toEqual([]);
       expect(fs.readFileSync(path.join(среда.repo, ПАПКА, '_state.json'), 'utf8')).toContain('Готова к публикации');
-      expect(fs.readdirSync(path.join(среда.repo, 'editor', '.tmp'))).toEqual([]);
+      expect(fs.existsSync(path.join(среда.editorDir, НАСТРОЙКИ['хранение']['папкаОригиналов']))).toBe(false);
     });
   }
 
@@ -153,7 +169,8 @@ describe('применение доработки', () => {
   it('картинка, лежащая на сайте, не трогается применением: байты на диске остаются прежними', async () => {
     const среда = репозиторий(ФАЙЛЫ());
     const наСайте = `${ПАПКА}/img/photo.jpg`;
-    const settings = настройкиСоСкриптом(среда.repo, РЕЗУЛЬТАТ);
+    сБиблиотекой(ЛЕГЧЕ_PNG());
+    const settings = НАСТРОЙКИ;
     const git = gitСВеткой([наСайте]);
     const до = снимокДиска(среда.repo);
     const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU}, settings, git);
@@ -176,7 +193,8 @@ describe('применение доработки', () => {
 
   it('сайт стал известен между планом и применением — отказ: человек соглашался на другое', async () => {
     const среда = репозиторий(ФАЙЛЫ());
-    const settings = настройкиСоСкриптом(среда.repo, РЕЗУЛЬТАТ);
+    сБиблиотекой(ЛЕГЧЕ_PNG());
+    const settings = НАСТРОЙКИ;
     // План сложился, когда опубликованной ветки не видно вовсе: он обещал не трогать ни одной картинки.
     const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU}, settings, gitСВеткой(null));
     const до = снимокДиска(среда.repo);
@@ -205,13 +223,14 @@ describe('применение доработки', () => {
     expect(код).not.toContain('фиксировать');
   });
 
-  it('сбой медиаподготовки (нет Python или скрипт упал) — 500 словами из настроек и диск прежний', async () => {
+  it('библиотеки картинок на машине нет — 500 словами из настроек, диск и история прежние', async () => {
     const среда = репозиторий(ФАЙЛЫ());
-    const settings = {...НАСТРОЙКИ, доработка: {...НАСТРОЙКИ['доработка'], команда: {python: 'нет-такой-программы-доработки', скрипт: 'scripts/image-prep.py', пределСекунд: 5}}};
+    const settings = НАСТРОЙКИ;
+    сБиблиотекой(null);
     const {data: план} = await запрос(среда, '/api/refine/plan', {path: RU}, settings);
     const до = снимокДиска(среда.repo);
     await expect(запрос(среда, '/api/refine/apply', {path: RU, выбранные: ПО_УМОЛЧАНИЮ, отпечаток: план.отпечаток}, settings))
-      .rejects.toMatchObject({status: 500, message: НАСТРОЙКИ['ошибкиСервера']['медиаподготовкаНеУдалась']});
+      .rejects.toMatchObject({status: 500, message: НАСТРОЙКИ['ошибкиСервера']['сжатиеНедоступно']});
     expect(снимокДиска(среда.repo)).toBe(до);
     expect(снимков(среда)).toEqual([]);
   });
