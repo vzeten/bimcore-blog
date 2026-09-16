@@ -85,12 +85,15 @@ function urlPath(href) {
   return href.replace(/^https?:\/\/[^/]+/, '');
 }
 
+/** Содержимое всех meta robots страницы, в нижнем регистре. */
+export function robotsContents(html) {
+  return tags(html, 'meta')
+    .filter((a) => a.name?.toLowerCase() === 'robots')
+    .map((a) => (a.content ?? '').toLowerCase());
+}
+
 export function hasNoIndex(html) {
-  return tags(html, 'meta').some(
-    (a) =>
-      a.name?.toLowerCase() === 'robots' &&
-      (a.content ?? '').toLowerCase().includes('noindex'),
-  );
+  return robotsContents(html).some((content) => content.includes('noindex'));
 }
 
 /** Все языковые ссылки страницы, включая x-default: [{hreflang, path}]. */
@@ -283,6 +286,16 @@ function auditByMap({outDir, map, defaultLocale, fail, warn}) {
     }
     if (!mustBeClosed && hasNoIndex(html)) {
       fail(where, 'настоящий перевод закрыт от индексации — лишний meta robots noindex');
+    }
+    // Крупная картинка в выдаче: открытая страница её разрешает. Тег один на
+    // страницу — второй одноимённый означал бы, что правило картинки и noindex
+    // разошлись, и какой из них прочтёт робот, уже не гарантировано.
+    const robots = robotsContents(html);
+    if (robots.length > 1) {
+      fail(where, `несколько meta robots на одной странице: ${robots.join(' | ')}`);
+    }
+    if (!mustBeClosed && !robots.some((content) => content.includes('max-image-preview:large'))) {
+      fail(where, 'открытая страница не разрешает крупную картинку в выдаче — нет max-image-preview:large');
     }
 
     // 2. sitemap локали

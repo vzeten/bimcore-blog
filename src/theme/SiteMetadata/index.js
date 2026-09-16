@@ -226,6 +226,16 @@ export default function SiteMetadata() {
         <body />
       </Head>
 
+      {/*
+          Крупная картинка статьи в выдаче и в ИИ-поиске. Стоит РАНЬШЕ всех
+          noindex: одноимённый meta из более позднего <Head> перебивает ранний,
+          поэтому закрытые страницы (непереведённые ниже, заглушки, архив и
+          метки блога в своих темах) получают свой noindex, а не этот тег.
+        */}
+      <Head>
+        <meta name="robots" content="max-image-preview:large" />
+      </Head>
+
       {defaultImage && <PageMetadata image={defaultImage} />}
 
       <CanonicalUrlHeaders />

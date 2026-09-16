@@ -40,6 +40,12 @@ const translationMap = buildTranslationMap({siteDir, locales, defaultLocale});
 // ставит src/theme/SiteMetadata; аудит после сборки это подтверждает.
 const llmsExcludePatterns = llmsExcludeRoutePatterns(translationMap);
 
+// Название ленты блога (RSS/Atom) на языке локали. Docusaurus собирает каждую
+// локаль отдельным проходом и сообщает её в DOCUSAURUS_CURRENT_LOCALE; переводов
+// для ленты в options.json нет. У EN остаётся штатное «BIMCORE Learn Blog».
+const feedTitles = {ru: 'Блог BIMCORE Learn', es: 'Blog de BIMCORE Learn'};
+const feedTitle = feedTitles[process.env.DOCUSAURUS_CURRENT_LOCALE ?? defaultLocale];
+
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -96,6 +102,7 @@ const config = {
           // Старый визуальный редактор не экранировал JSX-теги; MDX парсер их валидирует.
           // См. decisions «Truncate-маркер = <truncate /> JSX-тег».
           truncateMarker: /<truncate\s*\/>/,
+          ...(feedTitle ? {feedOptions: {title: feedTitle, description: feedTitle}} : {}),
         },
         theme: {
           customCss: './src/css/custom.css',

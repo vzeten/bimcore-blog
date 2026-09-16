@@ -65,9 +65,11 @@ function newBuildDir() {
   return path.join(root, `build-${counter}`);
 }
 
-function pageHtml({noindex = false, alternates = [], og = []}) {
+function pageHtml({noindex = false, alternates = [], og = [], robots = null}) {
   const head = [];
-  if (noindex) head.push('<meta data-rh="true" name="robots" content="noindex, nofollow">');
+  // Как в сборке: открытая страница разрешает крупную картинку, закрытая несёт только noindex.
+  const robotsTags = robots ?? [noindex ? 'noindex, nofollow' : 'max-image-preview:large'];
+  for (const content of robotsTags) head.push(`<meta data-rh="true" name="robots" content="${content}">`);
   for (const [hreflang, urlPath] of alternates) {
     // Как в минифицированной сборке: часть атрибутов без кавычек.
     head.push(`<link data-rh="true" rel=alternate href="${ORIGIN}${urlPath}" hreflang=${hreflang}>`);
@@ -191,6 +193,20 @@ test('открытая RU-статья не должна ссылаться на
   assert.ok(some(result, /ru \/ru\/only-ru\/ — hreflang обещает версию, которая закрыта или отсутствует: \/only-ru\//));
   assert.ok(some(result, /ru \/ru\/only-ru\/ — x-default должен указывать на \/ru\/only-ru\/, а указывает на \/only-ru\//));
   assert.ok(some(result, /ru \/ru\/only-ru\/ — og:locale:alternate обещает закрытую или отсутствующую версию: en/));
+});
+
+test('открытая страница без max-image-preview:large — ошибка', () => {
+  const build = correctBuild();
+  build.pages['/ru/full/'].robots = [];
+  const result = audit(render(build));
+  assert.ok(some(result, /ru \/ru\/full\/ — открытая страница не разрешает крупную картинку в выдаче/));
+});
+
+test('закрытая страница с тегом картинки рядом с noindex — ошибка: одноимённые теги перебивают друг друга', () => {
+  const build = correctBuild();
+  build.pages['/es/full/'].robots = ['max-image-preview:large', 'noindex, follow'];
+  const result = audit(render(build));
+  assert.ok(some(result, /es \/es\/full\/ — несколько meta robots на одной странице/));
 });
 
 test('поломка ловится и без карты: x-default открытой страницы на закрытую версию', () => {
