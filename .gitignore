@@ -71,3 +71,5 @@ scripts/knowledge-redirect/dist/
 /editor/.coordination/
 # Панель экземпляров редактора: журналы и список запусков, не содержимое проекта
 /editor/.panel/
+# Схемы процессов для владельца живут вне репозитория: C:/My_work/process-review
+/output/process-review/
