@@ -40,12 +40,6 @@ const translationMap = buildTranslationMap({siteDir, locales, defaultLocale});
 // ставит src/theme/SiteMetadata; аудит после сборки это подтверждает.
 const llmsExcludePatterns = llmsExcludeRoutePatterns(translationMap);
 
-// Название блога на всех языках одно — «BIMCORE Learn», без перевода и без слова
-// «блог» (решение владельца 2026-09-16). Им названы страница ленты и лента RSS/Atom;
-// переводы заголовка ленты в i18n/<l>/docusaurus-plugin-content-blog/options.json
-// повторяют его же.
-const blogName = 'BIMCORE Learn';
-
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -102,8 +96,6 @@ const config = {
           // Старый визуальный редактор не экранировал JSX-теги; MDX парсер их валидирует.
           // См. decisions «Truncate-маркер = <truncate /> JSX-тег».
           truncateMarker: /<truncate\s*\/>/,
-          blogTitle: blogName,
-          feedOptions: {title: blogName, description: blogName},
         },
         theme: {
           customCss: './src/css/custom.css',
