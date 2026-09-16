@@ -119,6 +119,10 @@ export function подставнаяБиблиотека({png: результа�
     autoOrient: () => цепочка,
     toColourspace: () => цепочка,
     resize: () => цепочка,
+    // Замер качества палитры читает точки эталона и результата: одинаковые точки — палитра годится,
+    // и выбор по весу идёт как прежде.
+    ensureAlpha: () => цепочка,
+    raw: () => ({toBuffer: async () => Buffer.alloc(16, 7)}),
     metadata: async () => ({width: ширина, height: высота, hasAlpha: false}),
     stats: async () => ({isOpaque: true}),
     png: () => ({toBuffer: async () => {
