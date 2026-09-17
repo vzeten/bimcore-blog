@@ -71,5 +71,7 @@ scripts/knowledge-redirect/dist/
 /editor/.coordination/
 # Панель экземпляров редактора: журналы и список запусков, не содержимое проекта
 /editor/.panel/
+# Оригиналы картинок до доработки: служебное хранилище редактора, не содержимое сайта
+/editor/.originals/
 # Схемы процессов для владельца живут вне репозитория: C:/My_work/process-review
 /output/process-review/
