@@ -42,6 +42,11 @@ test('шаг правит ссылки всего дерева, а у языка
   assert.deepEqual(адреса(поУмолчанию), [`${дом}/ru/ru/blog/statya/.md`]);
 });
 
+test('адрес сайта с косой чертой в конце правило не выключает', () => {
+  const дом = 'https://learn.bimcore.one';
+  assert.equal(безДвойнойЛокали(`${дом}/ru/ru/blog/statya/.md`, 'ru', `${дом}/`), `${дом}/ru/blog/statya/.md`);
+});
+
 test('узлы без ссылок и без детей шаг проходит молча', () => {
   const шаг = собратьСсылкиЛокали({локаль: 'es', адресСайта: 'https://learn.bimcore.one'});
   assert.doesNotThrow(() => шаг({type: 'root', children: [{type: 'paragraph'}, {type: 'link'}]}));

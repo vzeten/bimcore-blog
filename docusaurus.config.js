@@ -48,7 +48,6 @@ const текущаяЛокаль = process.env.DOCUSAURUS_CURRENT_LOCALE ?? defa
 // Адрес сайта нужен и самому Docusaurus, и шагу ссылок: одно значение на оба места.
 const адресСайта = 'https://learn.bimcore.one';
 
-
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   // Токен Ecwid здесь не лежит: customFields уезжают в бандл сайта, то есть в браузер каждого
