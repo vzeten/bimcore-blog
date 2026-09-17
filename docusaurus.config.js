@@ -8,6 +8,7 @@ import {
   llmsExcludeRoutePatterns,
 } from './plugins/translation-map/map.mjs';
 import {defaultLocale, locales} from './plugins/translation-map/locales.mjs';
+import {собратьСсылкиЛокали} from './plugins/llms-locale-links.mjs';
 
 // Локально читаем токены из .env.local (в git не коммитится).
 // На GitHub Actions переменные приходят из секретов репозитория (process.env).
@@ -40,6 +41,13 @@ const translationMap = buildTranslationMap({siteDir, locales, defaultLocale});
 // ставит src/theme/SiteMetadata; аудит после сборки это подтверждает.
 const llmsExcludePatterns = llmsExcludeRoutePatterns(translationMap);
 
+// Локаль текущего прохода сборки: её префикс снимается со ссылок markdown-копий для ИИ-агентов,
+// иначе плагин llms-txt приписывает его второй раз (`/ru/ru/...`, карточка #73).
+const текущаяЛокаль = process.env.DOCUSAURUS_CURRENT_LOCALE ?? defaultLocale;
+
+// Адрес сайта нужен и самому Docusaurus, и шагу ссылок: одно значение на оба места.
+const адресСайта = 'https://learn.bimcore.one';
+
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -49,7 +57,7 @@ const config = {
   tagline: 'Revit courses, guides & resources',
   favicon: 'img/favicon.ico',
   future: { v4: true },
-  url: 'https://learn.bimcore.one',
+  url: адресСайта,
   baseUrl: '/',
   // Хостинг 301-редиректит URL без «/» на вариант со «/» (статика из папок).
   // true выравнивает sitemap/canonical/hreflang с реальными URL — без цепочки 301.
@@ -173,6 +181,9 @@ const config = {
           // false → полные URL: иначе ссылки в /ru/llms.txt теряют /ru/
           // и ведут на EN-копии (у RU-only статей это 404). Аудит #63.
           relativePaths: false,
+          // Плагин прибавляет baseUrl локали к пути, где префикс уже есть; шаг по готовому
+          // markdown схлопывает удвоенный `/ru/ru/` (#73).
+          remarkPlugins: [[собратьСсылкиЛокали, {локаль: текущаяЛокаль === defaultLocale ? '' : текущаяЛокаль, адресСайта}]],
           excludeRoutes: [...serviceRoutePatterns, ...llmsExcludePatterns],
         },
       },
