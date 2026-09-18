@@ -47,6 +47,8 @@ export function TopBar(props: {
   onОбновить: () => Promise<void>;
   /** Сказать человеку словами: версия начата либо начать её не вышло. */
   onСообщить: (текст: string) => void;
+  /** Сообщение об удаче: полоса без красного. */
+  onУдача: (текст: string) => void;
 }) {
   const п = props.settings.подписи;
   const в = props.settings.видимость;
@@ -68,7 +70,7 @@ export function TopBar(props: {
     обновить: props.onОбновить,
     открыть: async (path) => (await props.onOpen(path)) === true,
     onОшибка: props.onСообщить,
-    onНачато: props.onСообщить,
+    onНачато: props.onУдача,
   });
 
   const скрыта = скрытаВОкне(props.fields);
@@ -241,6 +243,7 @@ export function TopBar(props: {
           onОбложка={props.onОбложка}
           onДоступность={props.onДоступность}
           onOpen={props.onOpen}
+          onОбновить={props.onОбновить}
           onСообщить={props.onСообщить}
         />
       </div>

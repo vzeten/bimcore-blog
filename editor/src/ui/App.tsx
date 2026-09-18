@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
+import {useMessage} from './useMessage';
 import {Rail} from './zones/Rail';
 import {Registry} from './zones/Registry';
 import {TopBar} from './zones/TopBar';
@@ -37,11 +38,10 @@ export function App() {
   const [mode, setMode] = useState<PanelMode>(null);
   const [article, setArticle] = useState<Article | null>(null);
   const [fields, setFields] = useState<Field[]>([]);
-  // Текст живёт в редакторе и в `текстСейчас`; состояние нужно только для пересоздания зоны.
-  const [, setText] = useState('');
+  const [, setText] = useState(''); // Текст живёт в редакторе и в `текстСейчас`; это — для пересоздания зоны.
   const [dirty, setDirty] = useState(false);
   const [colors, setColors] = useState(true);
-  const [ошибка, setОшибка] = useState<string | null>(null);
+  const {ошибка, удача, setОшибка, сообщитьУдачу} = useMessage();
   const [состояниеСохранения, setСостояниеСохранения] = useState<SaveState>('сохранено');
   const {runSafe, сПричиной} = makeReporter(setОшибка);
   const автосохранение = useAutosave(settings?.хранение.автосохранениеСек ?? 0, setСостояниеСохранения, setОшибка);
@@ -53,9 +53,7 @@ export function App() {
   // Текст и шапка в ref: пока запрос идёт, человек печатает, и ответ сравнивает «что сохраняли» с «что в окне».
   const текстСейчас = useRef('');
   const шапкаСейчас = useRef('');
-  // Какая статья открыта и идёт ли просмотр — в ref: эти признаки читают замыкания редактора
-  // и поздние ответы запросов, созданные ещё до того, как всё поменялось.
-  // Значение ставит переход (сразу, а не при отрисовке); здесь только начальное состояние.
+  // Открытая статья и просмотр — в ref: их читают замыкания редактора и поздние ответы; ставит переход.
   const статьяСейчас = useRef<string | null>(null);
   // Номер захода в статью: та же статья, открытая заново, — уже другое окно.
   const открытие = useRef(0);
@@ -97,7 +95,7 @@ export function App() {
     открыть: (path) => open(path),
     обновить: refresh,
     onОшибка: setОшибка,
-    onСоздано: setОшибка,
+    onСоздано: сообщитьУдачу,
   });
 
   const setСпор = (спор: Article['спор']): void => setArticle((было) => (было ? {...было, спор} : было));
@@ -127,7 +125,7 @@ export function App() {
   const удаление = useDelete({
     путь: () => статьяСейчас.current, заход: () => открытие.current,
     автосохранение, обновить: refresh, закрытьСтатью: closeArticle,
-    onОшибка: (текст) => setОшибка(сПричиной('ошибкаУдаления', текст)), onУдалено: setОшибка,
+    onОшибка: (текст) => setОшибка(сПричиной('ошибкаУдаления', текст)), onУдалено: сообщитьУдачу,
   });
 
   useEffect(() => {
@@ -178,6 +176,7 @@ export function App() {
         удаление={удаление}
         onОбновить={refresh}
         onСообщить={setОшибка}
+        onУдача={сообщитьУдачу}
         // Просмотр версии ничего не пишет: пишущие кнопки шапки на это время заперты.
         просмотр={просмотрИдёт}
       />
@@ -186,6 +185,7 @@ export function App() {
         settings={settings}
         article={реестр ? null : article}
         ошибка={ошибка}
+        удача={удача}
         onЗакрытьОшибку={() => setОшибка(null)}
         расхождение={расхождение}
         просмотрИдёт={просмотрИдёт}

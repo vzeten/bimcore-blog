@@ -13,6 +13,9 @@
 
 .errorbar span { flex: 1; }
 .errorbar-close { border: 0; background: transparent; color: #8a1f1f; font-size: 12px; text-decoration: underline; }
+/* Удача — нейтральная серо-голубая полоса: сообщение о том, что всё вышло, не выглядит бедой. */
+.errorbar-ok { background: #eef3f8; border-bottom-color: #c9d6e3; color: #22384d; }
+.errorbar-ok .errorbar-close { color: #22384d; }
 
 /* ---------- сбой ---------- */
 

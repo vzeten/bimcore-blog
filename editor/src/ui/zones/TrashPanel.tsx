@@ -70,7 +70,7 @@ export function TrashPanel(props: {settings: Settings; onЗакрыть: () => v
         <div className="trash-row" key={запись.id}>
           <span className="trash-name">
             {запись.название || (запись.пути ?? []).join(', ')}
-            {запись.языки && запись.языки.length > 0 && <span className="trash-meta"> · {запись.языки.join(', ')}</span>}
+            {запись.языки && запись.языки.length > 0 && <span className="trash-meta"> · {языкиЗаписи(запись.языки, props.settings)}</span>}
           </span>
           <span className="trash-meta">
             {запись.состояние === 'готово' ? label('удаленаКогда', {когда: когда(запись.удалено)}) : п.записьНезавершена}
@@ -95,4 +95,11 @@ export function TrashPanel(props: {settings: Settings; onЗакрыть: () => v
       ))}
     </section>
   );
+}
+
+/** Языки записи корзины — заглавными кодами в порядке языков настроек, как буквы в реестре: «RU, EN». */
+export function языкиЗаписи(языки: string[], settings: Settings): string {
+  const порядок = Object.keys(settings.локали);
+  const место = (код: string) => (порядок.includes(код) ? порядок.indexOf(код) : порядок.length);
+  return [...языки].sort((a, b) => место(a) - место(b)).map((код) => код.toUpperCase()).join(', ');
 }

@@ -11,7 +11,7 @@ import type {Settings} from '../types';
 export function PublishReason(props: {
   settings: Settings;
   остановка: Остановка;
-  onПерейти: (место: {путь: string; строка: number}) => void;
+  onПерейти: (место: {путь: string; строка: number; столбец?: number; длина?: number}) => void;
   onПонятно: () => void;
 }) {
   const п = props.settings.публикация;
@@ -122,7 +122,10 @@ export function ничегоНеУшло(остановка: Остановка)
 }
 
 /** Место в статье, куда можно перейти: первая находка, у которой известны файл и строка тела. */
-export function местоОстановки(остановка: Остановка): {путь: string; строка: number; код: string} | null {
+export function местоОстановки(остановка: Остановка): {путь: string; строка: number; код: string; столбец?: number; длина?: number} | null {
   const находка = остановка.находки.find((н) => typeof н.путь === 'string' && н.путь !== '' && typeof н.строка === 'number');
-  return находка ? {путь: находка.путь as string, строка: находка.строка as number, код: находка.код} : null;
+  return находка ? {
+    путь: находка.путь as string, строка: находка.строка as number, код: находка.код,
+    ...(typeof находка.столбец === 'number' && typeof находка.знаков === 'number' ? {столбец: находка.столбец, длина: находка.знаков} : {}),
+  } : null;
 }

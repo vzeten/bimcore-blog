@@ -12,6 +12,8 @@ export function Bars(props: {
   settings: Settings;
   article: Article | null;
   ошибка: string | null;
+  /** Сообщение об удаче: полоса нейтральная, без красного. */
+  удача: boolean;
   onЗакрытьОшибку: () => void;
   /** Ответы человека по спорным местам и их отправка: сама панель правил не знает. */
   расхождение: {
@@ -35,7 +37,7 @@ export function Bars(props: {
 }) {
   return (
     <>
-      <ErrorBar settings={props.settings} текст={props.ошибка} onЗакрыть={props.onЗакрытьОшибку} />
+      <ErrorBar settings={props.settings} текст={props.ошибка} удача={props.удача} onЗакрыть={props.onЗакрытьОшибку} />
 
       {!props.просмотрИдёт && props.article?.спор && (
         <ConflictPanel

@@ -1,6 +1,9 @@
 /* Окно публикации и значок «Сайт» (решение владельца 2026-09-18, п.2 и п.5). Окно — тем же слоем
    поверх программы, что вопрос удаления (.delete-ask): остальное заперто, пока оно открыто. */
 
+/* Вторичный текст, который человек обязан прочитать (окна публикации и причины): темнее тихого. */
+:root { --ink-second: #4f5660; }
+
 .publish-ask-langs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
 .publish-ask-langs li { display: flex; gap: 8px; align-items: baseline; }
 .publish-ask-langs label { display: inline-flex; gap: 6px; align-items: center; min-width: 7rem; }
@@ -8,11 +11,13 @@
 .publish-ask-nofile { display: inline-flex; min-width: 7rem; padding-left: 19px; color: var(--ink-quiet); }
 .publish-ask-head { margin: 0; font-size: 13px; color: var(--ink); }
 .publish-ask-links { margin: 0; font-size: 13px; color: var(--layer-deleted); }
-.publish-ask-notes summary { color: var(--ink-quiet); font-size: 13px; cursor: pointer; }
+.publish-ask-notes summary { color: var(--ink-second); font-size: 13px; cursor: pointer; }
 /* Замечания в окне — одной строкой каждое, тем же шрифтом, что всё окно (макет владельца). */
 .publish-ask-list { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--ink); display: grid; gap: 2px; }
 /* Все надписи окна одного размера: подпись «сейчас: …» не мельче остального. */
-.delete-ask-body .publish-quiet-inline { font-size: 13px; }
+.delete-ask-body .publish-quiet-inline { font-size: 13px; color: var(--ink-second); }
+/* «На сайт ничего не ушло» в окне причины читается, а не угадывается (проба владельца 2026-09-19). */
+.publish .publish-quiet { font-size: 13px; color: var(--ink-second); }
 
 /* Кнопка после отказа: «Не опубликовано» — заметно, но не криком; по нажатию видна причина. */
 .publish-failed { color: var(--layer-deleted); border-color: var(--layer-deleted); }
