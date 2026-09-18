@@ -98,6 +98,21 @@ describe('разметка окон вопроса', () => {
     expect(оба).toContain('Ссылки на статью уберутся в 4 статьях.');
   });
 
+  it('публикация: пока сайт не спрошен — названия языков из свода и «узнаю…», путь к файлу не показывается никогда', () => {
+    const путь = 'i18n/ru/docusaurus-plugin-content-blog/dlya-publikacii/index.mdx';
+    const окно = {неУзнали: false, выбор: 'всем', отмечены: [путь], находки: null, состояние: null};
+    const html = renderToStaticMarkup(
+      <PublishAsk settings={НАСТРОЙКИ} path={путь} окно={окно} версии={{ru: путь, en: 'blog/dlya-publikacii/index.mdx'}}
+        onВыбрать={() => {}} onОтметить={() => {}} onОпубликовать={() => {}} onОтмена={() => {}} />,
+    );
+
+    expect(html).not.toContain('docusaurus-plugin-content-blog');
+    expect(html).not.toContain('index.mdx');
+    expect(html).toContain('Русский');
+    expect(html).toContain('English');
+    expect(html).toContain('сейчас: узнаю…');
+  });
+
   it('публикация: без отмеченных языков кнопка «Опубликовать» заперта', () => {
     const путь = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/index.mdx';
     const окно = {неУзнали: false, выбор: 'всем', отмечены: [], находки: null, состояние: null};

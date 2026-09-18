@@ -5,7 +5,7 @@
 // `/api/articles`. Шапка держала снимок момента открытия: работа уходила в файл, список это
 // показывал, а буквы `RU`, `EN`, `ES` над редактором молчали до повторного открытия статьи.
 
-import {признакиЛокали} from '../core/localeSigns.mjs';
+import {признакиЛокали, скрытаНаСайте} from '../core/localeSigns.mjs';
 import type {ArticleRow, ПризнакиЛокали} from './articleTypes';
 import type {SaveState} from './types';
 
@@ -41,6 +41,20 @@ export function путиИзСвода(свод: ArticleRow[], путь: string)
   if (!своя) return null;
 
   return Object.fromEntries(Object.entries(своя.versions).map(([код, версия]) => [код, версия.path]));
+}
+
+/**
+ * Скрыта ли открытая версия на САЙТЕ — по свежему своду, тем же правилом, что буквы языков. Из этого
+ * окно говорит «изменение ещё не на сайте»: снимок момента открытия после публикации врал бы до
+ * перезагрузки (проба владельца 2026-09-19). `null` — версии в опубликованной ветке нет;
+ * `undefined` — свод не знает ответа, и прежнее значение честнее выдуманного.
+ */
+export function скрытаИзСвода(свод: ArticleRow[], путь: string): boolean | null | undefined {
+  const версия = Object.values(строкаСвода(свод, путь)?.versions ?? {}).find((своя) => своя.path === путь);
+  if (версия === undefined || (версия.опубликован !== true && версия.опубликован !== false)) return undefined;
+  if (версия.опубликован === false) return null;
+  const скрыта = скрытаНаСайте(версия);
+  return typeof скрыта === 'boolean' ? скрыта : undefined;
 }
 
 /** Строка свода, которой принадлежит эта языковая версия. */

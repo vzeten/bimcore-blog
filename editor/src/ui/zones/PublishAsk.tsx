@@ -27,6 +27,8 @@ export function PublishAsk(props: {
   path: string;
   окно: ОкноПубликации;
   onВыбрать: (режим: string) => void;
+  /** Языковые версии статьи по своду (язык → путь): список языков до ответа сервера. */
+  версии?: Record<string, string>;
   onОтметить: (путь: string) => void;
   onОпубликовать: () => void;
   onОтмена: () => void;
@@ -36,9 +38,15 @@ export function PublishAsk(props: {
   const {окно, onKeyDown} = useFocusTrap(отмена);
   const заголовок = useId();
   const {выбор, находки} = props.окно;
-  const строки = строкиЯзыков(props.окно.состояние, props.path, props.окно.отмечены);
+  const порядок = Object.keys(props.settings.локали);
+  const строки = строкиЯзыков(props.окно.состояние, props.path, props.окно.отмечены, props.версии ?? {}, порядок);
   const ссылок = ссылокВОтмеченных(строки);
-  const имя = (локаль: string | null, путь: string) => props.settings.локали[локаль ?? ''] ?? локаль ?? путь;
+  // Пути человеку не показываются никогда: язык без кода (песочница) узнаётся по своду статьи.
+  const своя = Object.entries(props.версии ?? {}).find(([, путь]) => путь === props.path)?.[0] ?? null;
+  const имя = (локаль: string | null, путь: string) => {
+    const код = локаль ?? (путь === props.path ? своя : null);
+    return код === null ? '' : props.settings.локали[код] ?? код;
+  };
 
   return (
     <div
@@ -79,7 +87,7 @@ export function PublishAsk(props: {
               <label key={значение}>
                 <input
                   type="radio"
-                  name={`публикация:${props.path}`}
+                  name={`публикация:${заголовок}`}
                   value={значение}
                   checked={выбор === значение}
                   onChange={() => props.onВыбрать(значение)}

@@ -6,7 +6,8 @@
 import {describe, expect, it, vi} from 'vitest';
 
 import {createAutosaveQueue, type DraftPayload} from '../src/ui/autosaveQueue';
-import {записьПодтверждена, признакиИзСвода} from '../src/ui/localeFacts';
+import {записьПодтверждена, признакиИзСвода, скрытаИзСвода} from '../src/ui/localeFacts';
+import {изменениеНеНаСайте} from '../src/ui/headFields';
 import {признакиЛокали} from '../src/core/localeSigns.mjs';
 import type {ArticleRow, ArticleVersion} from '../src/ui/articleTypes';
 import type {SaveState} from '../src/ui/types';
@@ -182,5 +183,24 @@ describe('признаки версий обновляются после под
 
     expect(состояния).not.toContain('автосохранено');
     expect(подтверждения(состояния)).toBe(0);
+  });
+});
+
+describe('«изменение ещё не на сайте» после публикации', () => {
+  it('видимость на сайте берётся из свежего свода: опубликовали «По ссылке» — надпись гаснет без перезагрузки', () => {
+    // До публикации: на сайте версия видна всем, в окне выбрано «По ссылке» — надпись горит.
+    const было = {скрытаНаСайте: скрытаИзСвода(свод({ru: версия(ПУТИ.ru, {скрыта: false})}), ПУТИ.ru) as boolean | null, веткаИзвестна: true};
+    expect(изменениеНеНаСайте(было, true)).toBe(true);
+
+    // После публикации свод перечитан: на сайте та же шапка, что в файле.
+    const стало = {...было, скрытаНаСайте: скрытаИзСвода(свод({ru: версия(ПУТИ.ru, {скрыта: true})}), ПУТИ.ru) as boolean | null};
+    expect(изменениеНеНаСайте(стало, true)).toBe(false);
+  });
+
+  it('версии в ветке нет — null; свод не знает ответа — прежнее значение не трогается', () => {
+    expect(скрытаИзСвода(свод({ru: версия(ПУТИ.ru, {опубликован: false})}), ПУТИ.ru)).toBeNull();
+    expect(скрытаИзСвода(свод({ru: версия(ПУТИ.ru, {опубликован: null})}), ПУТИ.ru)).toBeUndefined();
+    expect(скрытаИзСвода(свод({ru: версия(ПУТИ.ru, {отличается: true})}), ПУТИ.ru)).toBeUndefined();
+    expect(скрытаИзСвода(свод({ru: версия(ПУТИ.ru)}), 'нет/такого.mdx')).toBeUndefined();
   });
 });

@@ -1,7 +1,7 @@
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import {loadArticle} from './actions';
 import {requestJson} from './api';
-import {признакиИзСвода, путиИзСвода} from './localeFacts';
+import {признакиИзСвода, путиИзСвода, скрытаИзСвода} from './localeFacts';
 import {parseFrontmatter, type Field} from './headFields';
 import type {Article, ArticleRow, PanelMode, SaveState, Settings} from './types';
 
@@ -58,7 +58,12 @@ export function useNavigation(deps: {
       deps.setArticle((было) => {
         const свежие = было === null ? null : признакиИзСвода(свод, было.path, локали);
         if (было === null || свежие === null) return было;
-        return {...было, признакиЛокалей: свежие, versions: путиИзСвода(свод, было.path) ?? было.versions};
+        // Видимость на сайте — тоже из свода: по ней шапка говорит «изменение ещё не на сайте».
+        const скрыта = скрытаИзСвода(свод, было.path);
+        return {
+          ...было, признакиЛокалей: свежие, versions: путиИзСвода(свод, было.path) ?? было.versions,
+          ...(скрыта === undefined ? {} : {скрытаНаСайте: скрыта}),
+        };
       });
     });
   };

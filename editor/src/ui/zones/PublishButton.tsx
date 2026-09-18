@@ -43,6 +43,7 @@ export function PublishButton(props: {
       void props.onОбновить();
       if (исход.ссылкиНеУбраны.length > 0) props.onСообщить(`${п.ссылкиНеУбраны} ${исход.ссылкиНеУбраны.join(', ')}`);
     },
+    props.article?.versions ?? {},
   );
   const идёт = идётПубликация(публикация.шаг);
   const неВышло = публикация.остановка !== null;
@@ -82,6 +83,7 @@ export function PublishButton(props: {
           path={props.article.path}
           окно={публикация.окно}
           onВыбрать={публикация.выбрать}
+          версии={props.article.versions}
           onОтметить={публикация.отметить}
           onОпубликовать={() => void публикация.начать()}
           onОтмена={публикация.отмена}
