@@ -36,7 +36,7 @@ export async function ссылкиНаНедоступную({git, repo, setting
     const текст = своя.байты.toString('utf8');
     if (!черновикСайта(splitArticle(текст).frontmatterRaw)) continue;
 
-    const свои = await целиВерсии({git, settings, repo, rel, текст, основа, записи});
+    const свои = await целиНедоступной({git, settings, repo, rel, текст, основа, записи});
     if (свои === null) return {...ничего, отказ: {код: 'фактыНеизвестны', локали: [своя.локаль], чего: 'ссылки'}};
     if (свои.адреса.size === 0) continue;
     уходят.push(rel);
@@ -70,7 +70,7 @@ export async function ссылкиНаНедоступную({git, repo, setting
  * языка: сайт показывает её текст под адресом этого языка. У обязательного языка целями становятся
  * ещё и адреса языков без своего файла: их страницы уходят вместе с ним. Не спросилось — `null`.
  */
-async function целиВерсии({git, settings, repo, rel, текст, основа, записи}) {
+export async function целиНедоступной({git, settings, repo, rel, текст, основа, записи}) {
   const сайт = сведенияСайта(repo, settings);
   const место = articlePlace(rel, сайт.roots);
   const корень = (локаль) => сайт.roots.find((root) => root['род'] === место.kind && root['локаль'] === локаль);

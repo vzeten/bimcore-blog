@@ -5,6 +5,7 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 
 import {publishStateRoute} from '../src/adapters/publishStateRoute.mjs';
+import {releaseRoute} from '../src/adapters/releaseRoute.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
 import {EN, ES, RU, СТАТЬЯ, запрос, среда, убратьПесочницы} from './publishHarness.mjs';
 
@@ -44,6 +45,17 @@ describe('состояние версий на сайте', () => {
 
     expect(ответ.основаИзвестна).toBe(false);
     expect(по(ответ, RU)).toMatchObject({наСайте: null, доступность: null});
+  });
+
+  it('число статей со ссылками считается тем же правилом, что у публикации: язык без своего файла, где сайт показывает обязательный, — тоже', async () => {
+    // Русского файла на сайте нет: под русским адресом сайт показывает английский текст, и
+    // «Недоступно» у русской версии убирает эту страницу и ссылки на неё.
+    const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ, [ES]: СТАТЬЯ, [СОСЕД]: СОСЕД_ТЕКСТ}, {вКоммите: [EN, ES, СОСЕД]});
+    место.положить(RU, СТАТЬЯ.replace('---\n\n', 'draft: true\n---\n\n'));
+    const показ = await запрос(releaseRoute, место, '/api/release', {path: RU});
+
+    expect(по(await состояние(место), RU)).toMatchObject({наСайте: false, ссылок: 1});
+    expect(показ.payload.ссылкиВСтатьях).toBe(1);
   });
 
   it('путь не статьи — отказ, а не пустой ответ', async () => {
