@@ -1,5 +1,6 @@
 import type {PrepareFinding, PrepareReport as Отчёт} from '../publishTypes';
 import type {Settings} from '../types';
+import {словаНаходки} from './PublishReason';
 
 /**
  * Отчёт подготовки: что мешает выпуску и что стоит поправить.
@@ -49,7 +50,7 @@ export function PrepareReport(props: {
           {находки.map((находка, номер) => (
             <li key={`${находка.код}|${находка.путь ?? ''}|${номер}`} className={класс(находка)}>
               <span className="prepare-level">{п.уровни[находка.уровень] ?? находка.уровень}</span>
-              <span className="prepare-text">{фраза(находка, п)}</span>
+              <span className="prepare-text">{словаНаходки(находка, props.settings)}</span>
               {место(находка) && <span className="prepare-where">{место(находка)}</span>}
             </li>
           ))}
@@ -66,14 +67,6 @@ export function PrepareReport(props: {
 /** Блокеры видны глазом отдельно от предупреждений: у них разная судьба выпуска. */
 function класс(находка: PrepareFinding): string {
   return находка.уровень === 'блокер' ? 'prepare-item prepare-block' : 'prepare-item';
-}
-
-/** Фраза человеку по коду находки; неизвестный код называется прямо, а не проглатывается. */
-function фраза(находка: PrepareFinding, п: Settings['подготовка']): string {
-  const своя = п.находки[находка.код];
-  if (typeof своя === 'string') return своя;
-
-  return `${п.неизвестнаяНаходка} ${находка.код}`;
 }
 
 /** Где искать: файл языковой версии и поле. У находок про статью целиком места нет — и не выдумываем. */
