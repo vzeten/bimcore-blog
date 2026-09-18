@@ -29,6 +29,8 @@ import {publishCoverRoute} from './src/adapters/publishCoverRoute.mjs';
 import {releaseRoute} from './src/adapters/releaseRoute.mjs';
 import {publishRoute} from './src/adapters/publishRoute.mjs';
 import {pushRoute} from './src/adapters/pushRoute.mjs';
+import {retireRoute} from './src/adapters/retireRoute.mjs';
+import {linkSweepRoute} from './src/adapters/linkSweep.mjs';
 import {detectPublishedRef, расхождениеССайтом, шапкиВВетке} from './src/adapters/gitFile.mjs';
 import {путиЗаОпубликованнойШапкой} from './src/core/localeSigns.mjs';
 import {дверьGit} from './src/adapters/gitEnv.mjs';
@@ -162,11 +164,9 @@ async function api(req, res, url) {
   if (await createRoute({req, res, url, repo: REPO, settings: readSettings(), git, тело, send})) return;
   if (await localeRoute({req, res, url, repo: REPO, settings: readSettings(), git, тело, send})) return;
 
-  // Удаление статьи — тоже отдельным модулем. Опубликованную ветку ручка получает функцией:
-  // на момент запуска сервера она ещё не определена, а к запросу уже известна.
+  // Удаление в корзину. Про сайт оно не судит: снятие с сайта идёт до него ручками `retireRoute`.
   if (await deleteRoute({
-    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git,
-    publishedRef: () => publishedRef, тело, insideRepo, send, articles, последняяПравка,
+    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), тело, insideRepo, send, articles, последняяПравка,
   })) return;
 
   // Корзина: перечень, возврат и стирание записи насовсем. Сама она ничего не удаляет по сроку.
@@ -201,8 +201,8 @@ async function api(req, res, url) {
   const дляВыпуска = {req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, insideRepo, send};
   if (await publishDateRoute(дляВыпуска) || await publishCoverRoute(дляВыпуска) || await releaseRoute(дляВыпуска)) return;
 
-  // Запись статьи — единственная ручка, меняющая местный git. Отправки в ней нет.
-  if (await publishRoute(дляВыпуска)) return;
+  // Записи статьи и снятия — единственные ручки, меняющие git (без отправки); уборка ссылок — диск.
+  if (await publishRoute(дляВыпуска) || await retireRoute(дляВыпуска) || await linkSweepRoute(дляВыпуска)) return;
 
   // Отправка на сайт: сначала показ того, что уедет, и только отдельным заходом сама отправка.
   if (await pushRoute({

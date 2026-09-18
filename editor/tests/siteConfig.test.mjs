@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-import {обложкаСайта} from '../src/core/siteConfig.mjs';
+import {адресСайта, обложкаСайта} from '../src/core/siteConfig.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -52,5 +52,16 @@ describe('общая обложка сайта', () => {
 
   it('пустое значение обложки в конфиге считается отсутствием', () => {
     expect(обложкаСайта("themeConfig: ({ image: '' })")).toBeNull();
+  });
+});
+
+describe('адрес сайта', () => {
+  it('адрес берётся из настоящего конфига сайта', () => {
+    expect(адресСайта(fs.readFileSync(path.join(REPO, 'docusaurus.config.js'), 'utf8'))).toBe('https://learn.bimcore.one');
+  });
+
+  it('`url` из вложенного объекта и из комментария за адрес сайта не сходит', () => {
+    expect(адресСайта("// url: 'https://x.test'\nconst config = {\n  plugins: [{url: 'https://y.test'}],\n  url: 'https://z.test',\n};")).toBe('https://z.test');
+    expect(адресСайта("const config = {\n  plugins: [{url: 'https://y.test'}],\n};")).toBeNull();
   });
 });

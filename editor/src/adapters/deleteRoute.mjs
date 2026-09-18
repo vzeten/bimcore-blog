@@ -11,13 +11,14 @@ import {badFields, badPath} from './httpBody.mjs';
  * Обрабатывает `/api/article/delete`. Возвращает true, если запрос был к ней.
  *
  * Два захода одним адресом: без `подтверждено` сервер называет, что произойдёт — статья уйдёт в
- * корзину — и состав языков, ничего не меняя; с `подтверждено: 'корзина'` действует. Другое
+ * корзину — и состав языков, ничего не меняя; с `подтверждено: 'корзина'` действует. Была статья
+ * на сайте — ход окна до этого снимает её оттуда (`retireRoute.mjs`): корзина сайта не касается. Другое
  * подтверждение (например прежнее «навсегда») отвергается: с 2026-09-18 безвозвратного удаления
  * статьи нет вовсе, оно живёт только в самой корзине и только по нажатию человека.
  * Причина отказа приходит кодом, слова человеку берутся из настроек (SPEC 4.4).
  */
 export async function deleteRoute({
-  req, res, url, repo, editorDir, settings, git, publishedRef, тело, insideRepo, send, articles, последняяПравка,
+  req, res, url, repo, editorDir, settings, тело, insideRepo, send, articles, последняяПравка,
 }) {
   if (url.pathname !== '/api/article/delete' || req.method !== 'POST') return false;
 
@@ -49,13 +50,13 @@ export async function deleteRoute({
     return true;
   }
 
-  const решение = await решитьУдаление({repo, settings, git, ref: publishedRef(), rel: payload.path});
+  const решение = решитьУдаление({repo, settings, rel: payload.path});
   if (решение.ошибка) {
     send(res, решение.ошибка === 'нетСтатьи' ? 404 : 400, {error: settings['ошибкиУдаления'][решение.ошибка], причина: решение.ошибка, стёрто: []});
     return true;
   }
 
-  const ответ = {режим: решение.режим, причина: решение.причина, пути: решение.пути, языки: решение.языки};
+  const ответ = {режим: решение.режим, пути: решение.пути, языки: решение.языки};
   if (payload.подтверждено === undefined) {
     send(res, 200, ответ);
     return true;

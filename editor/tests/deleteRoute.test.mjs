@@ -1,6 +1,7 @@
 // Имя каждого теста повторяет формулировку правила.
-// Ручка удаления на настоящем временном git: режим по ветке и её истории, подтверждение именно
-// этого режима, корзина и возврат, статья-файл в общей папке, ссылка в пути.
+// Ручка удаления на настоящем временном git: режим один — корзина, подтверждение именно его,
+// корзина и возврат, статья-файл в общей папке, ссылка в пути. Снятие с сайта — своя ручка
+// (`retireRoute`), и эта про сайт не судит вовсе.
 import {afterEach, describe, expect, it} from 'vitest';
 import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
@@ -10,7 +11,6 @@ import path from 'node:path';
 import {deleteRoute} from '../src/adapters/deleteRoute.mjs';
 import {trashRoute} from '../src/adapters/trashRoute.mjs';
 import {saveDraft, saveSnapshot} from '../src/adapters/draftStore.mjs';
-import {дверьGit} from '../src/adapters/gitEnv.mjs';
 import {listArticles} from '../src/adapters/library.mjs';
 
 const RU_ROOT = 'i18n/ru/docusaurus-plugin-content-docs/current';
@@ -81,12 +81,11 @@ function репозиторий({вВетке = [], снятыИзВетки = [
   return repo;
 }
 
-async function ручка(repo, ручка, адрес, тело, ref = 'main') {
+async function ручка(repo, ручка, адрес, тело) {
   const ответ = {};
   const принято = await ручка({
     req: {method: 'POST'}, res: {}, url: new URL(`http://localhost${адрес}`),
-    repo, editorDir: path.join(repo, 'editor'), settings: НАСТРОЙКИ, git: дверьGit(repo),
-    publishedRef: () => ref, тело: async () => тело,
+    repo, editorDir: path.join(repo, 'editor'), settings: НАСТРОЙКИ, тело: async () => тело,
     articles: async () => listArticles(repo, НАСТРОЙКИ, new Map(), new Set()),
     insideRepo: (target) => path.resolve(target).startsWith(path.resolve(repo) + path.sep),
     последняяПравка: new Map(),
@@ -95,16 +94,16 @@ async function ручка(repo, ручка, адрес, тело, ref = 'main') 
   return {принято, ...ответ};
 }
 
-const удалить = (repo, rel, подтверждено, ref) => ручка(repo, deleteRoute, '/api/article/delete', подтверждено === undefined ? {path: rel} : {path: rel, подтверждено}, ref);
+const удалить = (repo, rel, подтверждено) => ручка(repo, deleteRoute, '/api/article/delete', подтверждено === undefined ? {path: rel} : {path: rel, подтверждено});
 const есть = (repo, rel) => fs.existsSync(path.join(repo, rel));
 const корзина = (repo) => fs.existsSync(path.join(repo, 'editor/.trash')) ? fs.readdirSync(path.join(repo, 'editor/.trash')) : [];
 
-describe('режим по настоящей ветке', () => {
+describe('режим один — корзина', () => {
   it('без подтверждения сервер только называет, что будет, и ничего не трогает', async () => {
     const repo = репозиторий();
     const ответ = await удалить(repo, RU);
     expect(ответ.code).toBe(200);
-    expect(ответ.data).toMatchObject({режим: 'корзина', причина: 'неОпубликована', пути: [EN, RU], языки: ['en', 'ru']});
+    expect(ответ.data).toEqual({режим: 'корзина', пути: [EN, RU], языки: ['en', 'ru']});
     expect(есть(repo, RU)).toBe(true);
   });
 
@@ -124,7 +123,6 @@ describe('режим по настоящей ветке', () => {
 
   it('статья в опубликованной ветке — корзина, файлы и картинки в архиве, соседи целы', async () => {
     const repo = репозиторий({вВетке: [RU, EN]});
-    expect((await удалить(repo, RU)).data).toMatchObject({режим: 'корзина', причина: 'опубликована'});
     const ответ = await удалить(repo, RU, 'корзина');
     expect(ответ.code).toBe(200);
     expect(ответ.data).toMatchObject({режим: 'корзина', удалено: [EN, RU]});
@@ -133,19 +131,6 @@ describe('режим по настоящей ветке', () => {
     expect(корзина(repo)).toHaveLength(1);
     expect(есть(repo, `editor/.trash/${корзина(repo)[0]}/repo/${RU_ROOT}/lessons/proba/img-01.png`)).toBe(true);
     expect(есть(repo, `${RU_ROOT}/lessons/other/index.mdx`)).toBe(true);
-  });
-
-  it('статья была в ветке раньше и снята коммитом — всё равно корзина: адрес у неё уже был', async () => {
-    const repo = репозиторий({снятыИзВетки: [RU, EN]});
-    expect((await удалить(repo, RU)).data).toMatchObject({режим: 'корзина', причина: 'опубликована'});
-  });
-
-  it('ветку прочитать не удалось — корзина, а не отказ', async () => {
-    const repo = репозиторий();
-    expect((await удалить(repo, RU, undefined, 'нет-такой-ветки')).data).toMatchObject({режим: 'корзина', причина: 'неизвестно'});
-    const ответ = await удалить(repo, RU, 'корзина', 'нет-такой-ветки');
-    expect(ответ.code).toBe(200);
-    expect(корзина(repo)).toHaveLength(1);
   });
 
   it('подтверждено прежнее «навсегда» — отказ: безвозвратного удаления статьи больше нет', async () => {
@@ -162,7 +147,7 @@ describe('режим по настоящей ветке', () => {
     const память = new Map();
     await deleteRoute({
       req: {method: 'POST'}, res: {}, url: new URL('http://localhost/api/article/delete'),
-      repo, editorDir: path.join(repo, 'editor'), settings: НАСТРОЙКИ, git: дверьGit(repo), publishedRef: () => 'main',
+      repo, editorDir: path.join(repo, 'editor'), settings: НАСТРОЙКИ,
       тело: async () => ({path: RU, подтверждено: 'корзина'}), articles: async () => listArticles(repo, НАСТРОЙКИ, new Map(), new Set()),
       insideRepo: (target) => path.resolve(target).startsWith(path.resolve(repo) + path.sep), последняяПравка: память, send: () => {},
     });
@@ -273,28 +258,3 @@ describe('корзина и возврат через ручки', () => {
     expect(корзина(repo)).toHaveLength(1);
   });
 });
-
-describe('неполная история', () => {
-  /** Клон глубиной один от репозитория, где статья была опубликована и снята коммитом раньше среза. */
-  function неполныйКлон() {
-    const исток = репозиторий({снятыИзВетки: [RU, EN]});
-    git(исток, 'commit', '-q', '--allow-empty', '-m', 'ещё один коммит поверх');
-    const клон = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-shallow-'));
-    песочницы.push(клон);
-    execFileSync('git', ['clone', '-q', '--depth', '1', '--branch', 'main', `file://${исток.replace(/\\/g, '/')}`, клон], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']});
-    for (const rel of [RU, EN]) записать(клон, rel);
-    return {исток, клон};
-  }
-
-  it('в неполной копии пустой git log по пути — не доказательство: режим корзина, причина неизвестно', async () => {
-    const {клон} = неполныйКлон();
-    expect(execFileSync('git', ['rev-parse', '--is-shallow-repository'], {cwd: клон, encoding: 'utf8'}).trim()).toBe('true');
-    expect((await удалить(клон, RU, undefined, 'origin/main')).data).toMatchObject({режим: 'корзина', причина: 'неизвестно'});
-  });
-
-  it('в полной истории та же статья — корзина по доказанной прошлой публикации', async () => {
-    const {исток} = неполныйКлон();
-    expect((await удалить(исток, RU)).data).toMatchObject({режим: 'корзина', причина: 'опубликована'});
-  });
-});
-

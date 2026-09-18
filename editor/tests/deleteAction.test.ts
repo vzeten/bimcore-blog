@@ -1,72 +1,102 @@
 // Имя каждого теста повторяет формулировку правила.
-// Действия удаления и корзины в окне: два захода одним адресом, отказ не выдаётся за успех,
-// перечень уже стёртого и конфликтов доходит вместе с причиной.
+// Ход удаления в окне и действия корзины: один вопрос до всякой записи, порядок шагов после него,
+// отказ не выдаётся за успех, перечень конфликтов доходит вместе с причиной.
 import {describe, expect, it, vi} from 'vitest';
-import {deleteArticle} from '../src/ui/actions';
 import {trashDrop, trashRestore} from '../src/ui/trashActions';
-import {провестиУдаление} from '../src/ui/useDelete';
+import {провестиУдаление, спроситьУдаление, type ХодУдаления} from '../src/ui/retireRun';
 
 const ПУТЬ = 'editor/sandbox/proba/index.mdx';
 
-describe('удаление статьи из окна', () => {
-  it('без подтверждения уходит только путь: сервер называет режим и ничего не трогает', async () => {
-    const request = vi.fn().mockResolvedValue({режим: 'корзина', пути: [ПУТЬ], языки: ['ru'], дней: 30});
-    const ok = vi.fn();
+describe('ход удаления: один вопрос, дальше само', () => {
+  /** Ход с подставным сервером: ответы по адресу, записка — что спрошено и с каким телом. */
+  const ход = (ответы: Record<string, unknown>, правки: Partial<ХодУдаления> = {}) => {
+    const записка: {адрес: string; тело: Record<string, unknown>}[] = [];
+    const х: ХодУдаления = {
+      запрос: async <T>(адрес: string, тело: Record<string, unknown>) => {
+        записка.push({адрес, тело});
+        const ответ = ответы[адрес];
+        if (ответ instanceof Error) throw ответ;
+        return (typeof ответ === 'function' ? ответ(тело) : ответ) as T;
+      },
+      дописать: async () => true,
+      жива: () => true,
+      слово: (ключ) => ключ,
+      ...правки,
+    };
+    return {х, записка, адреса: () => записка.map((шаг) => шаг.адрес)};
+  };
+  const НА_САЙТЕ = {наСайте: true, статей: 2, отпечаток: 'п1'};
 
-    await deleteArticle(ПУТЬ, null, {ok, fail: vi.fn()}, request as never);
-
-    expect(ok).toHaveBeenCalledWith({режим: 'корзина', пути: [ПУТЬ], языки: ['ru'], дней: 30});
-    expect(request.mock.calls[0][0]).toBe('/api/article/delete');
-    expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({path: ПУТЬ});
+  it('черновик не записался — вопроса нет, сервер не спрошен', async () => {
+    const {х, записка} = ход({}, {дописать: async () => false});
+    expect(await спроситьУдаление(ПУТЬ, х)).toEqual({вид: 'остановка', текст: 'удалениеБезЧерновика'});
+    expect(записка).toEqual([]);
   });
 
-  it('с подтверждением уходит корзина, успех доносит список удалённого', async () => {
-    const request = vi.fn().mockResolvedValue({удалено: [ПУТЬ], режим: 'корзина'});
-    const ok = vi.fn();
-
-    await deleteArticle(ПУТЬ, 'корзина', {ok, fail: vi.fn()}, request as never);
-
-    expect(ok).toHaveBeenCalledWith({удалено: [ПУТЬ], режим: 'корзина'});
-    expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({path: ПУТЬ, подтверждено: 'корзина'});
+  it('пока дописывался черновик, окно сменилось — вопрос не задаётся', async () => {
+    const {х, записка} = ход({}, {жива: () => false});
+    expect(await спроситьУдаление(ПУТЬ, х)).toEqual({вид: 'прервано'});
+    expect(записка).toEqual([]);
   });
 
-  it('успех доносит запись корзины и время удаления', async () => {
-    const request = vi.fn().mockResolvedValue({удалено: [ПУТЬ], режим: 'корзина', корзина: 'x-1', удаленоКогда: '2026-09-18T00:00:00.000Z'});
-    const ok = vi.fn();
-
-    await deleteArticle(ПУТЬ, 'корзина', {ok, fail: vi.fn()}, request as never);
-
-    expect(ok.mock.calls[0][0]).toMatchObject({корзина: 'x-1', удаленоКогда: '2026-09-18T00:00:00.000Z'});
+  it('до вопроса только чтение: можно ли удалить и что снимется с сайта', async () => {
+    const {х, адреса} = ход({'/api/article/delete': {}, '/api/retire': НА_САЙТЕ});
+    expect(await спроситьУдаление(ПУТЬ, х)).toEqual({вид: 'спрашиваю', снятие: НА_САЙТЕ});
+    expect(адреса()).toEqual(['/api/article/delete', '/api/retire']);
   });
 
-  it('отказ сервера не выдаётся за успех', async () => {
-    const request = vi.fn().mockRejectedValue(new Error('режим сменился'));
-    const ok = vi.fn();
-    const fail = vi.fn();
-
-    await deleteArticle(ПУТЬ, 'корзина', {ok, fail}, request as never);
-
-    expect(ok).not.toHaveBeenCalled();
-    expect(fail).toHaveBeenCalledWith('режим сменился', []);
-  });
-
-  it('сбой посреди удаления доносит перечень того, что уже исчезло', async () => {
-    const ошибка = Object.assign(new Error('удалилось не всё'), {
-      ответ: {причина: 'удалилосьНеВсё', стёрто: [ПУТЬ, 'editor/sandbox/proba/img-01.png']},
+  it('после «Удалить» статья с сайта: запись с согласием и отпечатком, отправка, уборка ссылок, корзина', async () => {
+    const {х, записка, адреса} = ход({
+      '/api/retire/commit': {sha: 'abc'}, '/api/publish/plan': {sha: 'abc'}, '/api/publish/push': {отправлено: true},
+      '/api/links/sweep': {изменены: [], невосстановленные: []}, '/api/article/delete': {удалено: [ПУТЬ]},
     });
-    const fail = vi.fn();
-
-    await deleteArticle(ПУТЬ, 'корзина', {ok: vi.fn(), fail}, vi.fn().mockRejectedValue(ошибка) as never);
-
-    expect(fail).toHaveBeenCalledWith('удалилось не всё', [ПУТЬ, 'editor/sandbox/proba/img-01.png']);
+    expect(await провестиУдаление(ПУТЬ, НА_САЙТЕ, х)).toEqual({вид: 'удалено'});
+    expect(адреса()).toEqual(['/api/retire/commit', '/api/publish/plan', '/api/publish/push', '/api/links/sweep', '/api/article/delete']);
+    expect(записка[0].тело).toEqual({path: ПУТЬ, подтверждено: true, отпечаток: 'п1'});
+    expect(записка[2].тело).toEqual({path: ПУТЬ, sha: 'abc', подтверждено: true});
+    expect(записка[4].тело).toEqual({path: ПУТЬ, подтверждено: 'корзина'});
   });
 
-  it('ответа с перечнем нет — вместо него пустой список, а не поломка', async () => {
-    const fail = vi.fn();
+  it('статьи на сайте не было — ни записи, ни отправки: уборка ссылок и корзина', async () => {
+    const {х, адреса} = ход({'/api/links/sweep': {изменены: [], невосстановленные: []}, '/api/article/delete': {}});
+    expect(await провестиУдаление(ПУТЬ, {наСайте: false, статей: 0, отпечаток: null}, х)).toEqual({вид: 'удалено'});
+    expect(адреса()).toEqual(['/api/links/sweep', '/api/article/delete']);
+  });
 
-    await deleteArticle(ПУТЬ, 'корзина', {ok: vi.fn(), fail}, vi.fn().mockRejectedValue('сервер не отвечает') as never);
+  it('отправка не прошла — остановка, ссылки и корзина не трогаются', async () => {
+    const {х, адреса} = ход({'/api/retire/commit': {}, '/api/publish/plan': {sha: 'abc'}, '/api/publish/push': new Error('сервер ушёл вперёд')});
+    expect(await провестиУдаление(ПУТЬ, НА_САЙТЕ, х)).toEqual({вид: 'остановка', текст: 'сервер ушёл вперёд'});
+    expect(адреса()).not.toContain('/api/links/sweep');
+    expect(адреса()).not.toContain('/api/article/delete');
+  });
 
-    expect(fail.mock.calls[0][1]).toEqual([]);
+  it('ссылки на диске убрать не вышло — статья остаётся на месте, файлы названы', async () => {
+    const {х, адреса} = ход({'/api/links/sweep': {изменены: [], невосстановленные: ['docs/a/index.mdx']}});
+    expect(await провестиУдаление(ПУТЬ, {наСайте: false, статей: 0, отпечаток: null}, х))
+      .toEqual({вид: 'остановка', текст: 'удалениеСсылкиНеУбраны docs/a/index.mdx'});
+    expect(адреса()).not.toContain('/api/article/delete');
+  });
+
+  it('своё недосланное снятие досылается один раз, затем вопрос задаётся заново', async () => {
+    let снятий = 0;
+    const недослано = Object.assign(new Error('не дослано'), {ответ: {код: 'снятиеНеДослано'}});
+    const {х, адреса} = ход({
+      '/api/article/delete': {},
+      '/api/retire': () => {
+        снятий += 1;
+        if (снятий === 1) throw недослано;
+        return {наСайте: false, статей: 0, отпечаток: null};
+      },
+      '/api/publish/plan': {sha: 'abc'}, '/api/publish/push': {отправлено: true},
+    });
+    expect(await спроситьУдаление(ПУТЬ, х)).toMatchObject({вид: 'спрашиваю', снятие: {наСайте: false}});
+    expect(адреса()).toEqual(['/api/article/delete', '/api/retire', '/api/publish/plan', '/api/publish/push', '/api/article/delete', '/api/retire']);
+  });
+
+  it('отказ сервера до вопроса доходит словами вместе с названными путями', async () => {
+    const отказ = Object.assign(new Error('ссылка не разобрана:'), {ответ: {код: 'ссылкаНеРазобрана', разрывы: [{путь: 'docs/x/index.mdx'}]}});
+    const {х} = ход({'/api/article/delete': {}, '/api/retire': отказ});
+    expect(await спроситьУдаление(ПУТЬ, х)).toEqual({вид: 'остановка', текст: 'ссылка не разобрана: docs/x/index.mdx'});
   });
 });
 
@@ -80,33 +110,6 @@ describe('возврат из корзины', () => {
     const ошибка = Object.assign(new Error('конфликт'), {ответ: {причина: 'возвратКонфликт', конфликты: [ПУТЬ]}});
     await trashRestore('запись', {ok: vi.fn(), fail}, vi.fn().mockRejectedValue(ошибка) as never);
     expect(fail).toHaveBeenCalledWith('конфликт', [ПУТЬ]);
-  });
-});
-
-describe('ход удаления после подтверждения', () => {
-  const шаг = (правки: Partial<Parameters<typeof провестиУдаление>[0]>) => ({
-    дописать: async () => true, окно: () => 'a|1', своё: 'a|1', удалить: vi.fn(async () => {}), onОшибка: vi.fn(), ...правки,
-  });
-
-  it('черновик не записался — удаления нет, человеку сказано почему', async () => {
-    const с = шаг({дописать: async () => false});
-    expect(await провестиУдаление(с)).toBe('черновикНеЗаписан');
-    expect(с.удалить).not.toHaveBeenCalled();
-    expect(с.onОшибка).toHaveBeenCalledTimes(1);
-  });
-
-  it('пока дописывался черновик, окно сменилось — старое предложение не исполняется', async () => {
-    let окно = 'a|1';
-    const с = шаг({дописать: async () => { окно = 'b|1'; return true; }, окно: () => окно});
-    expect(await провестиУдаление(с)).toBe('окноСменилось');
-    expect(с.удалить).not.toHaveBeenCalled();
-    expect(с.onОшибка).not.toHaveBeenCalled();
-  });
-
-  it('черновик записан и окно то же — удаление идёт', async () => {
-    const с = шаг({});
-    expect(await провестиУдаление(с)).toBe('удалено');
-    expect(с.удалить).toHaveBeenCalledTimes(1);
   });
 });
 

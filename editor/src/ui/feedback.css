@@ -180,3 +180,13 @@
   font-size: 12px;
   white-space: pre-wrap;
 }
+
+/* Вопрос удаления: окно поверх всей программы, остальное заперто, пока оно открыто. Кнопка
+   «Удалить» — тёмно-красная с белым словом (решение владельца 2026-09-18, п.6). */
+.delete-ask { position: fixed; inset: 0; background: rgba(17, 20, 24, 0.35); display: flex; align-items: center; justify-content: center; z-index: 30; }
+.delete-ask-body { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 20px; width: 460px; max-width: 92vw; display: grid; gap: 10px; }
+.delete-ask-title { margin: 0; font-size: 15px; font-weight: 500; color: var(--ink); }
+.delete-ask-text { margin: 0; font-size: 13px; color: var(--ink-quiet); }
+.delete-ask-buttons { display: flex; gap: 8px; justify-content: flex-end; }
+.delete-ask-buttons .delete-ask-go { background: #a3122a; color: #fff; font-weight: 500; border: 1px solid #a3122a; border-radius: 5px; padding: 6px 14px; cursor: pointer; }
+.delete-ask-buttons .delete-ask-go:disabled { opacity: 0.7; cursor: default; }

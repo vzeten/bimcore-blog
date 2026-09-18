@@ -10,7 +10,7 @@ import path from 'node:path';
 
 import {решениеОбУдалении} from '../core/deleteArticle.mjs';
 import {articlePlace} from '../core/frontmatterRules.mjs';
-import {опубликованные, statePath, walk} from './library.mjs';
+import {statePath, walk} from './library.mjs';
 import {вКорзину, составАрхива} from './trashStore.mjs';
 
 /**
@@ -34,52 +34,20 @@ export function версииСтатьи(repo, rel, settings) {
     }));
 }
 
-/**
- * Была ли версия когда-либо в опубликованной ветке. Текущего дерева мало: снятая с сайта статья
- * в нём отсутствует, а адрес у неё уже был. `null` — узнать не удалось, и решать это будет ядро.
- */
-async function былаОпубликована(git, ref, rel) {
-  try {
-    return (await git.raw(['log', '-1', '--format=%H', ref, '--', rel])).trim() !== '';
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Полна ли история репозитория. В неполной (shallow) копии пустой `git log` по пути ничего не
- * доказывает: публикация могла быть за границей среза, и режим считается неизвестным.
- */
-async function историяПолная(git) {
-  try {
-    return (await git.raw(['rev-parse', '--is-shallow-repository'])).trim() === 'false';
-  } catch {
-    return false;
-  }
-}
-
-/** Решение об удалении со всеми фактами; ничего на диске не меняет. */
-export async function решитьУдаление({repo, settings, git, ref, rel}) {
-  const версии = версииСтатьи(repo, rel, settings);
-  const ветка = await опубликованные(git, ref);
-  const полная = await историяПолная(git);
-
-  const факты = [];
-  for (const версия of версии) {
+/** Решение об удалении со всеми фактами с диска; ничего на диске не меняет. */
+export function решитьУдаление({repo, settings, rel}) {
+  const факты = версииСтатьи(repo, rel, settings).map((версия) => {
     const папка = path.join(repo, версия.папка);
-    факты.push({
+    return {
       ...версия,
-      опубликована: ветка.файлы.has(версия.path),
-      былаОпубликована: !версия.наСайте || ветка.файлы.has(версия.path) ? ветка.файлы.has(версия.path)
-        : полная ? await былаОпубликована(git, ref, версия.path) : null,
       служебная: статейВПапке(папка, true) > 0,
       // Своя папка: статья лежит в ней индексом и других статей рядом и глубже нет. Статья-файл
       // в общей папке (блог) уносит только свои файлы, соседей и общие картинки не трогает.
       своя: /^index\.mdx?$/.test(path.basename(версия.path)) && walk(папка).length === 1,
-    });
-  }
+    };
+  });
 
-  return решениеОбУдалении({веткаИзвестна: ветка.известна, версии: факты});
+  return решениеОбУдалении({версии: факты});
 }
 
 /**
