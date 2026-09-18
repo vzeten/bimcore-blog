@@ -15,8 +15,9 @@
 // только тело; его база сдвигается на новый файл, если стояла на прежнем, — иначе открытие соседа
 // увидело бы «файл изменён снаружи» там, где изменилась одна и та же ссылка.
 //
-// `толькоВерсия: true` — уборка ссылок на ОДНУ языковую версию, ставшую недоступной публикацией
-// (правило ВК, п.7): целью служит только её адрес, остальные языки статьи на сайте остаются.
+// `толькоВерсия: true` — уборка ссылок на языковые версии, ставшие недоступными публикацией
+// (правило ВК, п.7): целями служат только их адреса, остальные языки статьи на сайте остаются.
+// Версии перечислены в `версии` (этап 3: несколько языков одной публикацией), без него — одна `path`.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -30,6 +31,7 @@ import {gitAuthor} from './gitFile.mjs';
 import {положитьЦеликом} from './trashStore.mjs';
 import {образцыЦелей, откудаСсылка, сведенияСайта} from './linkFacts.mjs';
 import {целиСтатьи} from './retireFacts.mjs';
+import {отмеченныеВерсии} from './publishVersions.mjs';
 import {badFields, badPath} from './httpBody.mjs';
 
 /** Обрабатывает `/api/links/sweep`. Возвращает true, если запрос был к ней. */
@@ -49,7 +51,12 @@ export async function linkSweepRoute({req, res, url, repo, editorDir, settings, 
     return true;
   }
 
-  const цели = payload['толькоВерсия'] === true ? целиВерсии(repo, settings, rel) : await целиСтатьи({git, repo, settings, rel});
+  const версии = payload['толькоВерсия'] === true ? отмеченныеВерсии({payload, rel, repo, settings, insideRepo}) : null;
+  if (версии?.ошибка) {
+    send(res, 400, {error: версии.ошибка});
+    return true;
+  }
+  const цели = версии !== null ? целиВерсий(repo, settings, версии.версии) : await целиСтатьи({git, repo, settings, rel});
   const автор = (await gitAuthor(git)) ?? settings['реестр']['неизвестныйАвтор'];
   send(res, 200, убратьНаДиске({repo, editorDir, settings, цели, автор}));
   return true;
@@ -148,14 +155,19 @@ function убратьВЧерновиках({repo, settings, сайт, цели,
   }
 }
 
-/** Цель уборки — одна языковая версия: её адрес в её языке и её файл. */
-function целиВерсии(repo, settings, rel) {
-  let текст = '';
-  try {
-    текст = fs.readFileSync(path.join(repo, rel), 'utf8');
-  } catch {
-    // Файла нет — адрес возьмётся по пути, как его считает сам сайт.
+/** Цели уборки — названные языковые версии: адрес каждой в её языке и её файл. */
+function целиВерсий(repo, settings, версии) {
+  const цели = {адреса: new Set(), файлы: new Set()};
+  for (const rel of версии) {
+    let текст = '';
+    try {
+      текст = fs.readFileSync(path.join(repo, rel), 'utf8');
+    } catch {
+      // Файла нет — адрес возьмётся по пути, как его считает сам сайт.
+    }
+    const адрес = адресВерсии(rel, текст, сведенияСайта(repo, settings));
+    if (адрес !== '') цели.адреса.add(адрес);
+    цели.файлы.add(rel);
   }
-  const адрес = адресВерсии(rel, текст, сведенияСайта(repo, settings));
-  return {адреса: new Set(адрес === '' ? [] : [адрес]), файлы: new Set([rel])};
+  return цели;
 }

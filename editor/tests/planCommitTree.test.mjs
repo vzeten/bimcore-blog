@@ -9,7 +9,7 @@ import path from 'node:path';
 
 import {деревоКакПлан} from '../src/adapters/planCommit.mjs';
 import {деревоПлана} from '../src/adapters/gitCommit.mjs';
-import {готовыйПлан} from '../src/adapters/publishFacts.mjs';
+import {готовыйПлан} from '../src/adapters/readyPlan.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
 import {RU, СТАТЬЯ, настройкиСервера, среда, убратьПесочницы} from './publishHarness.mjs';
 

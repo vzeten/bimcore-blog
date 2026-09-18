@@ -3,6 +3,7 @@ import {useFocusTrap} from '../focusTrap';
 import {РЕЖИМЫ} from '../../core/siteAccess.mjs';
 import {формаЧисла} from '../../core/wordForm.mjs';
 import {Находки} from './PublishReason';
+import {кПубликации, ссылокВОтмеченных, строкиЯзыков} from '../publishLangs';
 import type {ОкноПубликации} from '../usePublish';
 import type {ВерсияНаСайте} from '../publishTypes';
 import type {Settings} from '../types';
@@ -12,10 +13,11 @@ const НЕДОСТУПНО = 'недоступно';
 
 /**
  * Единственный вопрос публикации — окном поверх программы (решение владельца 2026-09-18, п.2, макет
- * одобрен). Заголовок «Опубликовать»; блок «Языки» — открытый язык с неснимаемой галочкой и его
- * нынешним состоянием НА САЙТЕ (разметка — списком: несколько языков придут этапом 3); блок
- * «Доступность на сайте» — три ответа, «Доступно всем» по умолчанию; при «Недоступно» у версии,
- * которая сейчас на сайте, — сколько статей получат правку ссылок; замечания проверки свёрнуты.
+ * одобрен). Заголовок «Опубликовать»; блок «Языки» — каждый язык сайта с его нынешним состоянием НА
+ * САЙТЕ, галочки только у версий, чей файл есть у человека (этап 3): по умолчанию отмечен открытый,
+ * снять можно любой, но без отмеченных кнопка «Опубликовать» заперта; блок «Доступность на сайте» —
+ * три ответа, один на все отмеченные, «Доступно всем» по умолчанию; при «Недоступно» — в скольких
+ * статьях уберутся ссылки на отмеченные версии, живые на сайте; замечания проверки свёрнуты.
  *
  * Пока окно открыто, остальное заперто: слой перекрывает программу, `Tab` ходит только по окну,
  * Escape — то же, что «Отмена».
@@ -25,6 +27,7 @@ export function PublishAsk(props: {
   path: string;
   окно: ОкноПубликации;
   onВыбрать: (режим: string) => void;
+  onОтметить: (путь: string) => void;
   onОпубликовать: () => void;
   onОтмена: () => void;
 }) {
@@ -32,9 +35,10 @@ export function PublishAsk(props: {
   const отмена = useRef<HTMLButtonElement>(null);
   const {окно, onKeyDown} = useFocusTrap(отмена);
   const заголовок = useId();
-  const {состояние, выбор, находки} = props.окно;
-  const своя = состояние?.локали.find((версия) => версия.путь === props.path) ?? null;
-  const ссылок = своя?.наСайте === true && своя.доступность !== НЕДОСТУПНО ? своя.ссылок : 0;
+  const {выбор, находки} = props.окно;
+  const строки = строкиЯзыков(props.окно.состояние, props.path, props.окно.отмечены);
+  const ссылок = ссылокВОтмеченных(строки);
+  const имя = (локаль: string | null, путь: string) => props.settings.локали[локаль ?? ''] ?? локаль ?? путь;
 
   return (
     <div
@@ -53,13 +57,18 @@ export function PublishAsk(props: {
 
         <p className="publish-ask-head">{п.языки}</p>
         <ul className="publish-ask-langs">
-          <li>
-            <label>
-              <input type="checkbox" checked disabled readOnly />
-              {props.settings.локали[своя?.локаль ?? ''] ?? своя?.локаль ?? props.path}
-            </label>
-            <span className="publish-quiet-inline">{п.сейчас} {сейчасНаСайте(своя, props.окно, п)}</span>
-          </li>
+          {строки.map((строка) => (
+            <li key={строка.путь}>
+              {/* Галочка — только у версии, чей файл есть: публиковать то, чего нет, нечем. */}
+              {строка.можноОтметить ? (
+                <label>
+                  <input type="checkbox" checked={строка.отмечен} onChange={() => props.onОтметить(строка.путь)} />
+                  {имя(строка.локаль, строка.путь)}
+                </label>
+              ) : <span className="publish-ask-nofile">{имя(строка.локаль, строка.путь)}</span>}
+              <span className="publish-quiet-inline">{п.сейчас} {сейчасНаСайте(строка.версия, props.окно, п)}</span>
+            </li>
+          ))}
         </ul>
 
         <fieldset className="publish-доступность">
@@ -96,7 +105,9 @@ export function PublishAsk(props: {
         )}
 
         <div className="delete-ask-buttons">
-          <button type="button" className="ghost ghost-main" onClick={props.onОпубликовать}>{п.даПубликовать}</button>
+          <button type="button" className="ghost ghost-main" disabled={кПубликации(строки).length === 0} onClick={props.onОпубликовать}>
+            {п.даПубликовать}
+          </button>
           <button ref={отмена} type="button" className="ghost" onClick={props.onОтмена}>{п.неПубликовать}</button>
         </div>
       </div>

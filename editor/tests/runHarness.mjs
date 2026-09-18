@@ -17,13 +17,14 @@ import {дописатьПоля, заменитьШапку, строкаПол
 import {releaseRoute} from '../src/adapters/releaseRoute.mjs';
 import {срезОднойВерсии} from '../src/adapters/prepareStamp.mjs';
 import {закреплённаяОснова} from '../src/adapters/publishBase.mjs';
-import {готовыйПлан} from '../src/adapters/publishFacts.mjs';
+import {готовыйПлан} from '../src/adapters/readyPlan.mjs';
 import {отпечатокПлана} from '../src/adapters/planBytes.mjs';
 import {publishDateRoute} from '../src/adapters/publishDateRoute.mjs';
 import {publishCoverRoute} from '../src/adapters/publishCoverRoute.mjs';
 import {publishRoute} from '../src/adapters/publishRoute.mjs';
 import {pushRoute} from '../src/adapters/pushRoute.mjs';
 import {publishStateRoute} from '../src/adapters/publishStateRoute.mjs';
+import {publishVersionsRoute} from '../src/adapters/publishVersionsRoute.mjs';
 import {linkSweepRoute} from '../src/adapters/linkSweep.mjs';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -170,7 +171,7 @@ export function дверь({repo, editorDir, git}, записка, {безСни
     };
 
     const взято = await publishDateRoute(общее) || await publishCoverRoute(общее) || await releaseRoute(общее)
-      || await publishStateRoute(общее) || await publishRoute(общее) || await pushRoute(общее) || await linkSweepRoute(общее);
+      || await publishStateRoute(общее) || await publishVersionsRoute(общее) || await publishRoute(общее) || await pushRoute(общее) || await linkSweepRoute(общее);
     if (!взято) throw new Error(`ручки нет: ${адрес}`);
 
     const {status, payload} = ответы[0];

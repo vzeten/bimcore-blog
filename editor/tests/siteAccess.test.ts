@@ -10,7 +10,9 @@ import {describe, expect, it} from 'vitest';
 import {
   buildFrontmatter, parseFrontmatter, безПоказанных, показанныеПоля, порядокПолей,
 } from '../src/ui/headFields';
-import {ДОСТУПНО, НЕДОСТУПНО, ПО_ССЫЛКЕ, РЕЖИМЫ, поляРежима, режимДоступности} from '../src/core/siteAccess.mjs';
+import {
+  ДОСТУПНО, НЕДОСТУПНО, ПО_ССЫЛКЕ, РЕЖИМЫ, доступностьШапки, поляРежима, режимДоступности, шапкаДоступности,
+} from '../src/core/siteAccess.mjs';
 import {признакиЛокали, цветЛокали} from '../src/core/localeSigns.mjs';
 import type {Settings} from '../src/ui/types';
 
@@ -173,5 +175,32 @@ describe('красные буквы локали следуют опублико
 
     expect(цветЛокали(п)).toBe('обычная');
     expect(п.изменена).toBe(true);
+  });
+});
+
+describe('доступность, которую сервер пишет сам (отмеченные неоткрытые языки, этап 3)', () => {
+  const шапки = [
+    'title: "Проба"\nslug: /lessons/foo',
+    'title: "Проба"\ndraft: true\nslug: /lessons/foo',
+    'title: "Проба"\nunlisted: true',
+    'title: "Проба"\ndraft: false\nunlisted: false',
+  ];
+
+  for (const шапка of шапки) {
+    for (const значение of РЕЖИМЫ as string[]) {
+      it(`«${шапка.replace(/\n/g, ' | ')}» → «${значение}»: та же доступность, что у окна, запрещённой пары нет`, () => {
+        const итог = шапкаДоступности(шапка, значение, порядок) as string;
+
+        expect(доступностьШапки(итог)).toBe(значение);
+        expect(режим(итог)).toBe(режим(выбрать(шапка, значение)));
+        expect(/^draft: true/m.test(итог) && /^unlisted: true/m.test(итог)).toBe(false);
+      });
+    }
+  }
+
+  it('доступность уже та — шапка не переписывается ни на знак, «draft: false» остаётся', () => {
+    const шапка = 'title: "Проба"\ndraft: false\nslug: /lessons/foo';
+
+    expect(шапкаДоступности(шапка, ДОСТУПНО, порядок)).toBe(шапка);
   });
 });

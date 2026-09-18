@@ -54,24 +54,51 @@ describe('разметка окон вопроса', () => {
     expect(html).toContain('Ссылки уберутся в 21 статье.');
   });
 
-  it('публикация: заголовок «Опубликовать», язык с неснимаемой галочкой и его состояние на сайте, «Доступно всем» первым', () => {
+  it('публикация: заголовок «Опубликовать», галочки у существующих версий, открытый отмечен, состояние на сайте у каждого языка, «Доступно всем» первым', () => {
     const путь = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/index.mdx';
+    const ES = 'i18n/es/docusaurus-plugin-content-docs/current/lessons/proba/index.mdx';
     const окно = {
-      неУзнали: false, выбор: 'недоступно', находки: [{код: 'описаниеШаблонное', уровень: 'предупреждение', этап: 'поляПоиска'}],
+      неУзнали: false, выбор: 'недоступно', отмечены: [путь], находки: [{код: 'описаниеШаблонное', уровень: 'предупреждение', этап: 'поляПоиска'}],
       состояние: {path: путь, основаИзвестна: true, локали: [
-        {локаль: 'ru', путь, файлЕсть: true, наСайте: true, доступность: 'поСсылке', черновикЖдёт: false, ссылок: 3},
+        {локаль: 'ru', путь, файлЕсть: true, наСайте: true, доступность: 'поСсылке', черновикЖдёт: false, ссылок: 3, статьи: ['a', 'b', 'c']},
+        {локаль: 'en', путь: 'docs/lessons/proba/index.mdx', файлЕсть: false, наСайте: false, доступность: null, черновикЖдёт: false, ссылок: 0, статьи: []},
+        {локаль: 'es', путь: ES, файлЕсть: true, наСайте: true, доступность: 'всем', черновикЖдёт: false, ссылок: 2, статьи: ['a', 'd']},
       ]},
     };
     const html = renderToStaticMarkup(
-      <PublishAsk settings={НАСТРОЙКИ} path={путь} окно={окно} onВыбрать={() => {}} onОпубликовать={() => {}} onОтмена={() => {}} />,
+      <PublishAsk settings={НАСТРОЙКИ} path={путь} окно={окно} onВыбрать={() => {}} onОтметить={() => {}} onОпубликовать={() => {}} onОтмена={() => {}} />,
     );
+    const строки = html.split('<li>').slice(1).map((кусок) => кусок.split('</li>')[0]);
 
     expect(заголовокОкна(html)).toBe('Опубликовать');
-    expect(html).toMatch(/<input type="checkbox"(?=[^>]*checked="")(?=[^>]*disabled="")/);
+    // Русский отмечен, испанский — галочка есть, но снята; у английского без файла галочки нет вовсе.
+    expect(строки[0]).toMatch(/<input type="checkbox"[^>]*checked=""/);
+    expect(строки[1]).not.toContain('checkbox');
+    expect(строки[1]).toContain('сейчас: нет на сайте');
+    expect(строки[2]).toMatch(/<input type="checkbox"/);
+    expect(строки[2]).not.toMatch(/checked=""/);
     expect(html).toContain('сейчас: по ссылке');
+    expect(html).toContain('сейчас: доступно всем');
     expect(html.indexOf('Доступно всем')).toBeLessThan(html.indexOf('По ссылке'));
     expect(html.indexOf('По ссылке')).toBeLessThan(html.indexOf('Недоступно'));
+    // Считаются только отмеченные версии: испанские ссылки в число не входят, пока его не отметили.
     expect(html).toContain('Ссылки на статью уберутся в 3 статьях.');
     expect(html).toContain('Замечания проверки: 1');
+
+    const оба = renderToStaticMarkup(
+      <PublishAsk settings={НАСТРОЙКИ} path={путь} окно={{...окно, отмечены: [путь, ES]}} onВыбрать={() => {}} onОтметить={() => {}} onОпубликовать={() => {}} onОтмена={() => {}} />,
+    );
+    // Статья, ссылающаяся на обе версии, считается один раз.
+    expect(оба).toContain('Ссылки на статью уберутся в 4 статьях.');
+  });
+
+  it('публикация: без отмеченных языков кнопка «Опубликовать» заперта', () => {
+    const путь = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/index.mdx';
+    const окно = {неУзнали: false, выбор: 'всем', отмечены: [], находки: null, состояние: null};
+    const html = renderToStaticMarkup(
+      <PublishAsk settings={НАСТРОЙКИ} path={путь} окно={окно} onВыбрать={() => {}} onОтметить={() => {}} onОпубликовать={() => {}} onОтмена={() => {}} />,
+    );
+
+    expect(html).toMatch(/<button type="button" class="ghost ghost-main" disabled="">/);
   });
 });

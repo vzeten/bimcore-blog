@@ -8,9 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {splitArticle} from '../core/articleFile.mjs';
-import {isUnlisted} from '../core/frontmatterRules.mjs';
-import {черновикСайта} from '../core/localeSigns.mjs';
-import {ДОСТУПНО, НЕДОСТУПНО, ПО_ССЫЛКЕ} from '../core/siteAccess.mjs';
+import {НЕДОСТУПНО, доступностьШапки} from '../core/siteAccess.mjs';
 import {адресВерсии} from '../core/siteRoutes.mjs';
 import {годныйПуть} from './releaseFacts.mjs';
 import {закреплённаяОснова} from './publishBase.mjs';
@@ -47,14 +45,15 @@ export async function publishStateRoute({req, res, url, repo, settings, git, т�
  * `null`: «не знаю» не подделывается под «нет на сайте». Статья вне сайта — одна строка своей версии.
  *
  * `ссылок` — в скольких статьях сайта есть ссылка на эту версию: столько правок получит публикация,
- * если сделает её недоступной (правило ВК, п.7). У версии, которой на сайте нет, — ноль.
+ * если сделает её недоступной (правило ВК, п.7). У версии, которой на сайте нет, — ноль. `статьи` —
+ * ключи этих статей: по ним окно считает статьи сразу по всем отмеченным языкам (этап 3).
  */
 export async function состояниеНаСайте({repo, settings, git, rel}) {
   const черновики = черновыеПравки(repo, settings);
   const версии = путиВерсийНаСайте(rel, settings);
   const своя = (путь) => ({файлЕсть: fs.existsSync(path.join(repo, путь)), черновикЖдёт: черновики.has(путь)});
   if (версии.length === 0) {
-    return {path: rel, основаИзвестна: true, локали: [{локаль: null, путь: rel, ...своя(rel), наСайте: false, доступность: null, ссылок: 0}]};
+    return {path: rel, основаИзвестна: true, локали: [{локаль: null, путь: rel, ...своя(rel), наСайте: false, доступность: null, ссылок: 0, статьи: []}]};
   }
 
   const основа = await закреплённаяОснова({git, settings});
@@ -66,19 +65,13 @@ export async function состояниеНаСайте({repo, settings, git, rel
     const наСайте = лежит === null ? null : лежит.файлы.has(версия.путь);
     const текст = наСайте ? await showFile(git, основа.основа, версия.путь) : null;
     const доступность = текст === null ? null : доступностьШапки(splitArticle(текст).frontmatterRaw);
-    let ссылок = 0;
+    let статьи = [];
     if (доступность !== null && доступность !== НЕДОСТУПНО) {
       const адрес = адресВерсии(версия.путь, текст, сайт);
       const цели = {адреса: new Set(адрес === '' ? [] : [адрес]), файлы: new Set([версия.путь])};
-      ссылок = (await ссылкиВОснове({git, repo, settings, основа: основа.основа, цели, свои}))?.статей ?? 0;
+      статьи = (await ссылкиВОснове({git, repo, settings, основа: основа.основа, цели, свои}))?.ключи ?? [];
     }
-    локали.push({...версия, ...своя(версия.путь), наСайте, доступность, ссылок});
+    локали.push({...версия, ...своя(версия.путь), наСайте, доступность, ссылок: статьи.length, статьи});
   }
   return {path: rel, основаИзвестна: лежит !== null, локали};
-}
-
-/** Доступность по шапке с сайта: `draft` сильнее `unlisted`, как их читает и сам сайт. */
-function доступностьШапки(шапка) {
-  if (черновикСайта(шапка)) return НЕДОСТУПНО;
-  return isUnlisted(шапка) ? ПО_ССЫЛКЕ : ДОСТУПНО;
 }

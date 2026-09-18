@@ -4,6 +4,8 @@
 .publish-ask-langs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
 .publish-ask-langs li { display: flex; gap: 8px; align-items: baseline; }
 .publish-ask-langs label { display: inline-flex; gap: 6px; align-items: center; min-width: 7rem; }
+/* Язык без своего файла: галочки нет, имя стоит на месте подписи, состояние на сайте видно. */
+.publish-ask-nofile { display: inline-flex; min-width: 7rem; padding-left: 19px; color: var(--ink-quiet); }
 .publish-ask-head { margin: 0; font-size: 13px; color: var(--ink); }
 .publish-ask-links { margin: 0; font-size: 13px; color: var(--layer-deleted); }
 .publish-ask-notes summary { color: var(--ink-quiet); font-size: 12px; cursor: pointer; }

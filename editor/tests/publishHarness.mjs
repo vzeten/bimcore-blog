@@ -12,7 +12,7 @@ import {simpleGit} from 'simple-git';
 
 import {срезОднойВерсии} from '../src/adapters/prepareStamp.mjs';
 import {закреплённаяОснова} from '../src/adapters/publishBase.mjs';
-import {готовыйПлан} from '../src/adapters/publishFacts.mjs';
+import {готовыйПлан} from '../src/adapters/readyPlan.mjs';
 import {отпечатокПлана} from '../src/adapters/planBytes.mjs';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
