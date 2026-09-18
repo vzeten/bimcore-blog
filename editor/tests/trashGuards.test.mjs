@@ -7,6 +7,7 @@ import path from 'node:path';
 
 import {saveDraft, saveSnapshot} from '../src/adapters/draftStore.mjs';
 import {вКорзину, вернутьИзКорзины, довести, папкаКорзины, положитьЦеликом, составАрхива, списокКорзины} from '../src/adapters/trashStore.mjs';
+import {стеретьЗапись} from '../src/adapters/trashDrop.mjs';
 
 const НАСТРОЙКИ = {хранение: {файлСостояния: '_state.json', папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', папкаСведения: '.сведение', снимковНаВерсию: 5, папкаКорзины: '.trash'}};
 const RU = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/index.mdx';
@@ -70,6 +71,9 @@ describe('подмена папок корзины', () => {
     expect(списокКорзины({repo: п.repo, settings: НАСТРОЙКИ})).toEqual([]);
     expect(fs.existsSync(path.join(чужая, 'manifest.json'))).toBe(true);
     expect(вернутьИзКорзины({...параметры(п), id})).toEqual({ошибка: 'ссылкаВПути'});
+    // Стирание насовсем тоже отказывает: за подменённой папкой лежат чужие файлы.
+    expect(стеретьЗапись({repo: п.repo, settings: НАСТРОЙКИ, id})).toEqual({ошибка: 'ссылкаВПути'});
+    expect(fs.existsSync(path.join(чужая, 'manifest.json'))).toBe(true);
   });
 });
 

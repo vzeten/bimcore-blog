@@ -3,7 +3,7 @@
 // перечень уже стёртого и конфликтов доходит вместе с причиной.
 import {describe, expect, it, vi} from 'vitest';
 import {deleteArticle} from '../src/ui/actions';
-import {trashRestore} from '../src/ui/trashActions';
+import {trashDrop, trashRestore} from '../src/ui/trashActions';
 import {провестиУдаление} from '../src/ui/useDelete';
 
 const ПУТЬ = 'editor/sandbox/proba/index.mdx';
@@ -30,13 +30,13 @@ describe('удаление статьи из окна', () => {
     expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({path: ПУТЬ, подтверждено: 'корзина'});
   });
 
-  it('предупреждения сервера доходят вместе с успехом', async () => {
-    const request = vi.fn().mockResolvedValue({удалено: [ПУТЬ], режим: 'навсегда', предупреждения: ['остались черновики']});
+  it('успех доносит запись корзины и время удаления', async () => {
+    const request = vi.fn().mockResolvedValue({удалено: [ПУТЬ], режим: 'корзина', корзина: 'x-1', удаленоКогда: '2026-09-18T00:00:00.000Z'});
     const ok = vi.fn();
 
     await deleteArticle(ПУТЬ, 'корзина', {ok, fail: vi.fn()}, request as never);
 
-    expect(ok.mock.calls[0][0].предупреждения).toEqual(['остались черновики']);
+    expect(ok.mock.calls[0][0]).toMatchObject({корзина: 'x-1', удаленоКогда: '2026-09-18T00:00:00.000Z'});
   });
 
   it('отказ сервера не выдаётся за успех', async () => {
@@ -110,3 +110,24 @@ describe('ход удаления после подтверждения', () => 
   });
 });
 
+describe('стирание записи корзины', () => {
+  it('без подтверждения в запросе нет согласия, с подтверждением — есть', async () => {
+    const request = vi.fn().mockResolvedValue({спрашиваю: true});
+
+    await trashDrop('x-1', false, {ok: vi.fn(), fail: vi.fn()}, request as never);
+    await trashDrop('x-1', true, {ok: vi.fn(), fail: vi.fn()}, request as never);
+
+    expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({id: 'x-1'});
+    expect(JSON.parse(request.mock.calls[1][1].body)).toEqual({id: 'x-1', подтверждено: true});
+  });
+
+  it('отказ сервера доходит словами, а не выдаётся за успех', async () => {
+    const ok = vi.fn();
+    const fail = vi.fn();
+
+    await trashDrop('x-1', true, {ok, fail}, vi.fn().mockRejectedValue(new Error('запись не доведена')) as never);
+
+    expect(ok).not.toHaveBeenCalled();
+    expect(fail).toHaveBeenCalledWith('запись не доведена');
+  });
+});

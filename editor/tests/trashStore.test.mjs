@@ -183,6 +183,34 @@ describe('корзина ничего не удаляет сама', () => {
     expect(fs.existsSync(path.join(п.repo, 'docs/lessons/other/index.mdx'))).toBe(true);
   });
 
+  it('незаконченный перенос стирается, а на возврате — нет: там архив единственная копия', () => {
+    const п = репозиторий();
+    const корзина = папкаКорзины(п.repo, НАСТРОЙКИ);
+    const запись = (id, состояние) => {
+      fs.mkdirSync(path.join(корзина, id), {recursive: true});
+      fs.writeFileSync(path.join(корзина, id, 'manifest.json'), JSON.stringify({версия: 1, id, удалено: '2026-06-01T00:00:00.000Z', статья: {пути: []}, состояние, файлы: []}), 'utf8');
+      return id;
+    };
+    const перенос = запись('2026-06-01T00-00-00-000Z-pppppp', 'перенос');
+    const возврат = запись('2026-06-01T00-00-00-000Z-vvvvvv', 'возврат');
+
+    expect(стеретьЗапись({repo: п.repo, settings: НАСТРОЙКИ, id: перенос})).toMatchObject({стёрто: перенос});
+    expect(стеретьЗапись({repo: п.repo, settings: НАСТРОЙКИ, id: возврат})).toEqual({ошибка: 'записьНезавершена', состояние: 'возврат'});
+    expect([fs.existsSync(path.join(корзина, перенос)), fs.existsSync(path.join(корзина, возврат))]).toEqual([false, true]);
+  });
+
+  it('корзина лежит при материалах, а не при папке кода: удалённое не уезжает с копией кода', () => {
+    const п = репозиторий();
+    const код = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-code-'));
+    песочницы.push(код);
+    const состав = составАрхива({repo: п.repo, settings: НАСТРОЙКИ, решение: {файлы: [EN], папки: [], пути: [EN], языки: ['en']}});
+    const запись = вКорзину({repo: п.repo, editorDir: код, settings: НАСТРОЙКИ, статья: {название: 'x', пути: [EN], языки: ['en'], папки: []}, состав});
+
+    expect(fs.existsSync(path.join(п.repo, 'editor', '.trash', запись.id, 'manifest.json'))).toBe(true);
+    expect(fs.existsSync(path.join(код, '.trash'))).toBe(false);
+    expect(списокКорзины({repo: п.repo, settings: НАСТРОЙКИ}).map((з) => з.id)).toEqual([запись.id]);
+  });
+
   it('чужое имя записи стереть нельзя: выхода за папку корзины нет', () => {
     const п = репозиторий();
     expect(стеретьЗапись({repo: п.repo, settings: НАСТРОЙКИ, id: '../../etc'})).toEqual({ошибка: 'нетЗаписи'});

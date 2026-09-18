@@ -169,7 +169,7 @@ async function api(req, res, url) {
     publishedRef: () => publishedRef, тело, insideRepo, send, articles, последняяПравка,
   })) return;
 
-  // Корзина: перечень записей и возврат. Просроченные завершённые записи чистятся при обращении.
+  // Корзина: перечень, возврат и стирание записи насовсем. Сама она ничего не удаляет по сроку.
   if (await trashRoute({req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), тело, send})) return;
 
   // Открытие статьи — отдельным модулем: сервер иначе выходит за лимит размера файла.
