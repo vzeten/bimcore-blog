@@ -2,7 +2,7 @@ import {useId, useRef} from 'react';
 import {useFocusTrap} from '../focusTrap';
 import {РЕЖИМЫ} from '../../core/siteAccess.mjs';
 import {формаЧисла} from '../../core/wordForm.mjs';
-import {Находки} from './PublishReason';
+import {словаНаходки} from './PublishReason';
 import {кПубликации, ссылокВОтмеченных, строкиЯзыков} from '../publishLangs';
 import type {ОкноПубликации} from '../usePublish';
 import type {ВерсияНаСайте} from '../publishTypes';
@@ -100,7 +100,10 @@ export function PublishAsk(props: {
         {находки !== null && находки.length > 0 && (
           <details className="publish-ask-notes">
             <summary>{п.замечания.replace('{n}', String(находки.length))}</summary>
-            <Находки список={находки} settings={props.settings} />
+            {/* Каждое замечание — одна строка тем же шрифтом, без колонки уровня (макет владельца). */}
+            <ul className="publish-ask-list">
+              {находки.map((находка, номер) => <li key={`${находка.код}|${номер}`}>{словаНаходки(находка, props.settings)}</li>)}
+            </ul>
           </details>
         )}
 

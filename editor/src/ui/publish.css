@@ -8,7 +8,11 @@
 .publish-ask-nofile { display: inline-flex; min-width: 7rem; padding-left: 19px; color: var(--ink-quiet); }
 .publish-ask-head { margin: 0; font-size: 13px; color: var(--ink); }
 .publish-ask-links { margin: 0; font-size: 13px; color: var(--layer-deleted); }
-.publish-ask-notes summary { color: var(--ink-quiet); font-size: 12px; cursor: pointer; }
+.publish-ask-notes summary { color: var(--ink-quiet); font-size: 13px; cursor: pointer; }
+/* Замечания в окне — одной строкой каждое, тем же шрифтом, что всё окно (макет владельца). */
+.publish-ask-list { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--ink); display: grid; gap: 2px; }
+/* Все надписи окна одного размера: подпись «сейчас: …» не мельче остального. */
+.delete-ask-body .publish-quiet-inline { font-size: 13px; }
 
 /* Кнопка после отказа: «Не опубликовано» — заметно, но не криком; по нажатию видна причина. */
 .publish-failed { color: var(--layer-deleted); border-color: var(--layer-deleted); }
@@ -60,7 +64,7 @@
   border: 1px solid var(--line);
   margin-left: -1px;
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.25;
   color: var(--ink);
   background: var(--bg);

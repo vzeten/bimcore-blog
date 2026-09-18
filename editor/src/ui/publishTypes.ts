@@ -13,6 +13,8 @@ export interface PrepareFinding {
   строка?: number | null;
   локаль?: string;
   значение?: string;
+  /** Видимый текст ссылки: им причина называет ссылку человеку. */
+  текст?: string;
   длина?: number;
   предел?: number;
 }
