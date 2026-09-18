@@ -1,0 +1,44 @@
+{
+  "строки": [
+    "<button class=\"lang lang-цвет-обычная\" title=\"Русский\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">RU</span><span class=\"lang-снизу\"></span></button><button class=\"lang lang-цвет-нет lang-срыв\" title=\"нет на сайте\" disabled=\"\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">EN</span><span class=\"lang-снизу\"></span></button><button class=\"lang lang-цвет-нет\" title=\"Español: версии нет\" disabled=\"\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">ES</span><span class=\"lang-снизу\"></span></button>",
+    "<button class=\"lang lang-цвет-новая\" title=\"Русский: ещё ни разу не публиковалась\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">RU</span><span class=\"lang-снизу\"></span></button><button class=\"lang lang-цвет-новая\" title=\"English: ещё ни разу не публиковалась\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">EN</span><span class=\"lang-снизу\"></span></button><button class=\"lang lang-цвет-нет\" title=\"Español: версии нет\" disabled=\"\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">ES</span><span class=\"lang-снизу\"></span></button>",
+    "<button class=\"lang lang-цвет-обычная\" title=\"Русский\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">RU</span><span class=\"lang-снизу\"></span></button><button class=\"lang lang-цвет-обычная\" title=\"English\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">EN</span><span class=\"lang-снизу\"></span></button><button class=\"lang lang-цвет-нет\" title=\"Español: версии нет\" disabled=\"\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">ES</span><span class=\"lang-снизу\"></span></button>",
+    "<button class=\"lang lang-цвет-обычная\" title=\"Русский: изменена после публикации, правка ещё не на сайте, только по ссылке\"><span class=\"lang-сверху\"><span class=\"lang-точка lang-точка-изменена\"></span></span><span class=\"lang-код\">RU</span><span class=\"lang-снизу\"><svg class=\"lang-ссылка\" viewBox=\"0 0 14 14\" aria-hidden=\"true\" focusable=\"false\"><g fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"><path d=\"M5.4 8.6 L8.6 5.4\"></path><path d=\"M8.2 4.4 L9.3 3.3 a2.4 2.4 0 0 1 3.4 3.4 L11.6 7.8\"></path><path d=\"M5.8 9.6 L4.7 10.7 a2.4 2.4 0 0 1-3.4-3.4 L2.4 6.2\"></path></g></svg></span></button><button class=\"lang lang-цвет-обычная\" title=\"English\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">EN</span><span class=\"lang-снизу\"></span></button><button class=\"lang lang-цвет-нет\" title=\"Español: версии нет\" disabled=\"\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">ES</span><span class=\"lang-снизу\"></span></button>",
+    "<button class=\"lang lang-цвет-черновик\" title=\"Русский: черновик, сайт эту страницу не соберёт\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">RU</span><span class=\"lang-снизу\"></span></button><button class=\"lang lang-цвет-обычная\" title=\"English\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">EN</span><span class=\"lang-снизу\"></span></button><button class=\"lang lang-цвет-нет\" title=\"Español: версии нет\" disabled=\"\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">ES</span><span class=\"lang-снизу\"></span></button>",
+    "<button class=\"lang lang-цвет-нет\" title=\"Русский: версии нет\" disabled=\"\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">RU</span><span class=\"lang-снизу\"></span></button><button class=\"lang lang-цвет-обычная\" title=\"English\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">EN</span><span class=\"lang-снизу\"></span></button><button class=\"lang lang-цвет-нет\" title=\"Español: версии нет\" disabled=\"\"><span class=\"lang-сверху\"></span><span class=\"lang-код\">ES</span><span class=\"lang-снизу\"></span></button>"
+  ],
+  "стили": [
+    "styles.css: --ink-quiet: #7c848e;",
+    "styles.css: --accent: #1257d6;",
+    "styles.css: --знак-тревоги: #c8102e;",
+    "styles.css: .lang-ask { display: flex; align-items: center; gap: 6px; margin-left: 10px; font-size: 12px; }",
+    "styles.css: .lang { display: inline-flex; flex-direction: column; align-items: center; border: 0; background: transparent; color: var(--ink-quiet); border-radius: 999px; padding: 2px 4px; font-size: 12px; line-height: 1.1; }",
+    "styles.css: .lang-сверху, .lang-снизу { display: flex; align-items: center; justify-content: center; gap: 2px; height: 8px; }",
+    "styles.css: .lang-сверху { align-items: flex-end; }",
+    "styles.css: .lang-точка { width: 5px; height: 5px; border-radius: 50%; }",
+    "styles.css: .lang-точка-изменена { background: var(--знак-тревоги); }",
+    "styles.css: .lang-ссылка { width: 9px; height: 9px; display: block; }",
+    "styles.css: .lang-цвет-обычная { color: var(--ink-quiet); }",
+    "styles.css: .lang-цвет-новая { color: var(--accent); }",
+    "styles.css: .lang-цвет-черновик { color: var(--знак-тревоги); }",
+    "styles.css: .lang-цвет-нет { opacity: 0.35; cursor: default; }",
+    "styles.css: .lang-on { background: var(--bg-soft); box-shadow: inset 0 0 0 1px var(--line); font-weight: 600; }",
+    "styles.css: .layer-site { color: var(--layer-site); }",
+    "styles.css: .layer-prevHuman { color: var(--layer-prevHuman); }",
+    "styles.css: .layer-prevAi { color: var(--layer-prevAi); }",
+    "styles.css: .layer-prevOther { color: var(--layer-prevOther); }",
+    "styles.css: .layer-current { color: var(--layer-current); }",
+    "styles.css: .mono .layer-site, .mono .layer-prevHuman, .mono .layer-prevAi, .mono .layer-prevOther, .mono .layer-current { color: var(--ink); }",
+    "registry.css: .cell-langs .lang { padding: 1px 2px; font-size: 10px; }",
+    "registry.css: .lang-срыв { background: var(--layer-deleted); opacity: 1; }",
+    "registry.css: .lang-срыв .lang-код { color: #fff; }"
+  ],
+  "слои": {
+    "site": "#8a8f98",
+    "prevHuman": "#111418",
+    "prevAi": "#0f7a53",
+    "prevOther": "#7a4fbf",
+    "current": "#1257d6",
+    "deleted": "#c8102e"
+  }
+}

@@ -144,7 +144,9 @@ function клетка(
 
     return (
       <button
-        className={article.titleFromOtherLocale ? 'cell-title cell-foreign' : 'cell-title'}
+        // Название пишется обычным цветом, даже когда взято из другой языковой версии: решение
+        // владельца 2026-09-18, замены прежней красной пометке нет.
+        className="cell-title"
         onClick={() => основная && props.onOpen(основная.path)}
       >
         {article.title}

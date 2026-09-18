@@ -21,7 +21,6 @@
 .registry-table tr:hover td { background: #f8fafb; }
 .cell-title { border: 0; background: transparent; font: inherit; text-align: left; padding: 0; cursor: pointer; }
 .cell-title:hover { text-decoration: underline; }
-.cell-foreign { color: var(--layer-deleted); }
 /* Просвет между метками заметно больше отступов внутри метки: так точка читается частью своей
    локали, а не отдельным рядом над столбцом (наблюдение владельца 2026-09-08). */
 .cell-langs { display: inline-flex; gap: 16px; }
