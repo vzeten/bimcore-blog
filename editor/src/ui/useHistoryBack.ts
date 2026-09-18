@@ -32,8 +32,6 @@ export function useHistoryBack(deps: {
   };
   // Восстановление идёт один раз за жизнь окна: повторная отрисовка не открывает статью заново.
   const восстановлено = useRef(false);
-  const открытьРеф = useRef(deps.open);
-  открытьРеф.current = deps.open;
 
   useEffect(() => {
     const назад = (event: PopStateEvent) => переходыРеф.current(event);
@@ -48,7 +46,9 @@ export function useHistoryBack(deps: {
     void восстановитьПриЗапуске({
       состояние: СОСТОЯНИЕ_ЗАПУСКА,
       // Без нового шага истории: запись уже описывает эту статью, а второй шаг сломал бы «назад».
-      открыть: async (path) => (await открытьРеф.current(path, false)) === true,
+      // Открыватель берётся из той же отрисовки, где настройки уже пришли: раньше него
+      // восстановление и не начинается, поэтому ссылка свежая без отдельного ref.
+      открыть: async (path) => (await deps.open(path, false)) === true,
       поставитьРеестр: () => history.replaceState({вид: 'реестр'}, ''),
     });
   }, [deps.готовы]);
