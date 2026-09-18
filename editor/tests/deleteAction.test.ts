@@ -20,21 +20,21 @@ describe('удаление статьи из окна', () => {
     expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({path: ПУТЬ});
   });
 
-  it('с подтверждением уходит именно названный режим, успех доносит список удалённого', async () => {
-    const request = vi.fn().mockResolvedValue({удалено: [ПУТЬ], режим: 'навсегда'});
+  it('с подтверждением уходит корзина, успех доносит список удалённого', async () => {
+    const request = vi.fn().mockResolvedValue({удалено: [ПУТЬ], режим: 'корзина'});
     const ok = vi.fn();
 
-    await deleteArticle(ПУТЬ, 'навсегда', {ok, fail: vi.fn()}, request as never);
+    await deleteArticle(ПУТЬ, 'корзина', {ok, fail: vi.fn()}, request as never);
 
-    expect(ok).toHaveBeenCalledWith({удалено: [ПУТЬ], режим: 'навсегда'});
-    expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({path: ПУТЬ, подтверждено: 'навсегда'});
+    expect(ok).toHaveBeenCalledWith({удалено: [ПУТЬ], режим: 'корзина'});
+    expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({path: ПУТЬ, подтверждено: 'корзина'});
   });
 
   it('предупреждения сервера доходят вместе с успехом', async () => {
     const request = vi.fn().mockResolvedValue({удалено: [ПУТЬ], режим: 'навсегда', предупреждения: ['остались черновики']});
     const ok = vi.fn();
 
-    await deleteArticle(ПУТЬ, 'навсегда', {ok, fail: vi.fn()}, request as never);
+    await deleteArticle(ПУТЬ, 'корзина', {ok, fail: vi.fn()}, request as never);
 
     expect(ok.mock.calls[0][0].предупреждения).toEqual(['остались черновики']);
   });
@@ -44,7 +44,7 @@ describe('удаление статьи из окна', () => {
     const ok = vi.fn();
     const fail = vi.fn();
 
-    await deleteArticle(ПУТЬ, 'навсегда', {ok, fail}, request as never);
+    await deleteArticle(ПУТЬ, 'корзина', {ok, fail}, request as never);
 
     expect(ok).not.toHaveBeenCalled();
     expect(fail).toHaveBeenCalledWith('режим сменился', []);
@@ -56,7 +56,7 @@ describe('удаление статьи из окна', () => {
     });
     const fail = vi.fn();
 
-    await deleteArticle(ПУТЬ, 'навсегда', {ok: vi.fn(), fail}, vi.fn().mockRejectedValue(ошибка) as never);
+    await deleteArticle(ПУТЬ, 'корзина', {ok: vi.fn(), fail}, vi.fn().mockRejectedValue(ошибка) as never);
 
     expect(fail).toHaveBeenCalledWith('удалилось не всё', [ПУТЬ, 'editor/sandbox/proba/img-01.png']);
   });
@@ -64,7 +64,7 @@ describe('удаление статьи из окна', () => {
   it('ответа с перечнем нет — вместо него пустой список, а не поломка', async () => {
     const fail = vi.fn();
 
-    await deleteArticle(ПУТЬ, 'навсегда', {ok: vi.fn(), fail}, vi.fn().mockRejectedValue('сервер не отвечает') as never);
+    await deleteArticle(ПУТЬ, 'корзина', {ok: vi.fn(), fail}, vi.fn().mockRejectedValue('сервер не отвечает') as never);
 
     expect(fail.mock.calls[0][1]).toEqual([]);
   });

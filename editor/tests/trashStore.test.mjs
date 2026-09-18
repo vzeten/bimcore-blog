@@ -7,8 +7,9 @@ import path from 'node:path';
 
 import {saveDraft, saveSnapshot} from '../src/adapters/draftStore.mjs';
 import {вКорзину, вернутьИзКорзины, довести, папкаКорзины, положитьЦеликом, составАрхива, списокКорзины} from '../src/adapters/trashStore.mjs';
+import {стеретьЗапись} from '../src/adapters/trashDrop.mjs';
 
-const НАСТРОЙКИ = {хранение: {файлСостояния: '_state.json', папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', папкаСведения: '.сведение', снимковНаВерсию: 5, папкаКорзины: '.trash', корзинаДней: 30}};
+const НАСТРОЙКИ = {хранение: {файлСостояния: '_state.json', папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', папкаСведения: '.сведение', снимковНаВерсию: 5, папкаКорзины: '.trash'}};
 const RU = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/index.mdx';
 const EN = 'docs/lessons/proba/index.mdx';
 const ПАПКА_RU = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba';
@@ -65,7 +66,7 @@ describe('перенос в корзину', () => {
     const п = репозиторий();
     const состав = составАрхива({...параметры(п), решение: РЕШЕНИЕ});
     const запись = вКорзину({...параметры(п), статья: {название: 'Проба', пути: РЕШЕНИЕ.пути, языки: РЕШЕНИЕ.языки, папки: РЕШЕНИЕ.папки}, состав});
-    const dir = path.join(папкаКорзины(п.editorDir, НАСТРОЙКИ), запись.id);
+    const dir = path.join(папкаКорзины(п.repo, НАСТРОЙКИ), запись.id);
     expect(есть(п.repo, RU)).toBe(false);
     expect(есть(п.repo, ПАПКА_RU)).toBe(false);
     expect(есть(п.repo, 'docs/lessons/other/index.mdx')).toBe(true);
@@ -78,7 +79,7 @@ describe('перенос в корзину', () => {
   it('обрыв после копирования: повтор доводит перенос, ничего не теряя', () => {
     const п = репозиторий();
     const состав = составАрхива({...параметры(п), решение: РЕШЕНИЕ});
-    const dir = path.join(папкаКорзины(п.editorDir, НАСТРОЙКИ), '2026-09-04T00-00-00-000Z-abc123');
+    const dir = path.join(папкаКорзины(п.repo, НАСТРОЙКИ), '2026-09-04T00-00-00-000Z-abc123');
     const опись = {версия: 1, id: '2026-09-04T00-00-00-000Z-abc123', удалено: '2026-09-04T00:00:00.000Z', статья: {пути: РЕШЕНИЕ.пути, папки: РЕШЕНИЕ.папки}, состояние: 'перенос', файлы: состав};
     fs.mkdirSync(dir, {recursive: true});
     fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(опись), 'utf8');
@@ -95,7 +96,7 @@ describe('перенос в корзину', () => {
     const п = репозиторий();
     const состав = составАрхива({...параметры(п), решение: РЕШЕНИЕ});
     fs.rmSync(path.join(п.repo, EN));
-    const dir = path.join(папкаКорзины(п.editorDir, НАСТРОЙКИ), '2026-09-04T00-00-00-000Z-abc124');
+    const dir = path.join(папкаКорзины(п.repo, НАСТРОЙКИ), '2026-09-04T00-00-00-000Z-abc124');
     const опись = {версия: 1, id: 'x', удалено: '2026-09-04T00:00:00.000Z', статья: {пути: РЕШЕНИЕ.пути, папки: []}, состояние: 'перенос', файлы: состав};
     fs.mkdirSync(dir, {recursive: true});
     expect(() => довести({...параметры(п), dir, опись})).toThrow('архивПовреждён');
@@ -116,7 +117,7 @@ describe('возврат из корзины', () => {
     expect(fs.readFileSync(path.join(п.repo, RU), 'utf8')).toBe(`содержимое ${RU}`);
     expect(есть(п.repo, `${ПАПКА_RU}/img-01.png`)).toBe(true);
     expect(fs.readdirSync(path.join(п.editorDir, '.drafts'))).toHaveLength(1);
-    expect(списокКорзины({editorDir: п.editorDir, settings: НАСТРОЙКИ})).toEqual([]);
+    expect(списокКорзины({repo: п.repo, settings: НАСТРОЙКИ})).toEqual([]);
   });
 
   it('на месте лежит другой файл — отказ целиком, ни один файл не записан и не перезаписан', () => {
@@ -141,7 +142,7 @@ describe('возврат из корзины', () => {
   it('чужое имя записи и подменённая опись не выходят за репозиторий', () => {
     const п = репозиторий();
     expect(вернутьИзКорзины({...параметры(п), id: '../../etc'})).toEqual({ошибка: 'нетЗаписи'});
-    const dir = path.join(папкаКорзины(п.editorDir, НАСТРОЙКИ), '2026-09-04T00-00-00-000Z-bad001');
+    const dir = path.join(папкаКорзины(п.repo, НАСТРОЙКИ), '2026-09-04T00-00-00-000Z-bad001');
     fs.mkdirSync(path.join(dir, 'repo'), {recursive: true});
     fs.writeFileSync(path.join(dir, 'repo', 'x.txt'), 'x', 'utf8');
     fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({версия: 1, id: 'x', удалено: '2026-09-04T00:00:00.000Z', статья: {}, состояние: 'готово', файлы: [{корень: 'repo', из: '../снаружи.txt', в: 'repo/x.txt'}]}), 'utf8');
@@ -150,18 +151,42 @@ describe('возврат из корзины', () => {
   });
 });
 
-describe('срок корзины', () => {
-  it('готовая запись старше срока чистится при обращении, свежая и незавершённая остаются', () => {
+describe('корзина ничего не удаляет сама', () => {
+  it('запись любой давности остаётся на месте: срок отменён решением владельца 2026-09-18', () => {
     const п = репозиторий();
     const свежая = удалить(п, new Date('2026-09-04T00:00:00.000Z'));
     const старая = удалить(п, new Date('2026-07-01T00:00:00.000Z'), true);
-    const незавершённая = path.join(папкаКорзины(п.editorDir, НАСТРОЙКИ), '2026-06-01T00-00-00-000Z-aaaaaa');
+    const незавершённая = path.join(папкаКорзины(п.repo, НАСТРОЙКИ), '2026-06-01T00-00-00-000Z-aaaaaa');
     fs.mkdirSync(незавершённая, {recursive: true});
     fs.writeFileSync(path.join(незавершённая, 'manifest.json'), JSON.stringify({версия: 1, id: '2026-06-01T00-00-00-000Z-aaaaaa', удалено: '2026-06-01T00:00:00.000Z', статья: {пути: []}, состояние: 'скопировано', файлы: []}), 'utf8');
-    const записи = списокКорзины({editorDir: п.editorDir, settings: НАСТРОЙКИ, сейчас: new Date('2026-09-04T12:00:00.000Z')});
-    expect(записи.map((з) => з.id)).toEqual([свежая.id, '2026-06-01T00-00-00-000Z-aaaaaa']);
-    expect(fs.existsSync(path.join(папкаКорзины(п.editorDir, НАСТРОЙКИ), старая.id))).toBe(false);
-    expect(записи[0].срокДо).toBe('2026-10-04T00:00:00.000Z');
+    const записи = списокКорзины({repo: п.repo, settings: НАСТРОЙКИ});
+    expect(записи.map((з) => з.id).sort()).toEqual([свежая.id, старая.id, '2026-06-01T00-00-00-000Z-aaaaaa'].sort());
+    expect(fs.existsSync(path.join(папкаКорзины(п.repo, НАСТРОЙКИ), старая.id))).toBe(true);
+    expect(записи[0].срокДо).toBeUndefined();
+  });
+
+  it('стереть можно готовую запись и незаконченный перенос, а середину работы — нет', () => {
+    const п = репозиторий();
+    const готовая = удалить(п, new Date('2026-09-04T00:00:00.000Z'));
+    const середина = path.join(папкаКорзины(п.repo, НАСТРОЙКИ), '2026-06-01T00-00-00-000Z-bbbbbb');
+    fs.mkdirSync(середина, {recursive: true});
+    fs.writeFileSync(path.join(середина, 'manifest.json'), JSON.stringify({версия: 1, id: '2026-06-01T00-00-00-000Z-bbbbbb', удалено: '2026-06-01T00:00:00.000Z', статья: {пути: []}, состояние: 'скопировано', файлы: []}), 'utf8');
+
+    expect(стеретьЗапись({repo: п.repo, settings: НАСТРОЙКИ, id: '2026-06-01T00-00-00-000Z-bbbbbb'}))
+      .toEqual({ошибка: 'записьНезавершена', состояние: 'скопировано'});
+    expect(fs.existsSync(середина)).toBe(true);
+
+    expect(стеретьЗапись({repo: п.repo, settings: НАСТРОЙКИ, id: готовая.id})).toMatchObject({стёрто: готовая.id});
+    expect(fs.existsSync(path.join(папкаКорзины(п.repo, НАСТРОЙКИ), готовая.id))).toBe(false);
+    // Соседняя запись и сами материалы не тронуты.
+    expect(fs.existsSync(середина)).toBe(true);
+    expect(fs.existsSync(path.join(п.repo, 'docs/lessons/other/index.mdx'))).toBe(true);
+  });
+
+  it('чужое имя записи стереть нельзя: выхода за папку корзины нет', () => {
+    const п = репозиторий();
+    expect(стеретьЗапись({repo: п.repo, settings: НАСТРОЙКИ, id: '../../etc'})).toEqual({ошибка: 'нетЗаписи'});
+    expect(стеретьЗапись({repo: п.repo, settings: НАСТРОЙКИ, id: '2026-01-01T00-00-00-000Z-nnnnnn'})).toEqual({ошибка: 'нетЗаписи'});
   });
 
   function удалить(п, когда, другая = false) {

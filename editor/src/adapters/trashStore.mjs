@@ -18,14 +18,15 @@ import {draftPath, historyDirOf, хранилищеРедактора} from './d
 
 const ОПИСЬ = 'manifest.json';
 /** Имя записи корзины: время и короткий хвост — в адресе ничего, кроме безопасных знаков. */
-const ИМЯ_ЗАПИСИ = /^[0-9A-Za-z_-]{8,80}$/;
+export const ИМЯ_ЗАПИСИ = /^[0-9A-Za-z_-]{8,80}$/;
 
-export function папкаКорзины(editorDir, settings) {
-  return path.join(editorDir, settings['хранение']['папкаКорзины']);
-}
-
-export function дниКорзины(settings) {
-  return Number(settings['хранение']['корзинаДней']) || 30;
+/**
+ * Папка корзины — при МАТЕРИАЛАХ, рядом с черновиками и историей (SPEC 7.1.5), а не при коде:
+ * корзина хранит удалённое, пока человек сам его не сотрёт, а временная копия кода унесла бы
+ * статьи владельца с собой, и другой экземпляр их бы не увидел.
+ */
+export function папкаКорзины(repo, settings) {
+  return path.join(хранилищеРедактора(repo), settings['хранение']['папкаКорзины']);
 }
 
 /**
@@ -56,14 +57,14 @@ function проверенный(корень, rel) {
 const тотЖе = (a, b) => (process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b);
 
 /** Существующая папка — настоящая: не ссылка, не junction и не лежит за ними. Иначе — исключение. */
-function настоящаяПапка(dir) {
+export function настоящаяПапка(dir) {
   if (fs.lstatSync(dir).isSymbolicLink() || !тотЖе(fs.realpathSync.native(dir), path.resolve(dir))) throw new Error('ссылкаВПути');
   return dir;
 }
 
 /** Папка корзины, проверенная на подмену; её ещё нет — `null`. */
-function корзинаНастоящая(editorDir, settings) {
-  const папка = папкаКорзины(editorDir, settings);
+export function корзинаНастоящая(repo, settings) {
+  const папка = папкаКорзины(repo, settings);
   return fs.existsSync(папка) ? настоящаяПапка(папка) : null;
 }
 
@@ -106,7 +107,7 @@ export function составАрхива({repo, settings, решение}) {
   return [...записи.values()];
 }
 
-function прочитатьОпись(dir) {
+export function прочитатьОпись(dir) {
   try {
     const опись = JSON.parse(fs.readFileSync(path.join(dir, ОПИСЬ), 'utf8'));
     if (!опись || typeof опись !== 'object' || !Array.isArray(опись.файлы)) return null;
@@ -184,9 +185,9 @@ function убратьПустые(repo, папка) {
  */
 export function вКорзину({repo, editorDir, settings, статья, состав, сейчас = new Date()}) {
   const id = `${сейчас.toISOString().replace(/[:.]/g, '-')}-${crypto.randomBytes(3).toString('hex')}`;
-  const dir = path.join(папкаКорзины(editorDir, settings), id);
+  const dir = path.join(папкаКорзины(repo, settings), id);
   const опись = {версия: 1, id, удалено: сейчас.toISOString(), статья, состояние: 'перенос', файлы: состав};
-  const корзина = папкаКорзины(editorDir, settings);
+  const корзина = папкаКорзины(repo, settings);
   fs.mkdirSync(корзина, {recursive: true});
   настоящаяПапка(корзина);
   записатьОпись(editorDir, dir, опись);
@@ -219,16 +220,13 @@ export function довести({repo, editorDir, settings, dir, опись}) {
   return {id: опись.id, удалено: опись.удалено};
 }
 
-function срокДо(опись, settings) {
-  return new Date(Date.parse(опись.удалено) + дниКорзины(settings) * 86_400_000).toISOString();
-}
-
 /**
- * Записи корзины. Попутно чистятся только записи `готово`, чей срок вышел: незавершённые переносы
- * и возвраты, повреждённые описи и всё, что не удалось разобрать, остаются как есть.
+ * Записи корзины. **Ничего не удаляется само** (решение владельца 2026-09-18): срок хранения
+ * отменён, запись уходит только по прямому нажатию человека. Повреждённые описи и подменённые
+ * папки не читаются и остаются на месте — за ними чужие файлы.
  */
-export function списокКорзины({editorDir, settings, сейчас = new Date()}) {
-  const папка = корзинаНастоящая(editorDir, settings);
+export function списокКорзины({repo, settings}) {
+  const папка = корзинаНастоящая(repo, settings);
   if (папка === null) return [];
   const записи = [];
   for (const имя of fs.readdirSync(папка).sort().reverse()) {
@@ -238,12 +236,7 @@ export function списокКорзины({editorDir, settings, сейчас = 
     if (fs.lstatSync(dir).isSymbolicLink() || !fs.lstatSync(dir).isDirectory() || !тотЖе(fs.realpathSync.native(dir), dir)) continue;
     const опись = прочитатьОпись(dir);
     if (опись === null) continue;
-    const срок = срокДо(опись, settings);
-    if (опись.состояние === 'готово' && Date.parse(срок) <= сейчас.getTime()) {
-      fs.rmSync(dir, {recursive: true, force: true});
-      continue;
-    }
-    записи.push({id: опись.id, удалено: опись.удалено, срокДо: срок, состояние: опись.состояние, ...опись.статья});
+    записи.push({id: опись.id, удалено: опись.удалено, состояние: опись.состояние, ...опись.статья});
   }
   return записи;
 }
@@ -257,7 +250,7 @@ export function вернутьИзКорзины({repo, editorDir, settings, id}
   if (!ИМЯ_ЗАПИСИ.test(String(id))) return {ошибка: 'нетЗаписи'};
   let dir;
   try {
-    const папка = корзинаНастоящая(editorDir, settings);
+    const папка = корзинаНастоящая(repo, settings);
     if (папка === null || !fs.existsSync(path.join(папка, id))) return {ошибка: 'нетЗаписи'};
     dir = настоящаяПапка(path.join(папка, id));
   } catch {

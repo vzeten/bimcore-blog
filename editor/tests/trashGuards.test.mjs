@@ -8,7 +8,7 @@ import path from 'node:path';
 import {saveDraft, saveSnapshot} from '../src/adapters/draftStore.mjs';
 import {вКорзину, вернутьИзКорзины, довести, папкаКорзины, положитьЦеликом, составАрхива, списокКорзины} from '../src/adapters/trashStore.mjs';
 
-const НАСТРОЙКИ = {хранение: {файлСостояния: '_state.json', папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', папкаСведения: '.сведение', снимковНаВерсию: 5, папкаКорзины: '.trash', корзинаДней: 30}};
+const НАСТРОЙКИ = {хранение: {файлСостояния: '_state.json', папкаЧерновиков: '.drafts', папкаСпоров: '.drafts-споры', папкаСнимков: '.history', папкаСведения: '.сведение', снимковНаВерсию: 5, папкаКорзины: '.trash'}};
 const RU = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/index.mdx';
 const EN = 'docs/lessons/proba/index.mdx';
 const ПАПКА_RU = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba';
@@ -44,11 +44,11 @@ describe('подмена папок корзины', () => {
     fs.writeFileSync(path.join(чужая, id, 'manifest.json'), JSON.stringify({версия: 1, id, удалено: '2026-01-01T00:00:00.000Z', статья: {пути: []}, состояние: 'готово', файлы: []}), 'utf8');
     fs.mkdirSync(п.editorDir, {recursive: true});
     try {
-      fs.symlinkSync(чужая, папкаКорзины(п.editorDir, НАСТРОЙКИ), 'junction');
+      fs.symlinkSync(чужая, папкаКорзины(п.repo, НАСТРОЙКИ), 'junction');
     } catch {
       return;
     }
-    expect(() => списокКорзины({editorDir: п.editorDir, settings: НАСТРОЙКИ, сейчас: new Date('2026-09-04T00:00:00.000Z')})).toThrow('ссылкаВПути');
+    expect(() => списокКорзины({repo: п.repo, settings: НАСТРОЙКИ})).toThrow('ссылкаВПути');
     expect(fs.existsSync(path.join(чужая, id, 'manifest.json'))).toBe(true);
     expect(вернутьИзКорзины({...параметры(п), id})).toEqual({ошибка: 'ссылкаВПути'});
     expect(fs.existsSync(path.join(чужая, id, 'manifest.json'))).toBe(true);
@@ -59,7 +59,7 @@ describe('подмена папок корзины', () => {
     const чужая = path.join(п.repo, 'foreign-entry');
     fs.mkdirSync(чужая, {recursive: true});
     fs.writeFileSync(path.join(чужая, 'manifest.json'), JSON.stringify({версия: 1, id: 'x', удалено: '2026-01-01T00:00:00.000Z', статья: {пути: []}, состояние: 'готово', файлы: []}), 'utf8');
-    const корзина = папкаКорзины(п.editorDir, НАСТРОЙКИ);
+    const корзина = папкаКорзины(п.repo, НАСТРОЙКИ);
     fs.mkdirSync(корзина, {recursive: true});
     const id = '2026-01-01T00-00-00-000Z-abcdef';
     try {
@@ -67,7 +67,7 @@ describe('подмена папок корзины', () => {
     } catch {
       return;
     }
-    expect(списокКорзины({editorDir: п.editorDir, settings: НАСТРОЙКИ, сейчас: new Date('2026-09-04T00:00:00.000Z')})).toEqual([]);
+    expect(списокКорзины({repo: п.repo, settings: НАСТРОЙКИ})).toEqual([]);
     expect(fs.existsSync(path.join(чужая, 'manifest.json'))).toBe(true);
     expect(вернутьИзКорзины({...параметры(п), id})).toEqual({ошибка: 'ссылкаВПути'});
   });
@@ -78,7 +78,7 @@ describe('запись описи и копий без хвостов', () => {
     const п = репозиторий();
     const состав = составАрхива({...параметры(п), решение: РЕШЕНИЕ});
     const запись = вКорзину({...параметры(п), статья: {название: 'Проба', пути: РЕШЕНИЕ.пути, языки: РЕШЕНИЕ.языки, папки: РЕШЕНИЕ.папки}, состав});
-    const dir = path.join(папкаКорзины(п.editorDir, НАСТРОЙКИ), запись.id);
+    const dir = path.join(папкаКорзины(п.repo, НАСТРОЙКИ), запись.id);
     expect(() => JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'))).not.toThrow();
     expect(fs.readdirSync(path.join(п.editorDir, '.tmp'))).toEqual([]);
     expect(вернутьИзКорзины({...параметры(п), id: запись.id})).toEqual({возвращено: РЕШЕНИЕ.пути});
@@ -128,7 +128,7 @@ describe('установка файла целиком', () => {
     const состав = составАрхива({...параметры(п), решение: РЕШЕНИЕ});
     const запись = вКорзину({...параметры(п), статья: {название: 'Проба', пути: РЕШЕНИЕ.пути, языки: РЕШЕНИЕ.языки, папки: РЕШЕНИЕ.папки}, состав});
     // Занятость появляется после проверки: подменяем чтение архива так, чтобы файл цели возник перед установкой.
-    const dir = path.join(папкаКорзины(п.editorDir, НАСТРОЙКИ), запись.id);
+    const dir = path.join(папкаКорзины(п.repo, НАСТРОЙКИ), запись.id);
     const исходное = fs.readFileSync;
     let подложено = false;
     fs.readFileSync = function (файл, ...rest) {
@@ -165,13 +165,13 @@ describe('мелочи установки и перечня', () => {
     const п = репозиторий();
     const состав = составАрхива({...параметры(п), решение: РЕШЕНИЕ});
     const запись = вКорзину({...параметры(п), статья: {название: 'Проба', пути: РЕШЕНИЕ.пути, языки: РЕШЕНИЕ.языки, папки: РЕШЕНИЕ.папки}, состав});
-    const корзина = папкаКорзины(п.editorDir, НАСТРОЙКИ);
+    const корзина = папкаКорзины(п.repo, НАСТРОЙКИ);
     try {
       fs.symlinkSync(path.join(п.repo, 'нет-такой-папки'), path.join(корзина, '2026-01-01T00-00-00-000Z-broken'), 'junction');
     } catch {
       return;
     }
-    const записи = списокКорзины({editorDir: п.editorDir, settings: НАСТРОЙКИ, сейчас: new Date('2026-09-04T00:00:00.000Z')});
+    const записи = списокКорзины({repo: п.repo, settings: НАСТРОЙКИ});
     expect(записи.map((з) => з.id)).toEqual([запись.id]);
     expect(fs.existsSync(path.join(корзина, '2026-01-01T00-00-00-000Z-broken'))).toBe(false);
     expect(fs.lstatSync(path.join(корзина, '2026-01-01T00-00-00-000Z-broken')).isSymbolicLink()).toBe(true);

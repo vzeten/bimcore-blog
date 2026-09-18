@@ -100,25 +100,25 @@ const есть = (repo, rel) => fs.existsSync(path.join(repo, rel));
 const корзина = (repo) => fs.existsSync(path.join(repo, 'editor/.trash')) ? fs.readdirSync(path.join(repo, 'editor/.trash')) : [];
 
 describe('режим по настоящей ветке', () => {
-  it('без подтверждения сервер только называет режим и ничего не трогает', async () => {
+  it('без подтверждения сервер только называет, что будет, и ничего не трогает', async () => {
     const repo = репозиторий();
     const ответ = await удалить(repo, RU);
     expect(ответ.code).toBe(200);
-    expect(ответ.data).toMatchObject({режим: 'навсегда', причина: 'неОпубликована', пути: [EN, RU], языки: ['en', 'ru'], дней: 30});
+    expect(ответ.data).toMatchObject({режим: 'корзина', причина: 'неОпубликована', пути: [EN, RU], языки: ['en', 'ru']});
     expect(есть(repo, RU)).toBe(true);
   });
 
-  it('статья не в ветке и не в её истории — навсегда после подтверждения; уходят все версии, папки, черновик, история', async () => {
+  it('статья не была на сайте — всё равно корзина: черновик и история уходят в архив вместе с ней', async () => {
     const repo = репозиторий();
     saveDraft(repo, НАСТРОЙКИ, {path: RU, body: 'черновик', frontmatterRaw: '', отпечатокБазы: 'x'});
     saveSnapshot(repo, НАСТРОЙКИ, RU, 'снимок', 'Автор', '2026-09-01T10:00:00.000Z');
-    const ответ = await удалить(repo, RU, 'навсегда');
+    const ответ = await удалить(repo, RU, 'корзина');
     expect(ответ.code).toBe(200);
-    expect(ответ.data).toMatchObject({режим: 'навсегда', удалено: [EN, RU]});
+    expect(ответ.data).toMatchObject({режим: 'корзина', удалено: [EN, RU]});
     expect(есть(repo, RU)).toBe(false);
     expect(есть(repo, `${RU_ROOT}/lessons/proba`)).toBe(false);
     expect(есть(repo, 'docs/lessons/other/index.mdx')).toBe(true);
-    expect(корзина(repo)).toEqual([]);
+    expect(корзина(repo)).toHaveLength(1);
     expect(fs.readdirSync(path.join(repo, 'editor/.drafts'))).toEqual([]);
   });
 
@@ -148,7 +148,7 @@ describe('режим по настоящей ветке', () => {
     expect(корзина(repo)).toHaveLength(1);
   });
 
-  it('подтверждён не тот режим — отказ, ничего не тронуто', async () => {
+  it('подтверждено прежнее «навсегда» — отказ: безвозвратного удаления статьи больше нет', async () => {
     const repo = репозиторий({вВетке: [RU, EN]});
     const ответ = await удалить(repo, RU, 'навсегда');
     expect(ответ.code).toBe(409);
@@ -163,7 +163,7 @@ describe('режим по настоящей ветке', () => {
     await deleteRoute({
       req: {method: 'POST'}, res: {}, url: new URL('http://localhost/api/article/delete'),
       repo, editorDir: path.join(repo, 'editor'), settings: НАСТРОЙКИ, git: дверьGit(repo), publishedRef: () => 'main',
-      тело: async () => ({path: RU, подтверждено: 'навсегда'}), articles: async () => listArticles(repo, НАСТРОЙКИ, new Map(), new Set()),
+      тело: async () => ({path: RU, подтверждено: 'корзина'}), articles: async () => listArticles(repo, НАСТРОЙКИ, new Map(), new Set()),
       insideRepo: (target) => path.resolve(target).startsWith(path.resolve(repo) + path.sep), последняяПравка: память, send: () => {},
     });
     expect([...память.keys()]).toEqual([EN, RU]);
@@ -212,7 +212,7 @@ describe('что уходит, а что остаётся', () => {
 });
 
 describe('корзина и возврат через ручки', () => {
-  it('перечень показывает запись со сроком, возврат кладёт всё на место и снимает запись', async () => {
+  it('перечень показывает запись без срока, возврат кладёт всё на место и снимает запись', async () => {
     const repo = репозиторий({вВетке: [RU, EN]});
     await удалить(repo, RU, 'корзина');
     const список = await ручка(repo, (п) => trashRoute({...п, req: {method: 'GET'}}), '/api/trash', {});
@@ -241,6 +241,36 @@ describe('корзина и возврат через ручки', () => {
   it('чужое имя записи — нет записи, а не выход за папку корзины', async () => {
     const repo = репозиторий();
     expect((await ручка(repo, trashRoute, '/api/trash/restore', {id: '../../docs'})).code).toBe(404);
+    expect((await ручка(repo, trashRoute, '/api/trash/drop', {id: '../../docs'})).code).toBe(404);
+  });
+
+  it('стирание насовсем идёт двумя заходами: без подтверждения запись цела', async () => {
+    const repo = репозиторий({вВетке: [RU, EN]});
+    await удалить(repo, RU, 'корзина');
+    const id = корзина(repo)[0];
+
+    const вопрос = await ручка(repo, trashRoute, '/api/trash/drop', {id});
+    expect(вопрос.code).toBe(200);
+    expect(вопрос.data).toMatchObject({спрашиваю: true, id, пути: [EN, RU]});
+    expect(корзина(repo)).toHaveLength(1);
+
+    const стирание = await ручка(repo, trashRoute, '/api/trash/drop', {id, подтверждено: true});
+    expect(стирание.code).toBe(200);
+    expect(стирание.data).toMatchObject({стёрто: id});
+    // Стёрта только запись корзины: соседняя статья на диске цела.
+    expect([корзина(repo), есть(repo, 'docs/lessons/other/index.mdx')]).toEqual([[], true]);
+  });
+
+  it('запись на середине переноса или возврата не стирается: в корзине единственная копия', async () => {
+    const repo = репозиторий({вВетке: [RU, EN]});
+    await удалить(repo, RU, 'корзина');
+    const id = корзина(repo)[0];
+    const опись = path.join(repo, 'editor/.trash', id, 'manifest.json');
+    fs.writeFileSync(опись, JSON.stringify({...JSON.parse(fs.readFileSync(опись, 'utf8')), состояние: 'скопировано'}), 'utf8');
+    const отказ = await ручка(repo, trashRoute, '/api/trash/drop', {id, подтверждено: true});
+    expect(отказ.code).toBe(409);
+    expect(отказ.data).toMatchObject({причина: 'записьНезавершена'});
+    expect(корзина(repo)).toHaveLength(1);
   });
 });
 

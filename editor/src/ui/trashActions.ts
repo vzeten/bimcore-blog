@@ -9,16 +9,36 @@ const причина = (error: unknown): string => (error instanceof Error ? err
 export interface TrashEntry {
   id: string;
   удалено: string;
-  срокДо: string;
   состояние: string;
   название?: string;
   пути?: string[];
   языки?: string[];
 }
 
-/** Перечень корзины: просроченные готовые записи сервер попутно убирает сам. */
-export function trashList(request: Request = requestJson): Promise<{дней: number; записи: TrashEntry[]}> {
-  return request<{дней: number; записи: TrashEntry[]}>('/api/trash');
+/** Перечень корзины. Срока у записей нет: сама она ничего не удаляет (решение владельца 2026-09-18). */
+export function trashList(request: Request = requestJson): Promise<{записи: TrashEntry[]}> {
+  return request<{записи: TrashEntry[]}>('/api/trash');
+}
+
+/**
+ * Стереть запись корзины насовсем. Двумя заходами, как удаление статьи: без подтверждения сервер
+ * только называет, что исчезнет, с подтверждением — стирает. Вернуть после этого нечем.
+ */
+export async function trashDrop(
+  id: string,
+  подтверждено: boolean,
+  effects: {ok: (итог: {стёрто?: string; спрашиваю?: boolean; название?: string}) => void | Promise<void>; fail: (reason: string) => void | Promise<void>},
+  request: Request = requestJson,
+): Promise<void> {
+  try {
+    await effects.ok(await request<{стёрто?: string; спрашиваю?: boolean; название?: string}>('/api/trash/drop', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(подтверждено ? {id, подтверждено: true} : {id}),
+    }));
+  } catch (error) {
+    await effects.fail(причина(error));
+  }
 }
 
 /** Возврат записи из корзины. Отказ — конфликт на месте статьи или повреждённая запись. */

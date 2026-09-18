@@ -1,17 +1,20 @@
 import {useEffect, useState} from 'react';
-import {trashList, trashRestore, type TrashEntry} from '../trashActions';
+import {trashDrop, trashList, trashRestore, type TrashEntry} from '../trashActions';
 import {label} from '../labels';
 import type {Settings} from '../types';
 
 /**
- * Корзина удалённых статей поверх реестра: что лежит, до какого дня вернуть, кнопка возврата.
- * Перечень спрашивается у сервера при открытии и после каждого возврата: срок и уборку
- * просроченного считает он, окно ничего не хранит.
+ * Корзина удалённых статей поверх реестра: что лежит, когда удалено, кнопка возврата и кнопка
+ * «стереть насовсем» с отдельным подтверждением. Сама корзина ничего не удаляет по сроку —
+ * запись уходит только этой кнопкой (решение владельца 2026-09-18). Перечень спрашивается у
+ * сервера при открытии и после каждого действия: окно ничего не хранит.
  */
 export function TrashPanel(props: {settings: Settings; onЗакрыть: () => void; onВозвращено: () => void}) {
   const п = props.settings.подписи;
   const [записи, setЗаписи] = useState<TrashEntry[] | null>(null);
   const [занята, setЗанята] = useState<string | null>(null);
+  // Какая запись ждёт подтверждения стирания. Одно нажатие ничего не стирает: вернуть будет нечем.
+  const [стереть, setСтереть] = useState<string | null>(null);
   const [сообщение, setСообщение] = useState('');
 
   const перечитать = (): void => {
@@ -36,6 +39,20 @@ export function TrashPanel(props: {settings: Settings; onЗакрыть: () => v
     setЗанята(null);
   };
 
+  const стиратьНасовсем = async (запись: TrashEntry): Promise<void> => {
+    if (занята !== null) return;
+    setЗанята(запись.id);
+    await trashDrop(запись.id, true, {
+      ok: () => {
+        setСтереть(null);
+        setСообщение(label('записьСтёрта', {название: запись.название || (запись.пути ?? []).join(', ')}));
+        перечитать();
+      },
+      fail: (текст) => setСообщение(текст),
+    });
+    setЗанята(null);
+  };
+
   const когда = (iso: string): string => {
     const мс = Date.parse(iso);
     return Number.isFinite(мс) ? new Date(мс).toLocaleDateString() : iso;
@@ -56,11 +73,24 @@ export function TrashPanel(props: {settings: Settings; onЗакрыть: () => v
             {запись.языки && запись.языки.length > 0 && <span className="trash-meta"> · {запись.языки.join(', ')}</span>}
           </span>
           <span className="trash-meta">
-            {запись.состояние === 'готово' ? label('срокДо', {срок: когда(запись.срокДо)}) : п.записьНезавершена}
+            {запись.состояние === 'готово' ? label('удаленаКогда', {когда: когда(запись.удалено)}) : п.записьНезавершена}
           </span>
           <button className="ghost" disabled={занята !== null} onClick={() => void вернуть(запись)}>
             {занята === запись.id ? п.вернутьИдёт : п.вернуть}
           </button>
+          {стереть === запись.id ? (
+            <>
+              <span className="trash-meta">{п.стеретьВопрос}</span>
+              <button className="ghost" disabled={занята !== null} onClick={() => void стиратьНасовсем(запись)}>
+                {п.стеретьДа}
+              </button>
+              <button className="ghost" onClick={() => setСтереть(null)}>{п.неУдалять}</button>
+            </>
+          ) : (
+            <button className="ghost" disabled={занята !== null} onClick={() => setСтереть(запись.id)}>
+              {п.стереть}
+            </button>
+          )}
         </div>
       ))}
     </section>
