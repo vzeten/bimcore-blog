@@ -89,7 +89,9 @@ export function App() {
   });
 
   // Кнопка «назад» браузера — отдельным правилом: реестр — начальный экран, выхода из программы нет.
-  useHistoryBack({open, closeArticle: () => void closeArticle()});
+  // Восстановление статьи после обновления страницы ждёт настроек: без них открыватель
+  // ничего не сделает и промолчит (ED-039).
+  useHistoryBack({open, closeArticle: () => void closeArticle(), готовы: settings !== null});
 
   const создание = useCreate({
     открыть: (path) => open(path),
