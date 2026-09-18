@@ -13,6 +13,7 @@ import {запомнитьКоммит, запомнитьПоказ} from '../s
 import {fingerprint, listSnapshots, saveDraft} from '../src/adapters/draftStore.mjs';
 import {записатьСпор} from '../src/adapters/conflictStore.mjs';
 import {прочитатьВыкладку} from '../src/adapters/deployWatch.mjs';
+import {loadState, saveState} from '../src/adapters/library.mjs';
 import {newDraft} from '../src/core/drafts.mjs';
 import {splitArticle} from '../src/core/articleFile.mjs';
 import {заменитьШапку} from '../src/core/refineHead.mjs';
@@ -126,6 +127,36 @@ describe('несколько языков одной публикацией', ()
     expect(читать(с, EN)).toMatch(/^unlisted: true$/m);
     expect(listSnapshots(с.repo, НАСТРОЙКИ, EN).length).toBe(2);
   }, ЖДАТЬ_GIT * 2);
+
+  it('два неоткрытых языка, запись второго не легла — первый возвращён к прежнему тексту, ничего не переписано', async () => {
+    const с = await среда();
+    const былоEN = читать(с, EN);
+    // Испанский меняют снаружи ровно между чтением и записью: сверка второго языка обязана отказать.
+    const git = new Proxy(с.git, {get(цель, ключ) {
+      if (ключ !== 'raw') return typeof цель[ключ] === 'function' ? цель[ключ].bind(цель) : цель[ключ];
+      return async (аргументы) => {
+        if (аргументы[0] === 'config' && аргументы[1] === 'user.name') дописать(с, ES, 'Правка снаружи.');
+        return цель.raw(аргументы);
+      };
+    }});
+    const запрос = дверь({...с, git}, []);
+
+    const беда = await запрос('/api/publish/versions', {path: RU, версии: [RU, EN, ES], доступность: 'поСсылке'}).catch((ошибка) => ошибка);
+
+    expect(беда.ответ).toMatchObject({код: 'статьяИзменилась', путь: ES, изменены: []});
+    expect(читать(с, EN)).toBe(былоEN);
+    expect(читать(с, ES)).toContain('Правка снаружи.');
+    expect(читать(с, ES)).not.toMatch(/^unlisted: true$/m);
+  }, ЖДАТЬ_GIT);
+
+  it('шапку неоткрытого языка переписал сервер — его готовность возвращается в черновик, как после сохранения окна', async () => {
+    const с = await среда();
+    saveState(с.repo, EN, НАСТРОЙКИ, {...loadState(с.repo, EN, НАСТРОЙКИ), готовность: НАСТРОЙКИ['статусы'][1]});
+
+    await дверь(с, [])('/api/publish/versions', {path: RU, версии: [RU, EN], доступность: 'поСсылке'});
+
+    expect(loadState(с.repo, EN, НАСТРОЙКИ)['готовность']).toBe(НАСТРОЙКИ['статусы'][0]);
+  }, ЖДАТЬ_GIT);
 
   it('«Недоступно» на двух опубликованных — ссылки на обе версии убраны на сайте и на компьютере, живой испанский не тронут', async () => {
     const СОСЕД = (корень) => `${корень}/lessons/other/index.mdx`;
