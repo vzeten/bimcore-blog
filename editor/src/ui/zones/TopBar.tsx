@@ -1,11 +1,11 @@
 import {изменениеНеНаСайте, скрытаВОкне, type Field} from '../headFields';
 import {DeleteAsk} from './DeleteAsk';
 import {PrepareReport} from './PrepareReport';
-import {PublishPanel} from './PublishPanel';
+import {PublishButton} from './PublishButton';
+import {SiteBadge} from './SiteBadge';
 import {RefinePanel} from './RefinePanel';
 import {usePrepare} from '../usePrepare';
 import {useRefine} from '../useRefine';
-import {usePublish} from '../usePublish';
 import {useLocaleStart} from '../useLocaleStart';
 import {признакиЛокали, подсказкаЛокали} from '../../core/localeSigns.mjs';
 import {LocaleMark} from './LocaleMark';
@@ -35,6 +35,8 @@ export function TopBar(props: {
   onДата: (дата: string) => Promise<boolean>;
   /** Вписать адрес обложки, положенной публикацией, в `image` и записать — так же, как дату. */
   onОбложка: (адрес: string) => Promise<boolean>;
+  /** Поставить доступность, выбранную в окне публикации, и записать — так же, как дату. */
+  onДоступность: (режим: string) => Promise<boolean>;
   /** Поля шапки в окне: из них берётся видимость — своего признака у шапки окна нет. */
   fields: Field[];
   /** Удаление статьи: сервер называет, что снимется с сайта, окно задаёт единственный вопрос. */
@@ -79,16 +81,6 @@ export function TopBar(props: {
     перечитать: async (path) => (await props.onOpen(path)) === true,
     проверить: () => void подготовка.запустить(),
   });
-  // Публикация живёт рядом: она сама сохраняет, проверяет, собирает и отправляет, поэтому ей нужны
-  // и путь версии, и признак несохранённого, и умение записать окно на диск.
-  const публикация = usePublish(
-    props.article?.path ?? null,
-    props.dirty,
-    props.article?.заход ?? 0,
-    props.onSave,
-    props.onДата,
-    props.onОбложка,
-  );
 
   return (
     <>
@@ -167,6 +159,9 @@ export function TopBar(props: {
       )}
 
       <div className="topbar-actions">
+        {/* Выкладка на GitHub видна с любого экрана, в том числе в реестре (решение владельца 2026-09-18). */}
+        <SiteBadge settings={props.settings} />
+
         <button
           className={props.colors ? 'ghost ghost-on' : 'ghost'}
           title={props.colors ? п.цветаВыкл : п.цветаВкл}
@@ -181,9 +176,9 @@ export function TopBar(props: {
                 языковые версии не описываются, и «Опубликована» прятало правку соседней версии.
                 Состояние каждой версии стоит возле её букв слева (`LocaleMark`).
 
-                Видимость — не кнопка: меняется она в свойствах статьи и уезжает на диск обычным
-                «Сохранить». Здесь только правда о том, что человек получит на сайте, и она
-                про ОТКРЫТУЮ языковую версию: у соседних версий видимость своя (SPEC 2.8). */}
+                Видимость — не кнопка: назначает её публикация (окно «Опубликовать», решение
+                владельца 2026-09-18). Здесь только шапка открытой версии и пометка, что сайт этого
+                ещё не видит: у соседних версий видимость своя (SPEC 2.8). */}
             <span className={скрыта ? 'visibility visibility-off' : 'visibility'} title={п.видимость}>
               {скрыта ? в.поСсылке : в.вМеню}
               {/* Файл изменён, но сайт этого ещё не видит: обещать «скрыто» было бы враньём. */}
@@ -234,26 +229,20 @@ export function TopBar(props: {
           </button>
         )}
 
-        {/* Главное действие человека и единственное, которое ему нужно знать. Оно не зависит ни
-            от «Доработать», ни от какого-либо другого нажатия: всё, что нужно для публикации,
-            программа делает внутри него сама. Заперто оно только там, где писать вообще нельзя —
-            в просмотре старой версии.
-
-            Панель публикации живёт тут же, в одной опоре с кнопкой: она выпадает прямо под ней,
-            а не полосой во всю ширину окна. Опора — вокруг самой кнопки, а не вокруг всей шапки:
-            иначе панель отрывалась бы от кнопки, стоило появиться соседнему действию. */}
-        <div className="publish-anchor">
-          <button
-            className="ghost ghost-main"
-            disabled={публикация.шаг !== 'нет' || props.просмотр || !props.article}
-            title={props.просмотр ? п.идётПросмотр : ''}
-            onClick={() => void публикация.начать()}
-          >
-            {п.опубликовать}
-          </button>
-
-          <PublishPanel settings={props.settings} публикация={публикация} />
-        </div>
+        {/* Главное действие человека: одно нажатие, один вопрос, дальше программа сама
+            (`PublishButton`). Заперто оно только там, где писать нельзя, — в просмотре версии. */}
+        <PublishButton
+          settings={props.settings}
+          article={props.article}
+          dirty={props.dirty}
+          просмотр={props.просмотр}
+          onSave={props.onSave}
+          onДата={props.onДата}
+          onОбложка={props.onОбложка}
+          onДоступность={props.onДоступность}
+          onOpen={props.onOpen}
+          onСообщить={props.onСообщить}
+        />
       </div>
     </header>
 

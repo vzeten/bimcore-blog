@@ -24,6 +24,9 @@ import {разобратьОчередь, снятьЗаписи} from './publis
 import {взятьЗамок, отпустить} from './publishLock.mjs';
 import {коммитыВпереди, отправить, отставание, положениеВИстории, удалённаяВетка} from './gitPush.mjs';
 import {запомнитьПоказ, последнийПоказ} from './pushMemory.mjs';
+import {запомнитьВыкладку} from './deployWatch.mjs';
+import {articlePlace} from '../core/frontmatterRules.mjs';
+import {файлСтатьи} from '../core/articles.mjs';
 import {badFields, badPath} from './httpBody.mjs';
 
 /** Обрабатывает обе ручки отправки. Возвращает true, если запрос был к одной из них. */
@@ -192,10 +195,17 @@ async function повезти({rel, план, отправка, payload, repo, e
     const итог = await разборНеудачи({git, удалённый, sha: ожидающий.sha, ошибка, settings, rel});
     // Отправка всё-таки дошла — это успех, а не отказ, хотя ответа мы не дождались. Очередь тогда
     // тоже прибирается: коммит на сайте, доказывать его происхождение больше незачем.
-    if (итог.error === undefined) await прибратьОчередь({git, repo, editorDir, settings, удалённый});
+    if (итог.error === undefined) {
+      await запомнить({git, editorDir, settings, запись: ожидающий});
+      await прибратьОчередь({git, repo, editorDir, settings, удалённый});
+    }
     send(res, итог.error === undefined ? 200 : 409, итог);
     return true;
   }
+
+  // За выкладкой отправленного следит значок «Сайт»: сборки на компьютере нет, и чем кончилась
+  // сборка на GitHub, человек узнаёт там (`deployWatch.mjs`). Запоминается до уборки очереди.
+  await запомнить({git, editorDir, settings, запись: ожидающий});
 
   // Записи об уехавших коммитах снимаются только по ДОКАЗАННОМУ присутствию в свежей удалённой
   // ветке. Молча забыть свой неотправленный коммит значит запретить его отправку навсегда.
@@ -203,6 +213,13 @@ async function повезти({rel, план, отправка, payload, repo, e
 
   send(res, 200, {path: rel, sha: ожидающий.sha, отправлено: true, уже: false, коммиты: перечень, файлы: решение.файлы});
   return true;
+}
+
+/** Запомнить выкладку уехавшей записи: статья и языки, чьи файлы статей она везла. */
+function запомнить({git, editorDir, settings, запись}) {
+  const локали = [...new Set((запись.пути ?? []).filter(файлСтатьи)
+    .map((путь) => articlePlace(путь, settings['контент']).locale).filter(Boolean))];
+  return запомнитьВыкладку({git, editorDir, settings, sha: запись.sha, путь: запись.путь, локали});
 }
 
 /**

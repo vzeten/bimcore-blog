@@ -8,9 +8,8 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {зафиксироватьИОтправить, проверитьИСобрать} from '../src/ui/publishRun';
+import {зафиксироватьИОтправить, проверить} from '../src/ui/publishRun';
 import {запомнитьКоммит, запомнитьПоказ} from '../src/adapters/pushMemory.mjs';
-import {запомнитьСборку} from '../src/adapters/buildMemory.mjs';
 import {срезОднойВерсии} from '../src/adapters/prepareStamp.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
 import {
@@ -18,13 +17,11 @@ import {
 } from './runHarness.mjs';
 
 beforeEach(() => {
-  запомнитьСборку(null);
   запомнитьКоммит(null);
   запомнитьПоказ(null);
 });
 
 afterEach(() => {
-  запомнитьСборку(null);
   запомнитьКоммит(null);
   запомнитьПоказ(null);
   убратьПесочницы();
@@ -50,8 +47,8 @@ describe('снимок описывает ровно своё дерево', () 
     const с = await среда();
     fs.writeFileSync(path.join(с.repo, RU), `${СТАТЬЯ}Новая строка.\n`, 'utf8');
     const х = ход(дверь(с, []), []);
-    const вопрос = await проверитьИСобрать(RU, false, х);
-    expect(вопрос.вид).toBe('спрашиваю');
+    const вопрос = await проверить(RU, false, х);
+    expect(вопрос.вид).toBe('проверено');
     const былоНаСервере = await наСервере(с.сервер);
 
     // В план публикации дочерняя не входит ничем: у неё своя папка. Не доживи снимок проверок до
@@ -96,8 +93,8 @@ describe('снимок описывает ровно своё дерево', () 
     const с = await среда();
     fs.writeFileSync(path.join(с.repo, RU), `${СТАТЬЯ}Новая строка.\n`, 'utf8');
     const х = ход(дверь(с, []), []);
-    const вопрос = await проверитьИСобрать(RU, false, х);
-    expect(вопрос.вид).toBe('спрашиваю');
+    const вопрос = await проверить(RU, false, х);
+    expect(вопрос.вид).toBe('проверено');
 
     // Так выглядит обычная жизнь: человек во втором окне завёл СВОЮ, ничем не связанную статью в
     // другом разделе той же локали. Ни текст открытой версии, ни её категория от этого не меняются.
@@ -134,7 +131,7 @@ describe('снимок описывает ровно своё дерево', () 
     });
   };
 
-  for (const адрес of ['/api/release', '/api/release/build', '/api/publish/commit']) {
+  for (const адрес of ['/api/release', '/api/publish/commit']) {
     it(`смена своего дерева ВНУТРИ одного захода останавливает ручку: ${адрес}`, async () => {
       const с = await среда();
       fs.writeFileSync(path.join(с.repo, RU), `${СТАТЬЯ}Новая строка.\n`, 'utf8');

@@ -8,6 +8,7 @@ import {клавишиПоверхности} from './surfaceKeys';
 import {блокВ, обычныйТекст} from './structureGuard';
 import {layerColors, слоиОкна} from '../layerColors';
 import {правкаПанелиКартинки, type КартинкаВОкне} from '../livePreview/inline';
+import {взятьПереход, слушатьПереход} from './jumpTo';
 import type {БлокВОкне} from '../livePreview/blocks';
 import type {Article, ОписаниеБлока} from '../types';
 
@@ -133,7 +134,20 @@ export function useEditor(options: {
     window.addEventListener('scroll', пересчёт, true);
     window.addEventListener('resize', пересчёт);
 
+    // «Перейти к месту» из причины отказа публикации: строка тела с единицы, край документа — предел.
+    const перейти = () => {
+      const строка = view.current === null ? null : взятьПереход(свежие.current.article.path);
+      if (строка === null || view.current === null) return;
+      const doc = view.current.state.doc;
+      const где = doc.line(Math.min(Math.max(1, строка), doc.lines)).from;
+      view.current.dispatch({selection: {anchor: где}, scrollIntoView: true});
+      view.current.focus();
+    };
+    перейти();
+    const отписка = слушатьПереход(перейти);
+
     return () => {
+      отписка();
       window.removeEventListener('scroll', пересчёт, true);
       window.removeEventListener('resize', пересчёт);
       view.current?.destroy();

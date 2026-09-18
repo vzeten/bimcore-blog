@@ -1,0 +1,92 @@
+/* Окно публикации и значок «Сайт» (решение владельца 2026-09-18, п.2 и п.5). Окно — тем же слоем
+   поверх программы, что вопрос удаления (.delete-ask): остальное заперто, пока оно открыто. */
+
+.publish-ask-langs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.publish-ask-langs li { display: flex; gap: 8px; align-items: baseline; }
+.publish-ask-langs label { display: inline-flex; gap: 6px; align-items: center; min-width: 7rem; }
+.publish-ask-head { margin: 0; font-size: 13px; color: var(--ink); }
+.publish-ask-links { margin: 0; font-size: 13px; color: var(--layer-deleted); }
+.publish-ask-notes summary { color: var(--ink-quiet); font-size: 12px; cursor: pointer; }
+
+/* Кнопка после отказа: «Не опубликовано» — заметно, но не криком; по нажатию видна причина. */
+.publish-failed { color: var(--layer-deleted); border-color: var(--layer-deleted); }
+
+/* Значок «Сайт»: виден на любом экране, в том числе в реестре. Цвет — не единственный признак:
+   слово на значке называет состояние. */
+.site-anchor { position: relative; display: flex; }
+.site-badge { border: 1px solid var(--line); border-radius: 12px; padding: 2px 10px; font-size: 12px; background: var(--bg); color: var(--ink-quiet); cursor: default; }
+.site-badge-ok { color: var(--layer-prevAi); border-color: var(--layer-prevAi); }
+.site-badge-fail { color: #fff; background: #a3122a; border-color: #a3122a; cursor: pointer; }
+.site-badge-quiet { cursor: pointer; }
+
+/* Доступность на сайте — выбор из трёх, а не пара флажков: двумя флажками человек собрал бы
+   сочетание, которого сайт не принимает. Все три ответа видны всегда, а смена стоит одного нажатия.
+   С 2026-09-18 выбор живёт только в окне публикации (решение владельца, п.3). */
+.publish-доступность { border: 0; margin: 0; padding: 0; display: grid; gap: 4px; }
+.publish-доступность legend { padding: 0; margin-bottom: 4px; font-size: 13px; color: var(--ink); }
+
+/* Ширина ограничена: во всю ширину свойств три коротких слова растягиваются в полосу и
+   перестают читаться выбором. В узком окне ограничение не мешает — там своя ширина меньше. */
+.publish-сегменты { display: flex; flex-wrap: wrap; gap: 0; max-width: 460px; }
+
+/* Каждый вариант — обычная радиокнопка с подписью: клавиатура и чтение с экрана работают сами.
+   Сама точка не показывается, но остаётся на месте и в очереди перехода по Tab — убери её
+   `display: none`, и переключатель стал бы недоступен без мыши. */
+.publish-сегменты label {
+  display: block;
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.publish-сегменты input[type='radio'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Сегменты стоят встык, поэтому рамка общая: соседи делят её, а крайние скругляются наружу. */
+.publish-сегменты span {
+  display: block;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  margin-left: -1px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.publish-сегменты label:first-child span { margin-left: 0; border-radius: 6px 0 0 6px; }
+.publish-сегменты label:last-child span { border-radius: 0 6px 6px 0; }
+
+/* Выбранное состояние названо не одним цветом: заливка, своя рамка и жирная подпись видны и тем,
+   кто цвет различает плохо. Рамка выбранного поднимается над соседней, иначе она наполовину
+   съедена их общим краем. */
+.publish-сегменты input:checked + span {
+  background: var(--bg-soft);
+  border-color: var(--ink-quiet);
+  color: var(--ink);
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
+}
+
+/* Клавиатурный фокус виден отдельно от выбора: по группе ходят стрелками, и место, где человек
+   сейчас стоит, не то же самое, что выбранный ответ. */
+.publish-сегменты input:focus-visible + span {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+.publish-сегменты input:disabled + span { color: var(--ink-quiet); background: var(--bg-soft); }
+.publish-сегменты input:disabled { cursor: default; }
+

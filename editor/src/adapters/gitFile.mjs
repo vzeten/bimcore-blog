@@ -258,3 +258,17 @@ export async function путиКоммита(git, sha) {
 export async function деревоКоммита(git, sha) {
   return (await git.raw(['rev-parse', `${sha}^{tree}`])).trim();
 }
+
+/**
+ * Пути, которыми дерево отличается от названного коммита: `git diff-tree -r` по двум деревьям.
+ * Спрашивается у самого git, а не выводится из плана: заслон записи сверяет ответ git с планом,
+ * и лишний путь, попавший в дерево мимо перечня, виден только так. Не удалось спросить — `null`.
+ */
+export async function путиРазницы(git, от, дерево) {
+  try {
+    const сырое = await git.raw(['-c', 'core.quotepath=false', 'diff-tree', '-r', '--name-only', '-z', '--no-renames', от, дерево]);
+    return сырое.split('\0').filter((путь) => путь !== '' && путь !== '\n');
+  } catch {
+    return null;
+  }
+}

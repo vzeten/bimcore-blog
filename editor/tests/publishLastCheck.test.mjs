@@ -9,24 +9,21 @@ import fs from 'node:fs';
 import {pushRoute} from '../src/adapters/pushRoute.mjs';
 import {publishRoute} from '../src/adapters/publishRoute.mjs';
 import {releaseRoute} from '../src/adapters/releaseRoute.mjs';
-import {запомнитьСборку} from '../src/adapters/buildMemory.mjs';
 import {запомнитьПоказ} from '../src/adapters/pushMemory.mjs';
 import {прочитатьОчередь, записатьОчередь} from '../src/adapters/commitQueue.mjs';
 import {отпустить} from '../src/adapters/publishLock.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
-import {EN, ES, RU, СТАТЬЯ, запрос, наСервере, настройкиСервера, сборщик, среда, убратьПесочницы} from './publishHarness.mjs';
+import {EN, ES, RU, СТАТЬЯ, запрос, наСервере, настройкиСервера, среда, убратьПесочницы} from './publishHarness.mjs';
 
 vi.setConfig({testTimeout: ЖДАТЬ_GIT, hookTimeout: ЖДАТЬ_GIT});
 
 afterEach(() => {
-  запомнитьСборку(null);
   запомнитьПоказ(null);
   отпустить();
   убратьПесочницы();
 });
 
 const состав = (место) => запрос(releaseRoute, место, '/api/release', {path: RU});
-const собрать = (место) => запрос(releaseRoute, место, '/api/release/build', {path: RU}, {запуск: сборщик()});
 const записать = (место) => запрос(publishRoute, место, '/api/publish/commit', {path: RU, подтверждено: true});
 const показать = (место) => запрос(pushRoute, место, '/api/publish/plan', {path: RU});
 const отправить = (место, sha) => запрос(pushRoute, место, '/api/publish/push', {path: RU, sha, подтверждено: true});
@@ -36,7 +33,6 @@ const ссылки = (место) => место.git.raw(['for-each-ref', '--form
 /** Записанный, но не уехавший коммит статьи. Возвращает его полный SHA. */
 async function ожидающийКоммит(место) {
   место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
-  await собрать(место);
   const {status, payload} = await записать(место);
   expect(status).toBe(200);
 
@@ -132,7 +128,6 @@ describe('служебная ссылка принадлежит заходу д
   it('чтение путей коммита упало — отказ, очередь пуста, ссылки нет, следующий ход чист', async () => {
     const место = await среда();
     место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
-    await собрать(место);
     // Дверь к git, у которой после создания коммита падает чтение его путей.
     let упало = false;
     const сПадением = {
@@ -156,9 +151,8 @@ describe('служебная ссылка принадлежит заходу д
     expect(очередь(место)).toEqual([]);
     expect((await ссылки(место)).trim()).toBe('');
     expect(await наСервере(место)).toBe(место.основа);
-    // Следующий ход чист: состав, сборка, запись и отправка проходят как обычно.
+    // Следующий ход чист: состав, запись и отправка проходят как обычно.
     expect((await состав(место)).status).toBe(200);
-    await собрать(место);
     const {payload: запись} = await записать(место);
     await показать(место);
     expect((await отправить(место, запись.sha)).payload.отправлено).toBe(true);
@@ -167,7 +161,6 @@ describe('служебная ссылка принадлежит заходу д
   it('закрепление легло, но git бросил — отказ, очередь пуста, ссылки нет', async () => {
     const место = await среда();
     место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
-    await собрать(место);
     // Дверь к git: `update-ref` служебной ссылки выполняется по-настоящему, а ответ теряется.
     let легло = false;
     const сПотерей = {
@@ -211,7 +204,6 @@ describe('служебная ссылка принадлежит заходу д
   it('запись очереди не легла на диск — ссылка отпущена, коммит никому не принадлежит', async () => {
     const место = await среда();
     место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
-    await собрать(место);
     const сброс = vi.spyOn(fs, 'fsyncSync').mockImplementation(() => {
       throw Object.assign(new Error('сброс не удался'), {code: 'EIO'});
     });

@@ -12,9 +12,8 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {зафиксироватьИОтправить, проверитьИСобрать} from '../src/ui/publishRun';
+import {зафиксироватьИОтправить, проверить} from '../src/ui/publishRun';
 import {запомнитьКоммит, запомнитьПоказ} from '../src/adapters/pushMemory.mjs';
-import {запомнитьСборку} from '../src/adapters/buildMemory.mjs';
 import {прочитатьОчередь} from '../src/adapters/commitQueue.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
 import {EN, RU, НАСТРОЙКИ, СТАТЬЯ, дверь, наСервере, среда, убратьПесочницы, ход} from './runHarness.mjs';
@@ -26,13 +25,11 @@ const ДРУГАЯ = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/vto
 const СТАТЬЯ2 = '---\ntitle: "Вторая"\nslug: /lessons/vtoraya\ndescription: "Про вторую."\n---\n\nВторой текст.\n';
 
 beforeEach(() => {
-  запомнитьСборку(null);
   запомнитьКоммит(null);
   запомнитьПоказ(null);
 });
 
 afterEach(() => {
-  запомнитьСборку(null);
   запомнитьКоммит(null);
   запомнитьПоказ(null);
   убратьПесочницы();
@@ -46,7 +43,7 @@ const файлОчереди = (с) => path.join(с.editorDir, НАСТРОЙК�
 /** Довести до состояния «записано, но на сайт не уехало» — это оставляет обрыв между ними. */
 async function записаноНоНеУехало(с, х, статья = RU) {
   fs.writeFileSync(path.join(с.repo, статья), `${СТАТЬЯ}\nНовая строка.\n`, 'utf8');
-  await проверитьИСобрать(статья, false, х);
+  await проверить(статья, false, х);
 
   return х.запрос('/api/publish/commit', {path: статья, подтверждено: true});
 }
@@ -64,10 +61,10 @@ describe('состав уже записанного коммита', () => {
     expect(вКоммите).toContain('схема.png');
 
     правка();
-    const вопрос = await проверитьИСобрать(RU, false, х);
+    const вопрос = await проверить(RU, false, х);
 
     // Прежний коммит снят, на сайт не уехал, а новый вопрос задан по сегодняшнему составу.
-    expect(вопрос.вид).toBe('спрашиваю');
+    expect(вопрос.вид).toBe('проверено');
     expect(await наСервере(с.сервер)).not.toBe(запись.sha);
     expect(прочитатьОчередь(с.editorDir, НАСТРОЙКИ).записи).toEqual([]);
     const итог = await зафиксироватьИОтправить(RU, х, вопрос.отпечаток, вопрос.отпечатокПодготовки);
@@ -99,7 +96,7 @@ describe('состав уже записанного коммита', () => {
     // Человек ушёл в другую статью и нажал «Опубликовать» там. Статья исправна: блокер подготовки
     // у неё остановил бы ход раньше, чем сервер сказал бы про неотправленное, — это известный хвост
     // в `PLAN.md`, а не то, что проверяется здесь.
-    await проверитьИСобрать(ДРУГАЯ, false, х);
+    await проверить(ДРУГАЯ, false, х);
 
     expect(await наСервере(с.сервер)).toBe(запись.sha);
     expect(записей(записка)).toBe(былоЗаписей);
@@ -144,7 +141,7 @@ describe('запись очереди на диске', () => {
     const с = await среда();
     const х = ход(дверь(с, []), []);
     fs.writeFileSync(path.join(с.repo, RU), `${СТАТЬЯ}Новая строка.\n`, 'utf8');
-    await проверитьИСобрать(RU, false, х);
+    await проверить(RU, false, х);
     const былаГолова = (await с.git.raw(['rev-parse', 'HEAD'])).trim();
     // Так это выглядит, когда диск отказал ровно на сбросе очереди.
     const сброс = vi.spyOn(fs, 'fsyncSync').mockImplementation(() => {
@@ -168,7 +165,7 @@ describe('запись очереди на диске', () => {
     const с = await среда();
     const х = ход(дверь(с, []), []);
     fs.writeFileSync(path.join(с.repo, RU), `${СТАТЬЯ}Новая строка.\n`, 'utf8');
-    await проверитьИСобрать(RU, false, х);
+    await проверить(RU, false, х);
     const былоНаСервере = await наСервере(с.сервер);
     // Первый сброс (намерение) проходит, второй (подтверждение) — нет.
     let осталось = 1;

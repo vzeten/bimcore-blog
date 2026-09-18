@@ -9,14 +9,23 @@
 // (временный файл и замена одной операцией), прежний и новый текст остаются снимками в истории.
 //
 // Статья к этому часу ещё на диске: адреса и файлы, от которых считается уборка, берутся у неё.
+//
+// **Черновики автосохранения правятся тоже** (добавка ВК к этапу 2): работа, принятая сервером, но
+// не записанная в файл, вернула бы ссылку при следующем сохранении соседа. У черновика правится
+// только тело; его база сдвигается на новый файл, если стояла на прежнем, — иначе открытие соседа
+// увидело бы «файл изменён снаружи» там, где изменилась одна и та же ссылка.
+//
+// `толькоВерсия: true` — уборка ссылок на ОДНУ языковую версию, ставшую недоступной публикацией
+// (правило ВК, п.7): целью служит только её адрес, остальные языки статьи на сайте остаются.
 
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {безСсылок} from '../core/siteRoutes.mjs';
+import {адресВерсии, безСсылок} from '../core/siteRoutes.mjs';
+import {splitArticle} from '../core/articleFile.mjs';
 import {годныйПуть} from './releaseFacts.mjs';
 import {путиСтатей} from './library.mjs';
-import {latestSnapshot, saveSnapshot, snapshotText} from './draftStore.mjs';
+import {fingerprint, latestSnapshot, listDrafts, saveDraft, saveSnapshot, snapshotText} from './draftStore.mjs';
 import {gitAuthor} from './gitFile.mjs';
 import {положитьЦеликом} from './trashStore.mjs';
 import {образцыЦелей, откудаСсылка, сведенияСайта} from './linkFacts.mjs';
@@ -40,7 +49,7 @@ export async function linkSweepRoute({req, res, url, repo, editorDir, settings, 
     return true;
   }
 
-  const цели = await целиСтатьи({git, repo, settings, rel});
+  const цели = payload['толькоВерсия'] === true ? целиВерсии(repo, settings, rel) : await целиСтатьи({git, repo, settings, rel});
   const автор = (await gitAuthor(git)) ?? settings['реестр']['неизвестныйАвтор'];
   send(res, 200, убратьНаДиске({repo, editorDir, settings, цели, автор}));
   return true;
@@ -57,6 +66,7 @@ export function убратьНаДиске({repo, editorDir, settings, цели,
   const изменены = [];
   const невосстановленные = [];
   if (части.length === 0) return {изменены, невосстановленные};
+  const прежние = new Map();
 
   const корни = settings['контент'].filter((root) => root['наСайте'] === true);
   for (const путь of путиСтатей(repo, settings, корни)) {
@@ -81,6 +91,7 @@ export function убратьНаДиске({repo, editorDir, settings, цели,
     try {
       положитьЦеликом(editorDir, полный, Buffer.from(итог.текст, 'utf8'), true);
       изменены.push(путь);
+      прежние.set(путь, {было: fingerprint(текст), стало: итог.текст});
     } catch (ошибка) {
       console.error(ошибка);
       невосстановленные.push(путь);
@@ -100,5 +111,51 @@ export function убратьНаДиске({repo, editorDir, settings, цели,
     }
   }
 
+  убратьВЧерновиках({repo, settings, сайт, цели, части, прежние, невосстановленные});
   return {изменены, невосстановленные};
+}
+
+/**
+ * Подтверждённые черновики автосохранения соседей. Ссылка уходит из тела; база черновика, стоявшая
+ * на прежнем файле, сдвигается на новый. Не вышло — путь в `невосстановленные`, как и у файла.
+ */
+function убратьВЧерновиках({repo, settings, сайт, цели, части, прежние, невосстановленные}) {
+  for (const черновик of listDrafts(repo, settings)) {
+    const путь = черновик['path'];
+    const файл = прежние.get(путь);
+    if (!сайт.корни.some((корень) => путь.startsWith(`${корень}/`))) continue;
+    if (цели.файлы.has(путь) || (файл === undefined && !части.some((часть) => черновик['body'].includes(часть)))) continue;
+    const шапка = `---\n${черновик['frontmatterRaw']}\n---\n`;
+    // Перевод строки впереди не даёт телу, начатому чертой `---`, прочитаться шапкой.
+    const итог = безСсылок(`\n${черновик['body']}`, цели, откудаСсылка(путь, шапка, сайт));
+    if (итог.непонятные.length > 0) {
+      невосстановленные.push(путь);
+      continue;
+    }
+    if (итог.заменено === 0 && файл === undefined) continue;
+    const новый = {...черновик, body: итог.текст.slice(1)};
+    if (файл !== undefined && черновик['отпечатокБазы'] === файл.было) {
+      const {frontmatterRaw, body} = splitArticle(файл.стало);
+      Object.assign(новый, {отпечатокБазы: fingerprint(файл.стало)},
+        typeof черновик['базаТело'] === 'string' ? {базаШапка: frontmatterRaw, базаТело: body} : {});
+    }
+    try {
+      saveDraft(repo, settings, новый);
+    } catch (ошибка) {
+      console.error(ошибка);
+      невосстановленные.push(путь);
+    }
+  }
+}
+
+/** Цель уборки — одна языковая версия: её адрес в её языке и её файл. */
+function целиВерсии(repo, settings, rel) {
+  let текст = '';
+  try {
+    текст = fs.readFileSync(path.join(repo, rel), 'utf8');
+  } catch {
+    // Файла нет — адрес возьмётся по пути, как его считает сам сайт.
+  }
+  const адрес = адресВерсии(rel, текст, сведенияСайта(repo, settings));
+  return {адреса: new Set(адрес === '' ? [] : [адрес]), файлы: new Set([rel])};
 }

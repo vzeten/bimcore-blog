@@ -12,23 +12,20 @@ import {simpleGit} from 'simple-git';
 import {pushRoute} from '../src/adapters/pushRoute.mjs';
 import {publishRoute} from '../src/adapters/publishRoute.mjs';
 import {releaseRoute} from '../src/adapters/releaseRoute.mjs';
-import {запомнитьСборку} from '../src/adapters/buildMemory.mjs';
 import {запомнитьПоказ} from '../src/adapters/pushMemory.mjs';
 import {прочитатьОчередь} from '../src/adapters/commitQueue.mjs';
 import {владелецСсылок} from '../src/adapters/gitCommit.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
-import {RU, СТАТЬЯ, запрос, наСервере, настройкиСервера, сборщик, среда, убратьПесочницы} from './publishHarness.mjs';
+import {RU, СТАТЬЯ, запрос, наСервере, настройкиСервера, среда, убратьПесочницы} from './publishHarness.mjs';
 
 vi.setConfig({testTimeout: ЖДАТЬ_GIT, hookTimeout: ЖДАТЬ_GIT});
 
 afterEach(() => {
-  запомнитьСборку(null);
   запомнитьПоказ(null);
   убратьПесочницы();
 });
 
 const состав = (место) => запрос(releaseRoute, место, '/api/release', {path: RU});
-const собрать = (место) => запрос(releaseRoute, место, '/api/release/build', {path: RU}, {запуск: сборщик()});
 const записать = (место) => запрос(publishRoute, место, '/api/publish/commit', {path: RU, подтверждено: true});
 const показать = (место) => запрос(pushRoute, место, '/api/publish/plan', {path: RU});
 const отправить = (место, sha) => запрос(pushRoute, место, '/api/publish/push', {path: RU, sha, подтверждено: true});
@@ -55,7 +52,6 @@ describe('служебные ссылки принадлежат рабочей 
     const A = await среда();
     const B = await втораяКопия(A);
     A.положить(RU, `${СТАТЬЯ}Новая строка из A.\n`);
-    await собрать(A);
     const {status, payload} = await записать(A);
     expect(status).toBe(200);
     expect((await своиСсылки(A)).trim()).toBe(payload.sha);
@@ -91,7 +87,6 @@ describe('служебные ссылки принадлежат рабочей 
     const A = await среда();
     const B = await втораяКопия(A);
     A.положить(RU, `${СТАТЬЯ}Новая строка из A.\n`);
-    await собрать(A);
     const {payload} = await записать(A);
     // У второй копии — своя ссылка-сирота без записи очереди.
     await B.git.raw(['update-ref', `refs/editor/publish/${владелецСсылок(B.editorDir)}/${payload.sha}`, payload.sha]);

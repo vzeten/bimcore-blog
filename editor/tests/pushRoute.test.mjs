@@ -9,20 +9,17 @@ import {simpleGit} from 'simple-git';
 import {pushRoute} from '../src/adapters/pushRoute.mjs';
 import {publishRoute} from '../src/adapters/publishRoute.mjs';
 import {releaseRoute} from '../src/adapters/releaseRoute.mjs';
-import {запомнитьСборку} from '../src/adapters/buildMemory.mjs';
 import {запомнитьПоказ} from '../src/adapters/pushMemory.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
-import {EN, ES, RU, СТАТЬЯ, запрос, наСервере, сборщик, среда, убратьПесочницы} from './publishHarness.mjs';
+import {EN, ES, RU, СТАТЬЯ, запрос, наСервере, среда, убратьПесочницы} from './publishHarness.mjs';
 
 vi.setConfig({testTimeout: ЖДАТЬ_GIT, hookTimeout: ЖДАТЬ_GIT});
 
 afterEach(() => {
-  запомнитьСборку(null);
   запомнитьПоказ(null);
   убратьПесочницы();
 });
 
-const собрать = (место) => запрос(releaseRoute, место, '/api/release/build', {path: RU}, {запуск: сборщик()});
 const записать = (место) => запрос(publishRoute, место, '/api/publish/commit', {path: RU, подтверждено: true});
 const показать = (место, тело = {path: RU}) => запрос(pushRoute, место, '/api/publish/plan', тело);
 const отправить = (место, тело) => запрос(pushRoute, место, '/api/publish/push', тело);
@@ -30,7 +27,6 @@ const отправить = (место, тело) => запрос(pushRoute, м�
 /** Пройти путь человека до готового к отправке коммита. Возвращает его полный SHA. */
 async function довестиДоКоммита(место) {
   место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
-  await собрать(место);
 
   return (await записать(место)).payload.sha;
 }
@@ -112,7 +108,6 @@ describe('отправка на сайт', () => {
 
   it('вместе со статьёй уезжает заглушка языка, которого на сайте не было', async () => {
     const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ}, {вКоммите: [RU, EN]});
-    await собрать(место);
     const sha = (await записать(место)).payload.sha;
     await показать(место);
 
@@ -250,7 +245,6 @@ describe('отправка коммита, убирающего файл с са
   it('убранный путь не считается чужим и уезжает на сайт', async () => {
     const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ, [ES]: СТАТЬЯ, [ОБЛОЖКА]: 'картинка'});
     fs.rmSync(path.join(место.repo, ОБЛОЖКА));
-    await собрать(место);
     const sha = (await записать(место)).payload.sha;
 
     const показ = await показать(место);

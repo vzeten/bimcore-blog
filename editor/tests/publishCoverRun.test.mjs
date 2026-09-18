@@ -3,15 +3,14 @@
 // Обложка в ходе публикации: ход окна разговаривает с НАСТОЯЩИМИ ручками сервера и настоящим git во
 // временном репозитории. Проверяется то, ради чего правило заведено (решение владельца 2026-09-16):
 // если это возможно, обложку делает программа, и файл с полем появляются ДО обязательных проверок —
-// значит их видят и проверки, и состав, и сборка, и коммит. Если невозможно — публикация не
+// значит их видят и проверки, и состав, и коммит. Если невозможно — публикация не
 // останавливается: остаётся общая обложка сайта, техническая неудача встаёт в предупреждения вопроса.
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {проверитьИСобрать} from '../src/ui/publishRun';
+import {проверить} from '../src/ui/publishRun';
 import {запомнитьКоммит, запомнитьПоказ} from '../src/adapters/pushMemory.mjs';
-import {запомнитьСборку} from '../src/adapters/buildMemory.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
 import {GIF, jpg, png, подставнаяБиблиотека, сБиблиотекой} from './refineHarness.mjs';
 import {EN, RU, СТАТЬЯ, дверь, поставитьОбложкуВФайл, среда, убратьПесочницы, ход} from './runHarness.mjs';
@@ -25,13 +24,11 @@ const обложка = (repo) => /^image: (.+)$/m.exec(fs.readFileSync(path.join
 const новаяСтатья = (файлы) => среда({файлы: {[RU]: СТАТЬЯ, ...файлы}, вКоммите: [RU]});
 
 beforeEach(() => {
-  запомнитьСборку(null);
   запомнитьКоммит(null);
   запомнитьПоказ(null);
 });
 
 afterEach(() => {
-  запомнитьСборку(null);
   запомнитьКоммит(null);
   запомнитьПоказ(null);
   убратьПесочницы();
@@ -43,9 +40,9 @@ describe('обложка в ходе публикации', () => {
     сБиблиотекой(ЛЕГЧЕ_PNG());
     const записка = [];
 
-    const вопрос = await проверитьИСобрать(EN, false, ход(дверь(с, записка), [], undefined, поставитьОбложкуВФайл(с.repo, EN)));
+    const вопрос = await проверить(EN, false, ход(дверь(с, записка), [], undefined, поставитьОбложкуВФайл(с.repo, EN)));
 
-    expect(вопрос.вид).toBe('спрашиваю');
+    expect(вопрос.вид).toBe('проверено');
     expect(обложка(с.repo)).toMatch(/cover\.png/);
     expect(fs.readFileSync(path.join(с.repo, ПАПКА, 'cover.png'))).toEqual(РЕЗУЛЬТАТ);
     expect(вопрос.файлы.map((файл) => файл.путь)).toContain(`${ПАПКА}/cover.png`);
@@ -62,9 +59,9 @@ describe('обложка в ходе публикации', () => {
       return true;
     });
 
-    const вопрос = await проверитьИСобрать(EN, false, х);
+    const вопрос = await проверить(EN, false, х);
 
-    expect(вопрос.вид).toBe('спрашиваю');
+    expect(вопрос.вид).toBe('проверено');
     expect(вписано).toBe(false);
     expect(вопрос.предупреждения.map((находка) => находка.код)).not.toContain('обложкаНеОбработалась');
   }, ЖДАТЬ_GIT);
@@ -75,9 +72,9 @@ describe('обложка в ходе публикации', () => {
     сБиблиотекой(null);
     const х = ход(дверь(с, []), [], undefined, поставитьОбложкуВФайл(с.repo, EN));
 
-    const вопрос = await проверитьИСобрать(EN, false, х);
+    const вопрос = await проверить(EN, false, х);
 
-    expect(вопрос.вид).toBe('спрашиваю');
+    expect(вопрос.вид).toBe('проверено');
     expect(обложка(с.repo)).toBe(null);
     expect(вопрос.предупреждения).toContainEqual(expect.objectContaining({код: 'обложкаНеОбработалась', уровень: 'предупреждение'}));
   }, ЖДАТЬ_GIT);
@@ -99,15 +96,15 @@ describe('обложка в ходе публикации', () => {
       жива: () => жива,
     };
 
-    expect((await проверитьИСобрать(EN, false, отменяемая)).вид).toBe('прервано');
+    expect((await проверить(EN, false, отменяемая)).вид).toBe('прервано');
     expect(обложка(с.repo)).toBe(null);
     expect(fs.existsSync(path.join(с.repo, ПАПКА, 'cover.png'))).toBe(true);
 
     // Библиотеки больше нет: второй заход обязан взять готовый файл, а не создавать новый.
     сБиблиотекой(null);
-    const вопрос = await проверитьИСобрать(EN, false, ход(дверь(с, []), [], undefined, поставитьОбложкуВФайл(с.repo, EN)));
+    const вопрос = await проверить(EN, false, ход(дверь(с, []), [], undefined, поставитьОбложкуВФайл(с.repo, EN)));
 
-    expect(вопрос.вид).toBe('спрашиваю');
+    expect(вопрос.вид).toBe('проверено');
     expect(обложка(с.repo)).toMatch(/cover\.png/);
     expect(fs.readdirSync(path.join(с.repo, ПАПКА)).filter((имя) => имя.startsWith('cover'))).toEqual(['cover.png']);
   }, ЖДАТЬ_GIT);
@@ -121,9 +118,9 @@ describe('обложка в ходе публикации', () => {
       return true;
     });
 
-    const вопрос = await проверитьИСобрать(EN, false, х);
+    const вопрос = await проверить(EN, false, х);
 
-    expect(вопрос.вид).toBe('спрашиваю');
+    expect(вопрос.вид).toBe('проверено');
     expect(вписано).toBe(false);
     expect(fs.existsSync(path.join(с.repo, ПАПКА, 'cover.png'))).toBe(false);
   }, ЖДАТЬ_GIT);

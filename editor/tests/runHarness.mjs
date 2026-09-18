@@ -1,17 +1,15 @@
 // Общая обвязка сквозных проверок хода публикации: ход окна разговаривает с НАСТОЯЩИМИ ручками
 // сервера, а те — с настоящим git во временном репозитории и настоящим «сервером сайта» рядом.
 //
-// Подставлены только две вещи, к делу не относящиеся: полная сборка сайта (иначе проверка шла бы
-// минуты) и правила подготовки (у них свои проверки). Всё остальное — тот самый код, который
-// работает в окне.
+// Подставлены только правила подготовки (у них свои проверки). Всё остальное — тот самый код,
+// который работает в окне; полной сборки сайта на компьютере нет вовсе (решение владельца
+// 2026-09-18), быстрые проверки сервера идут настоящие.
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {simpleGit} from 'simple-git';
-
-import {поставитьЗависимости} from './depsFixture.mjs';
 
 import {splitArticle} from '../src/core/articleFile.mjs';
 import {дописатьПоля, заменитьШапку, строкаПоля} from '../src/core/refineHead.mjs';
@@ -25,6 +23,8 @@ import {publishDateRoute} from '../src/adapters/publishDateRoute.mjs';
 import {publishCoverRoute} from '../src/adapters/publishCoverRoute.mjs';
 import {publishRoute} from '../src/adapters/publishRoute.mjs';
 import {pushRoute} from '../src/adapters/pushRoute.mjs';
+import {publishStateRoute} from '../src/adapters/publishStateRoute.mjs';
+import {linkSweepRoute} from '../src/adapters/linkSweep.mjs';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const НАСТРОЙКИ = JSON.parse(fs.readFileSync(path.join(EDITOR, 'settings.json'), 'utf8'));
@@ -89,8 +89,6 @@ export async function среда({файлы = {[RU]: СТАТЬЯ, [EN]: СТА
   // работа человека.
   for (const [rel, содержимое] of Object.entries(файлы)) if (!вВетку.includes(rel)) положить(rel, содержимое);
 
-  поставитьЗависимости(repo);
-
   return {корень, repo, editorDir, сервер, git, положить};
 }
 
@@ -143,13 +141,13 @@ export function дверь({repo, editorDir, git}, записка, {безСни
     // Прямой запрос проверки без снимка обвязка дополняет так же, как это делает ОКНО: берёт
     // отпечаток из ответа предыдущего шага, а не считает его заново. Своё значение в теле
     // подстановка не трогает. Нет запомненного — считает тем же кодом сервера.
-    if (!безСнимка && (адрес === '/api/publish/commit' || адрес === '/api/release/build') && тело['отпечаток'] === undefined) {
+    if (!безСнимка && адрес === '/api/publish/commit' && тело['отпечаток'] === undefined) {
       тело = {...тело, отпечаток: показанный ?? await отпечатокПоказанного({repo, git, rel: тело.path})};
     }
 
-    // Снимок проверок едет во ВСЕ три ручки — так же, как его везёт окно. Прежде обвязка знала о
-    // нём только на шаге состава, и обрыв снимка на сборке и записи ни один набор не поймал бы.
-    const соСнимком = адрес === '/api/release' || адрес === '/api/release/build' || адрес === '/api/publish/commit';
+    // Снимок проверок едет в обе ручки — так же, как его везёт окно. Прежде обвязка знала о
+    // нём только на шаге состава, и обрыв снимка на записи ни один набор не поймал бы.
+    const соСнимком = адрес === '/api/release' || адрес === '/api/publish/commit';
     if (!безСнимка && соСнимком && тело['отпечатокПодготовки'] === undefined) {
       тело = {
         ...тело,
@@ -169,17 +167,10 @@ export function дверь({repo, editorDir, git}, записка, {безСни
       тело: async () => тело,
       insideRepo: (target) => path.resolve(target).startsWith(path.resolve(repo) + path.sep),
       send: (res, status, payload) => ответы.push({status, payload}),
-      // Полная сборка сайта подставлена: она идёт минуты и здесь ничего не доказывает. Подмена —
-      // тем же способом, каким её ждёт сам сборщик: вызовом ответа без ошибки.
-      запуск: (_путь, _ключи, _настройки, ответ) => {
-        ответ(null, 'сборка подставлена', '');
-
-        return {on: () => undefined};
-      },
     };
 
     const взято = await publishDateRoute(общее) || await publishCoverRoute(общее) || await releaseRoute(общее)
-      || await publishRoute(общее) || await pushRoute(общее);
+      || await publishStateRoute(общее) || await publishRoute(общее) || await pushRoute(общее) || await linkSweepRoute(общее);
     if (!взято) throw new Error(`ручки нет: ${адрес}`);
 
     const {status, payload} = ответы[0];
@@ -201,12 +192,13 @@ export function дверь({repo, editorDir, git}, записка, {безСни
  * Умолчание отвечает «записано», ничего не меняя: у документации даты не бывает вовсе. Обложка — так же:
  * у статьи без картинок её не бывает, а наборы про обложку подставляют `поставитьПолеВФайл`.
  */
-export function ход(дверьСервера, шаги, поставитьДату = async () => true, поставитьОбложку = async () => true) {
+export function ход(дверьСервера, шаги, поставитьДату = async () => true, поставитьОбложку = async () => true, поставитьДоступность = async () => true) {
   return {
     запрос: дверьСервера,
     сохранить: async () => true,
     поставитьДату,
     поставитьОбложку,
+    поставитьДоступность,
     шаг: (шаг) => шаги.push(шаг),
     жива: () => true,
   };

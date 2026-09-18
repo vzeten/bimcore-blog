@@ -12,26 +12,23 @@ import path from 'node:path';
 import {pushRoute} from '../src/adapters/pushRoute.mjs';
 import {publishRoute} from '../src/adapters/publishRoute.mjs';
 import {releaseRoute} from '../src/adapters/releaseRoute.mjs';
-import {запомнитьСборку} from '../src/adapters/buildMemory.mjs';
 import {запомнитьПоказ} from '../src/adapters/pushMemory.mjs';
 import {прочитатьОчередь, записатьОчередь} from '../src/adapters/commitQueue.mjs';
 import {разобратьОчередь} from '../src/adapters/publishRepair.mjs';
 import {взятьЗамок, отпустить} from '../src/adapters/publishLock.mjs';
 import {владелецСсылок} from '../src/adapters/gitCommit.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
-import {EN, RU, СТАТЬЯ, запрос, наСервере, настройкиСервера, сборщик, среда, убратьПесочницы} from './publishHarness.mjs';
+import {EN, RU, СТАТЬЯ, запрос, наСервере, настройкиСервера, среда, убратьПесочницы} from './publishHarness.mjs';
 
 vi.setConfig({testTimeout: ЖДАТЬ_GIT, hookTimeout: ЖДАТЬ_GIT});
 
 afterEach(() => {
-  запомнитьСборку(null);
   запомнитьПоказ(null);
   отпустить();
   убратьПесочницы();
 });
 
 const состав = (место) => запрос(releaseRoute, место, '/api/release', {path: RU});
-const собрать = (место) => запрос(releaseRoute, место, '/api/release/build', {path: RU}, {запуск: сборщик()});
 const записать = (место) => запрос(publishRoute, место, '/api/publish/commit', {path: RU, подтверждено: true});
 const показать = (место) => запрос(pushRoute, место, '/api/publish/plan', {path: RU});
 const отправить = (место, sha) => запрос(pushRoute, место, '/api/publish/push', {path: RU, sha, подтверждено: true});
@@ -41,7 +38,6 @@ const ссылка = (место, sha) => место.git.raw(['rev-parse', '--qu
 /** Записанный, но не уехавший коммит статьи. Возвращает его полный SHA. */
 async function ожидающийКоммит(место) {
   место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
-  await собрать(место);
   const {status, payload} = await записать(место);
   expect(status).toBe(200);
 
@@ -140,7 +136,6 @@ describe('ожидающий коммит переживает уборку git'
     expect(очередь(место)).toEqual([]);
     // Человек не заперт: новый ход строит новый коммит и доезжает до сайта.
     expect((await состав(место)).status).toBe(200);
-    await собрать(место);
     const новый = (await записать(место)).payload.sha;
     await показать(место);
     expect((await отправить(место, новый)).payload.отправлено).toBe(true);
@@ -153,7 +148,6 @@ describe('статья после показа не меняется', () => {
     const показанный = (await состав(место)).payload.отпечаток;
     место.положить(RU, `${СТАТЬЯ}Новая строка.\n`);
     const новыйПоказ = (await состав(место)).payload.отпечаток;
-    await собрать(место);
     await записать(место);
 
     const [запись] = очередь(место);

@@ -8,21 +8,18 @@ import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {проверитьИСобрать} from '../src/ui/publishRun';
+import {проверить} from '../src/ui/publishRun';
 import {запомнитьКоммит, запомнитьПоказ} from '../src/adapters/pushMemory.mjs';
-import {запомнитьСборку} from '../src/adapters/buildMemory.mjs';
 import {срезОднойВерсии} from '../src/adapters/prepareStamp.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
 import {EN, ES, НАСТРОЙКИ, RU, СТАТЬЯ, дверь, наСервере, среда, убратьПесочницы, ход} from './runHarness.mjs';
 
 beforeEach(() => {
-  запомнитьСборку(null);
   запомнитьКоммит(null);
   запомнитьПоказ(null);
 });
 
 afterEach(() => {
-  запомнитьСборку(null);
   запомнитьКоммит(null);
   запомнитьПоказ(null);
   убратьПесочницы();
@@ -40,7 +37,6 @@ describe('зелёная подготовка доказывается серв�
     const снимок = срезОднойВерсии(с.repo, RU, НАСТРОЙКИ).отпечаток;
     const ручки = [
       ['/api/release', {path: RU, отпечатокПодготовки: снимок}],
-      ['/api/release/build', {path: RU, отпечатокПодготовки: снимок}],
       ['/api/publish/commit', {path: RU, подтверждено: true, отпечатокПодготовки: снимок}],
     ];
 
@@ -61,11 +57,11 @@ describe('зелёная подготовка доказывается серв�
     const х = ход(дверь(с, записка), []);
     const былоНаСервере = await наСервере(с.сервер);
 
-    const беда = await проверитьИСобрать(RU, false, х).catch((ошибка) => ошибка);
+    const беда = await проверить(RU, false, х).catch((ошибка) => ошибка);
 
     expect(беда.ответ?.код).toBe('подготовкаНеПрошла');
-    // Полная сборка даже не запускалась: она идёт минуты, а статью выпускать нельзя.
-    expect(записка.some((шаг) => шаг.адрес === '/api/release/build')).toBe(false);
+    // До записи дело не дошло: статью выпускать нельзя.
+    expect(записка.some((шаг) => шаг.адрес === '/api/publish/commit')).toBe(false);
     expect(await наСервере(с.сервер)).toBe(былоНаСервере);
   }, ЖДАТЬ_GIT);
 
@@ -74,8 +70,8 @@ describe('зелёная подготовка доказывается серв�
     fs.writeFileSync(path.join(с.repo, RU), `${СТАТЬЯ}Новая строка.\n`, 'utf8');
     const х = ход(дверь(с, []), []);
 
-    const вопрос = await проверитьИСобрать(RU, false, х);
+    const вопрос = await проверить(RU, false, х);
 
-    expect(вопрос.вид).toBe('спрашиваю');
+    expect(вопрос.вид).toBe('проверено');
   }, ЖДАТЬ_GIT);
 });

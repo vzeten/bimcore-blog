@@ -5,6 +5,7 @@ import './styles.css';
 import './registry.css';
 import './properties.css';
 import './feedback.css';
+import './publish.css';
 import './refine.css';
 import './versions.css';
 import './imagePanel.css';

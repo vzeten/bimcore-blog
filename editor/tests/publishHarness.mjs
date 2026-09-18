@@ -10,8 +10,6 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {simpleGit} from 'simple-git';
 
-import {поставитьЗависимости} from './depsFixture.mjs';
-
 import {срезОднойВерсии} from '../src/adapters/prepareStamp.mjs';
 import {закреплённаяОснова} from '../src/adapters/publishBase.mjs';
 import {готовыйПлан} from '../src/adapters/publishFacts.mjs';
@@ -91,8 +89,6 @@ export async function среда(файлы = {[RU]: СТАТЬЯ, [EN]: СТА�
   // работа человека.
   for (const [rel, содержимое] of Object.entries(файлы)) if (!вВетку.includes(rel)) положить(rel, содержимое);
 
-  поставитьЗависимости(repo);
-
   const основа = (await git.raw(['rev-parse', 'HEAD'])).trim();
 
   // Рабочая ветка человека: публикация из неё — обычный случай, а не особый. Заводится ПОСЛЕ
@@ -123,12 +119,6 @@ export async function снимокРепозитория({git}) {
 export const файлыКоммита = async ({git}, sha) => (await git.raw(['-c', 'core.quotepath=false', 'show', '--name-only', '--format=', sha]))
   .split(/\r?\n/).map((строка) => строка.trim()).filter(Boolean).sort();
 
-/** Подставной сборщик: отвечает так же, как `execFile`, но мгновенно. */
-export const сборщик = ({ошибка = null, stdout = 'собрано', stderr = ''} = {}) => (файл, аргументы, опции, готово) => {
-  setTimeout(() => готово(ошибка, stdout, stderr), 0);
-  return {on: () => {}};
-};
-
 /**
  * Один запрос к ручке — так, как его делает окно.
  *
@@ -158,19 +148,19 @@ export async function запрос(ручка, место, pathname, тело, �
   return {взято, status: ответы[0]?.status, payload: ответы[0]?.payload ?? {}};
 }
 
-/** Тело запроса со снимком: подготовкой для состава, планом — для сборки и записи. */
+/** Тело запроса со снимком: подготовкой для состава и записи, планом — для записи. */
 async function соСнимком({repo, git}, pathname, тело) {
   const settings = настройкиСервера();
   if (typeof тело?.path !== 'string') return тело;
 
-  // Снимок проверок обвязка кладёт во ВСЕ три ручки, как это делает окно: он сопровождает весь
+  // Снимок проверок обвязка кладёт в обе ручки, как это делает окно: он сопровождает весь
   // маршрут, а не один его шаг.
   if (тело['отпечатокПодготовки'] === undefined
-    && (pathname === '/api/release' || pathname === '/api/release/build' || pathname === '/api/publish/commit')) {
+    && (pathname === '/api/release' || pathname === '/api/publish/commit')) {
     тело = {...тело, отпечатокПодготовки: срезОднойВерсии(repo, тело.path, settings)?.отпечаток ?? ''};
   }
 
-  if ((pathname === '/api/release/build' || pathname === '/api/publish/commit') && тело['отпечаток'] === undefined) {
+  if (pathname === '/api/publish/commit' && тело['отпечаток'] === undefined) {
     return {...тело, отпечаток: await отпечатокПоказанного({repo, git, settings, rel: тело.path})};
   }
 

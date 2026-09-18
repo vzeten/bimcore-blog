@@ -24,13 +24,8 @@ import {localeRoute} from './src/adapters/localeRoute.mjs';
 import {saveRoute} from './src/adapters/saveRoute.mjs';
 import {prepareRoute} from './src/adapters/prepareRoute.mjs';
 import {refineRoute} from './src/adapters/refineRoute.mjs';
-import {publishDateRoute} from './src/adapters/publishDateRoute.mjs';
-import {publishCoverRoute} from './src/adapters/publishCoverRoute.mjs';
-import {releaseRoute} from './src/adapters/releaseRoute.mjs';
-import {publishRoute} from './src/adapters/publishRoute.mjs';
-import {pushRoute} from './src/adapters/pushRoute.mjs';
-import {retireRoute} from './src/adapters/retireRoute.mjs';
-import {linkSweepRoute} from './src/adapters/linkSweep.mjs';
+import {publishRoutes} from './src/adapters/publishRoutes.mjs';
+import {слежение as слежениеВыкладки} from './src/adapters/deployWatch.mjs';
 import {detectPublishedRef, расхождениеССайтом, шапкиВВетке} from './src/adapters/gitFile.mjs';
 import {путиЗаОпубликованнойШапкой} from './src/core/localeSigns.mjs';
 import {дверьGit} from './src/adapters/gitEnv.mjs';
@@ -77,6 +72,9 @@ function обложкаСайтаИзКонфига() {
     return null;
   }
 }
+
+// Опрос выкладки на GitHub — один на сервер: значок «Сайт» спрашивает его, а не сеть (SPEC 5.4).
+const выкладка = слежениеВыкладки({editorDir: EDITOR_DIR, настройки: readSettings});
 
 // Пока ветку не спросили — про сайт не известно ничего. `HEAD` здесь стоять не может: местная
 // ветка не доказывает выпуск (см. `detectPublishedRef`).
@@ -195,19 +193,10 @@ async function api(req, res, url) {
     req, res, url, repo: REPO, settings: readSettings(), тело, insideRepo, send, articles,
   })) return;
 
-  // Один набор на все ручки публикации: настройки на заход читаются один раз, иначе правка файла
-  // настроек посреди запроса развела бы шаги одного решения по разным правилам. Дата блога — счёт
-  // без записи, обложка — только новый файл рядом со статьёй; следом состав, сборка и запись статьи.
+  // Ручки выпуска — одним модулем (`publishRoutes.mjs`): дата, обложка, состав с быстрыми
+  // проверками, состояние на сайте, запись, снятие, уборка ссылок, отправка и значок «Сайт».
   const дляВыпуска = {req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, insideRepo, send};
-  if (await publishDateRoute(дляВыпуска) || await publishCoverRoute(дляВыпуска) || await releaseRoute(дляВыпуска)) return;
-
-  // Записи статьи и снятия — единственные ручки, меняющие git (без отправки); уборка ссылок — диск.
-  if (await publishRoute(дляВыпуска) || await retireRoute(дляВыпуска) || await linkSweepRoute(дляВыпуска)) return;
-
-  // Отправка на сайт: сначала показ того, что уедет, и только отдельным заходом сама отправка.
-  if (await pushRoute({
-    req, res, url, repo: REPO, editorDir: EDITOR_DIR, settings: readSettings(), git, тело, insideRepo, send,
-  })) return;
+  if (await publishRoutes(дляВыпуска, выкладка)) return;
 
   // Автосохранение и разрешение спора: общий у них порядок правок одной языковой версии.
   const ручкиПравок = {req, res, url, repo: REPO, settings: readSettings(), git, publishedRef: () => publishedRef, тело, insideRepo, send, последняяПравка};
@@ -285,6 +274,8 @@ function onError(res, error) {
 }
 
 сервер.listen(PORT, () => {
+  // Незаконченная выкладка прошлого запуска дослеживается: запись лежит на диске.
+  выкладка.разбудить();
   // Экземпляр называет себя сам: род окна, версия КОДА, папка материалов, адрес и где лежит работа.
   for (const строка of [
     ...строкиЗапуска({settings: readSettings(), опознание: ОПОЗНАНИЕ, наСайте: publishedRef}),

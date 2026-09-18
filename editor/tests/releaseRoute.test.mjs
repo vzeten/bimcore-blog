@@ -1,24 +1,23 @@
 // Имя каждого теста повторяет формулировку правила.
-// Ручки предварительного выпуска: план публикации и полная сборка его точной копии. Настоящий
-// сборщик не зовётся — он идёт минутами; проверяется то, ЧТО программа делает с его ответом.
+// Ручка предварительного выпуска: план публикации и быстрые проверки будущего сайта (ссылки,
+// картинки, обложка, шапка, блоки текста). Полной сборки сайта на компьютере нет (решение владельца
+// 2026-09-18): сайт собирает GitHub.
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
 import {releaseRoute} from '../src/adapters/releaseRoute.mjs';
 import {publishRoute} from '../src/adapters/publishRoute.mjs';
-import {запомнитьСборку, зелёнаяСборка} from '../src/adapters/buildMemory.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
-import {EN, ES, RU, СТАТЬЯ, НАСТРОЙКИ, запрос, сборщик, среда, убратьПесочницы} from './publishHarness.mjs';
+import {EN, ES, RU, СТАТЬЯ, запрос, среда, убратьПесочницы} from './publishHarness.mjs';
 
 vi.setConfig({testTimeout: ЖДАТЬ_GIT, hookTimeout: ЖДАТЬ_GIT});
 
 afterEach(() => {
-  запомнитьСборку(null);
   убратьПесочницы();
 });
 
-const ручка = (место, pathname, тело, запуск) => запрос(releaseRoute, место, pathname, тело, {запуск});
+const ручка = (место, pathname, тело) => запрос(releaseRoute, место, pathname, тело);
 
 /** Кто-то другой толкнул в ветку сайта, пока человек работал. */
 async function чужаяРаботаНаСервере(место) {
@@ -137,7 +136,6 @@ describe('план публикации', () => {
   it('свой коммит ещё не уехал — новый выпуск не начинается, предлагается доотправить', async () => {
     const место = await среда();
     fs.writeFileSync(path.join(место.repo, RU), `${СТАТЬЯ}Ещё строка.\n`, 'utf8');
-    await ручка(место, '/api/release/build', {path: RU}, сборщик());
     await запрос(publishRoute, место, '/api/publish/commit', {path: RU, подтверждено: true});
 
     const {status, payload} = await ручка(место, '/api/release', {path: RU});
@@ -183,92 +181,79 @@ describe('план публикации', () => {
       const план = await ручка(место, '/api/release', {path: путь});
       expect(план.status).toBe(400);
       expect(план.payload.файлы).toBeUndefined();
-
-      let звали = false;
-      const сборка = await ручка(место, '/api/release/build', {path: путь}, (...аргументы) => {
-        звали = true;
-        return сборщик()(...аргументы);
-      });
-      expect(звали).toBe(false);
-      expect(сборка.status).toBe(400);
     });
   }
 });
 
-describe('полная сборка плана', () => {
-  it('зелёная сборка разрешает переход к подтверждению публикации и запоминается вместе с деревом', async () => {
-    const место = await среда();
-    const {status, payload} = await ручка(место, '/api/release/build', {path: RU}, сборщик());
+describe('быстрые проверки вместо сборки на компьютере', () => {
+  /** Перечень блоков сайта в основе: без распространения темы, чтобы перечень был полным. */
+  const БЛОКИ = 'src/theme/MDXComponents.js';
+  const СВОИ_БЛОКИ = "import CTA from '@site/src/components/CTA';\n\nexport default {\n  CTA,\n  truncate: () => null,\n};\n";
+  const сБлоками = (ещё = {}) => среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ, [ES]: СТАТЬЯ, [БЛОКИ]: СВОИ_БЛОКИ, ...ещё});
+  const коды = (payload) => payload.находки.map((находка) => `${находка.уровень}:${находка.код}`);
+
+  it('сборки на компьютере нет: ручки полной сборки больше не существует', async () => {
+    const место = await сБлоками();
+
+    expect((await ручка(место, '/api/release/build', {path: RU})).взято).toBe(false);
+  });
+
+  it('исправная правка проходит: блокеров нет, разбор текста без разборщика сайта — предупреждение', async () => {
+    const место = await сБлоками();
+    fs.writeFileSync(path.join(место.repo, RU), `${СТАТЬЯ}См. [английский урок](/lessons/proba/) и <CTA type="lesson" />.\n`, 'utf8');
+
+    const {status, payload} = await ручка(место, '/api/release', {path: RU});
 
     expect(status).toBe(200);
-    expect(payload.зелёная).toBe(true);
-    expect(payload.причина).toBe('');
-    expect(зелёнаяСборка()).toMatchObject({путь: RU, основа: место.основа});
-    expect(зелёнаяСборка().дерево).toMatch(/^[0-9a-f]{40}$/);
+    expect(payload.можно).toBe(true);
+    // Во временном репозитории зависимостей сайта нет: не проверено — так и сказано, но не отказ.
+    expect(коды(payload)).toEqual(['предупреждение:mdxНеПроверен']);
   });
 
-  it('упавшая сборка не пускает дальше, называет причину и сохраняет вывод сборщика целиком', async () => {
-    const место = await среда();
-    const вывод = 'Docusaurus build\nошибка сборки: страница не собралась\nподробности где-то тут';
-    const {payload} = await ручка(
-      место, '/api/release/build', {path: RU},
-      сборщик({ошибка: Object.assign(new Error('провал'), {code: 1}), stdout: вывод}),
-    );
+  it('ссылка на страницу, которой не будет, — блокер с местом, публиковать нельзя', async () => {
+    const место = await сБлоками();
+    fs.writeFileSync(path.join(место.repo, RU), `${СТАТЬЯ}См. [урок](/lessons/nope/).\n`, 'utf8');
 
-    expect(payload.зелёная).toBe(false);
-    expect(payload.вывод).toBe(вывод);
-    expect(payload.причина).toContain('ошибка сборки');
-    expect(зелёнаяСборка()).toBe(null);
+    const {payload} = await ручка(место, '/api/release', {path: RU});
+
+    expect(payload.можно).toBe(false);
+    expect(payload.находки).toContainEqual(expect.objectContaining({
+      код: 'ссылкаВНикуда', уровень: 'блокер', путь: RU, строка: 3, значение: '/lessons/nope/',
+    }));
   });
 
-  it('сборка, оборванная по пределу времени, называется своим ответом, а не тишиной', async () => {
-    const место = await среда();
-    const убит = Object.assign(new Error('таймаут'), {killed: true, signal: 'SIGTERM'});
-    const {payload} = await ручка(место, '/api/release/build', {path: RU}, сборщик({ошибка: убит}));
+  it('картинка, которой нет рядом со статьёй, и обложка на пустое место — блокеры', async () => {
+    const место = await сБлоками();
+    const шапка = '---\ntitle: "Проба"\nslug: /lessons/proba\ndescription: "Про пробу."\nimage: ./cover.png\n---\n';
+    fs.writeFileSync(path.join(место.repo, RU), `${шапка}\n![кадр](./media/kadr.png)\n`, 'utf8');
 
-    expect(payload.зелёная).toBe(false);
-    expect(payload.оборвана).toBe(true);
+    const {payload} = await ручка(место, '/api/release', {path: RU});
+
+    expect(payload.можно).toBe(false);
+    expect(коды(payload)).toEqual(expect.arrayContaining(['блокер:картинкиНет', 'блокер:обложкиНет']));
   });
 
-  it('план не доказан — сборка не запускается вовсе', async () => {
-    const место = await среда({
-      [RU]: СТАТЬЯ,
-      [EN]: СТАТЬЯ,
-      [ES]: СТАТЬЯ,
-      'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/сосед.mdx': СТАТЬЯ,
-    });
-    let звали = false;
+  it('блок, которого сайт не знает, — блокер; зарегистрированный блок проходит', async () => {
+    const место = await сБлоками();
+    fs.writeFileSync(path.join(место.repo, RU), `${СТАТЬЯ}<CTA type="lesson" />\n\n<Nope />\n`, 'utf8');
 
-    const {status, payload} = await ручка(место, '/api/release/build', {path: RU}, (...аргументы) => {
-      звали = true;
-      return сборщик()(...аргументы);
-    });
+    const {payload} = await ручка(место, '/api/release', {path: RU});
 
-    expect(звали).toBe(false);
-    expect(status).toBe(409);
-    expect(payload.error).toBe(НАСТРОЙКИ['ошибкиСервера']['составНеДоказан']);
+    expect(payload.находки.filter((находка) => находка.уровень === 'блокер'))
+      .toEqual([expect.objectContaining({код: 'компонентНеизвестен', значение: 'Nope', строка: 5})]);
   });
 
-  it('сборщик зовётся сам собой, без оболочки, и НЕ в рабочей папке человека', async () => {
-    const место = await среда();
-    let вызов = null;
+  it('«Недоступно» и «По ссылке» разом — блокер: сайт с такой шапкой не собирается', async () => {
+    const место = await сБлоками();
+    fs.writeFileSync(path.join(место.repo, RU), СТАТЬЯ.replace('---\n\n', 'draft: true\nunlisted: true\n---\n\n'), 'utf8');
 
-    await ручка(место, '/api/release/build', {path: RU}, (файл, аргументы, опции, готово) => {
-      вызов = {файл, аргументы, опции};
-      setTimeout(() => готово(null, '', ''), 0);
-      return {on: () => {}};
-    });
+    const {payload} = await ручка(место, '/api/release', {path: RU});
 
-    expect(вызов.файл).toBe(process.execPath);
-    expect(вызов.аргументы).toContain('build');
-    // Ключа языка нет намеренно: без него сборщик собирает все локали сайта.
-    expect(вызов.аргументы.some((аргумент) => String(аргумент).includes('locale'))).toBe(false);
-    // Собирается точная копия будущего сайта, а не рабочая папка человека.
-    expect(вызов.опции.cwd).not.toBe(место.repo);
-    expect(вызов.опции.timeout).toBe(НАСТРОЙКИ['сборка']['пределМинут'] * 60 * 1000);
+    expect(payload.можно).toBe(false);
+    expect(коды(payload)).toContain('блокер:черновикИСкрыта');
   });
 
-  it('ни план, ни сборка не меняют на диске ни одного байта работы человека', async () => {
+  it('ни план, ни проверки не меняют на диске ни одного байта работы человека', async () => {
     const место = await среда(
       {[RU]: СТАТЬЯ, [EN]: СТАТЬЯ, [ES]: '---\ntitle: "Prueba"\n---\n\nMi trabajo.\n'},
       {вКоммите: [RU, EN]},
@@ -281,7 +266,6 @@ describe('полная сборка плана', () => {
     const было = снимок();
 
     await ручка(место, '/api/release', {path: RU});
-    await ручка(место, '/api/release/build', {path: RU}, сборщик());
 
     expect(снимок()).toEqual(было);
   });

@@ -1,8 +1,9 @@
 import {useRef, useState} from 'react';
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
-import {buildFrontmatter, parseFrontmatter, порядокПолей, type Field} from './headFields';
+import {buildFrontmatter, parseFrontmatter, безПоказанных, показанныеПоля, порядокПолей, type Field} from './headFields';
 import {nothingChanged} from '../core/articleFile.mjs';
 import {дописатьПоля, полеПишетсяСтрокой, строкаПоля} from '../core/refineHead.mjs';
+import {поляРежима, режимДоступности} from '../core/siteAccess.mjs';
 import type {Пара} from './restore';
 import type {DraftPayload} from './useAutosave';
 import type {Article, Root, SaveState, Settings} from './types';
@@ -149,6 +150,24 @@ export function useWindowText(deps: {
     поставитьПоле('image', (строкаПоля as (поле: string, сырое: string) => string)('image', адрес), settings)
   );
 
+  /**
+   * Поставить доступность, выбранную в окне публикации (решение владельца 2026-09-18, п.2–3): поля
+   * `draft`/`unlisted` меняются правилом ядра `поляРежима`, и запрещённая пара не рождается.
+   * Ответ: `нечего` — в шапке уже это, писать незачем; `поставлено` — правка легла в окно и ждёт
+   * сохранения. Правка идёт той же дорогой, что у свойств, — второго писателя шапки нет.
+   */
+  const поставитьДоступность = (режим: string, settings: Settings): 'нечего' | 'поставлено' => {
+    const article = deps.article;
+    if (!article) return 'нечего';
+    const образец = deps.шапкаСейчас.current || article.frontmatterRaw;
+    const свои = parseFrontmatter(образец, article.path, deps.roots, deps.общаяОбложка);
+    // Строки `draft`/`unlisted` в шапке может не быть: поля берутся с показанными, как у свойств.
+    const поля = показанныеПоля(свои, порядокПолей(settings, article.path));
+    if (режимДоступности(поля) === режим) return 'нечего';
+    правитьПоля(безПоказанных(свои, поляРежима(поля, режим) as Field[]), settings);
+    return 'поставлено';
+  };
+
   const поставитьПоле = (ключ: string, строка: string, settings: Settings): boolean => {
     const article = deps.article;
     if (!article) return false;
@@ -179,6 +198,7 @@ export function useWindowText(deps: {
     правитьПоля,
     поставитьДату,
     поставитьОбложку,
+    поставитьДоступность,
     отметить,
     положитьПару,
   };

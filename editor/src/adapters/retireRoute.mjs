@@ -72,8 +72,13 @@ export async function retireRoute({req, res, url, repo, editorDir, settings, git
 
 async function снять({rel, payload, запись, repo, editorDir, settings, git, res, send}) {
   const место = путиВерсийНаСайте(rel, settings);
+  // Согласие на запись снятия дано про статью на сайте. Её там нет — показ устарел, и ответ «200 без
+  // коммита» ход прочёл бы как успех записи: отказ называет перемену своим именем.
+  const нечегоСнимать = () => (запись
+    ? отказ(res, send, settings, 'статьяИзменилась')
+    : показать(res, send, {наСайте: false, статей: 0, отпечаток: null}));
   // Статья вне сайта (песочница): снимать нечего, и сервер сайта спрашивать незачем.
-  if (место.length === 0) return показать(res, send, {наСайте: false, статей: 0, отпечаток: null});
+  if (место.length === 0) return нечегоСнимать();
 
   const основа = await закреплённаяОснова({git, settings});
   if (основа.ошибка) return отказ(res, send, settings, 'сайтНеизвестен');
@@ -92,7 +97,7 @@ async function снять({rel, payload, запись, repo, editorDir, settings
   const источники = отпечатокИсточников(repo, rel, settings);
   const план = await планСнятия({git, repo, settings, rel, основа: основа.основа});
   if (план.ошибка) return отказ(res, send, settings, план.ошибка);
-  if (!план.наСайте) return показать(res, send, {наСайте: false, статей: 0, отпечаток: null});
+  if (!план.наСайте) return нечегоСнимать();
   if (план.разрывы.length > 0) return отказ(res, send, settings, план.разрывы[0].причина, {разрывы: план.разрывы});
   if (!снятиеВозможно(план) || план.отказ) return отказ(res, send, settings, 'составНеДоказан', {отказ: план.отказ ?? null});
 
