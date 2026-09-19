@@ -32,6 +32,8 @@ import {положитьЦеликом} from './trashStore.mjs';
 import {образцыЦелей, откудаСсылка, сведенияСайта} from './linkFacts.mjs';
 import {основыУборки, путиВерсийНаСайте, целиПоОсновам} from './retireFacts.mjs';
 import {отмеченныеВерсии} from './publishVersions.mjs';
+import {целиНедоступной} from './draftLinks.mjs';
+import {естьВОснове} from './publishFacts.mjs';
 import {badFields, badPath} from './httpBody.mjs';
 
 /** Обрабатывает `/api/links/sweep`. Возвращает true, если запрос был к ней. */
@@ -185,6 +187,16 @@ async function целиВерсий({git, repo, settings, версии, осно
       if (адрес !== '') цели.адреса.add(адрес);
     }
     цели.файлы.add(rel);
+    // Тем же правилом, что план (`целиНедоступной`), от сайта ДО этой публикации: у обязательного
+    // языка уходят и адреса языков без своего файла — ни тогда, ни теперь (заглушек нет).
+    const [после, до] = основы;
+    if (до === undefined) continue;
+    const есть = await естьВОснове(git, после, путиВерсийНаСайте(rel, settings).map((версия) => версия.путь));
+    // Не спросилось — лишнего не убираем: язык с файлом на сайте потерял бы живые ссылки.
+    if (есть === null) continue;
+    const записи = [...есть.файлы.keys()].map((путь) => ({путь}));
+    const плана = await целиНедоступной({git, settings, repo, rel, текст, основа: до, записи});
+    for (const адрес of плана?.адреса ?? []) цели.адреса.add(адрес);
   }
   return цели;
 }
