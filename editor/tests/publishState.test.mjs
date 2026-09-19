@@ -58,6 +58,15 @@ describe('состояние версий на сайте', () => {
     expect(показ.payload.ссылкиВСтатьях).toBe(1);
   });
 
+  it('адрес сменён локально: число статей в окне считается по живому адресу — и совпадает с тем, что уберёт публикация', async () => {
+    const место = await среда({[RU]: СТАТЬЯ, [EN]: СТАТЬЯ, [ES]: СТАТЬЯ, [СОСЕД]: СОСЕД_ТЕКСТ});
+    место.положить(RU, СТАТЬЯ.replace('slug: /lessons/proba', 'slug: /lessons/proba-new').replace('---\n\n', 'draft: true\n---\n\n'));
+    const показ = await запрос(releaseRoute, место, '/api/release', {path: RU});
+
+    expect(по(await состояние(место), RU)).toMatchObject({наСайте: true, ссылок: 1});
+    expect(показ.payload.ссылкиВСтатьях).toBe(1);
+  });
+
   it('путь не статьи — отказ, а не пустой ответ', async () => {
     const место = await среда();
 

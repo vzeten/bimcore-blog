@@ -27,10 +27,10 @@ import {splitArticle} from '../core/articleFile.mjs';
 import {годныйПуть} from './releaseFacts.mjs';
 import {путиСтатей} from './library.mjs';
 import {fingerprint, latestSnapshot, listDrafts, saveDraft, saveSnapshot, snapshotText} from './draftStore.mjs';
-import {gitAuthor} from './gitFile.mjs';
+import {gitAuthor, showFile} from './gitFile.mjs';
 import {положитьЦеликом} from './trashStore.mjs';
 import {образцыЦелей, откудаСсылка, сведенияСайта} from './linkFacts.mjs';
-import {целиСтатьи} from './retireFacts.mjs';
+import {основыУборки, путиВерсийНаСайте, целиПоОсновам} from './retireFacts.mjs';
 import {отмеченныеВерсии} from './publishVersions.mjs';
 import {badFields, badPath} from './httpBody.mjs';
 
@@ -56,7 +56,13 @@ export async function linkSweepRoute({req, res, url, repo, editorDir, settings, 
     send(res, 400, {error: версии.ошибка});
     return true;
   }
-  const цели = версии !== null ? целиВерсий(repo, settings, версии.версии) : await целиСтатьи({git, repo, settings, rel});
+  // Адреса — и местные, и опубликованные: сменённый, но ещё не выпущенный `slug` иначе оставил бы у
+  // соседей ссылки на прежний адрес, который только что ушёл с сайта (условие контролёра Codex).
+  const пути = версии !== null ? версии.версии : [rel, ...путиВерсийНаСайте(rel, settings).map((версия) => версия.путь)];
+  const основы = await основыУборки({git, settings, пути: [...new Set(пути)]});
+  const цели = версии !== null
+    ? await целиВерсий({git, repo, settings, версии: версии.версии, основы})
+    : await целиПоОсновам({git, repo, settings, rel, основы});
   const автор = (await gitAuthor(git)) ?? settings['реестр']['неизвестныйАвтор'];
   send(res, 200, убратьНаДиске({repo, editorDir, settings, цели, автор}));
   return true;
@@ -155,8 +161,12 @@ function убратьВЧерновиках({repo, settings, сайт, цели,
   }
 }
 
-/** Цели уборки — названные языковые версии: адрес каждой в её языке и её файл. */
-function целиВерсий(repo, settings, версии) {
+/**
+ * Цели уборки — названные языковые версии: адрес каждой в её языке по тексту с диска и по тексту из
+ * каждого снимка сайта (`основы`), и её файл.
+ */
+async function целиВерсий({git, repo, settings, версии, основы}) {
+  const сайт = сведенияСайта(repo, settings);
   const цели = {адреса: new Set(), файлы: new Set()};
   for (const rel of версии) {
     let текст = '';
@@ -165,8 +175,15 @@ function целиВерсий(repo, settings, версии) {
     } catch {
       // Файла нет — адрес возьмётся по пути, как его считает сам сайт.
     }
-    const адрес = адресВерсии(rel, текст, сведенияСайта(repo, settings));
-    if (адрес !== '') цели.адреса.add(адрес);
+    const тексты = [текст];
+    for (const основа of основы) {
+      const там = await showFile(git, основа, rel);
+      if (там !== null) тексты.push(там);
+    }
+    for (const свой of тексты) {
+      const адрес = адресВерсии(rel, свой, сайт);
+      if (адрес !== '') цели.адреса.add(адрес);
+    }
     цели.файлы.add(rel);
   }
   return цели;

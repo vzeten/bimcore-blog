@@ -83,6 +83,35 @@ describe('«Недоступно» у опубликованной версии'
     expect(fs.readFileSync(path.join(с.repo, СОСЕД_RU), 'utf8')).toBe(ФАЙЛЫ[СОСЕД_RU]);
   }, ЖДАТЬ_GIT * 2);
 
+  it('«Недоступно» вместе со сменой адреса: ссылки на живой прежний адрес убраны в коммите и на диске', async () => {
+    const с = await среда({файлы: ФАЙЛЫ});
+    // Человек сменил адрес русской версии и сделал её недоступной одной публикацией.
+    const полный = path.join(с.repo, RU);
+    fs.writeFileSync(полный, СТАТЬЯ.replace('slug: /lessons/proba', 'slug: /lessons/proba-new'), 'utf8');
+
+    const исход = await опубликовать(RU, false, ход(дверь(с, []), [], undefined, undefined, недоступно(с)), 'недоступно');
+
+    expect(исход.вид).toBe('готово');
+    expect(await сайт(с, RU)).toContain('draft: true');
+    expect(await сайт(с, СОСЕД_RU)).toBe(сосед('См. пробу рядом.'));
+    expect(fs.readFileSync(path.join(с.repo, СОСЕД_RU), 'utf8')).toBe(сосед('См. пробу рядом.'));
+    expect(await сайт(с, СОСЕД_EN)).toBe(ФАЙЛЫ[СОСЕД_EN]);
+  }, ЖДАТЬ_GIT * 2);
+
+  it('адрес сменён без «Недоступно», а на прежний ссылается другая статья — быстрая проверка останавливает публикацию', async () => {
+    const с = await среда({файлы: ФАЙЛЫ});
+    for (const rel of [EN, RU, ES]) {
+      fs.writeFileSync(path.join(с.repo, rel), СТАТЬЯ.replace('slug: /lessons/proba', 'slug: /lessons/proba-new'), 'utf8');
+    }
+    const было = await наСервере(с.сервер);
+
+    const исход = await опубликовать(EN, false, ход(дверь(с, []), []), 'всем', [EN, RU, ES]);
+
+    expect(исход.вид).toBe('остановка');
+    expect(исход.находки.map((н) => [н.код, н.путь].join(':')).sort()).toEqual([`ссылкаНаУшедшуюСтраницу:${СОСЕД_EN}`, `ссылкаНаУшедшуюСтраницу:${СОСЕД_RU}`]);
+    expect(await наСервере(с.сервер)).toBe(было);
+  }, ЖДАТЬ_GIT * 2);
+
   it('«Доступно всем» — обычная публикация: ни правки соседей, ни уборки', async () => {
     const с = await среда({файлы: ФАЙЛЫ});
     fs.appendFileSync(path.join(с.repo, RU), 'Новая строка.\n', 'utf8');

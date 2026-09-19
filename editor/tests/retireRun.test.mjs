@@ -106,6 +106,23 @@ describe('удаление статьи, бывшей на сайте', () => {
     expect({...стало, дерево: ''}).toEqual({...было, дерево: ''});
   }, ЖДАТЬ_GIT * 2);
 
+  it('адрес сменён локально и не выпущен: ссылки на ОПУБЛИКОВАННЫЙ адрес убраны и на сайте, и на диске', async () => {
+    const с = await среда({файлы: ФАЙЛЫ});
+    // На сайте статья живёт по /lessons/proba, а у человека все версии уже переехали на /lessons/proba-new.
+    for (const rel of [EN, RU, ES]) {
+      fs.writeFileSync(path.join(с.repo, rel), СТАТЬЯ.replace('slug: /lessons/proba', 'slug: /lessons/proba-new'), 'utf8');
+    }
+    const х = ход(дверьУдаления(с, []));
+
+    const вопрос = await спроситьУдаление(RU, х);
+    const исход = await провестиУдаление(RU, вопрос.снятие, х);
+
+    expect(исход).toEqual({вид: 'удалено'});
+    const без = сосед('/lessons/proba/').replace('[пробу](/lessons/proba/)', 'пробу');
+    expect(await сайт(с, СОСЕД_EN)).toBe(без);
+    expect(fs.readFileSync(path.join(с.repo, СОСЕД_EN), 'utf8')).toBe(без);
+  }, ЖДАТЬ_GIT * 2);
+
   it('обрыв отправки: статья на месте, повтор досылает ту же запись и второй не делает', async () => {
     const с = await среда({файлы: ФАЙЛЫ});
     const сайтДо = await наСервере(с.сервер);
