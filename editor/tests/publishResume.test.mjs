@@ -8,7 +8,7 @@ import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {зафиксироватьИОтправить, проверить} from '../src/ui/publishRun';
+import {зафиксироватьИОтправить, опубликовать, проверить} from '../src/ui/publishRun';
 import {запомнитьКоммит, запомнитьПоказ} from '../src/adapters/pushMemory.mjs';
 import {ЖДАТЬ_GIT} from './saveHarness.mjs';
 import {EN, ES, RU, СТАТЬЯ, дверь, наСервере, среда, убратьПесочницы, ход} from './runHarness.mjs';
@@ -96,6 +96,33 @@ describe('прошлая запись не уехала на сайт', () => {
     expect(записка.map((шаг) => шаг.адрес)).toContain('/api/publish/push');
     expect(записей(записка)).toBe(0);
     expect(await наСервере(с.сервер)).toBe(запись.sha);
+  }, ЖДАТЬ_GIT);
+
+  it('«Опубликовать» с доступностью, уход во время досылки — второй проход окно не трогает, итог без ложного отказа', async () => {
+    const с = await среда();
+    const записка = [];
+    const базовая = дверь(с, записка);
+    const запись = await записаноНоНеУехало(с, ход(базовая, []));
+    let живо = true;
+    let записейДоступности = 0;
+    const сУходом = async (адрес, тело) => {
+      try {
+        return await базовая(адрес, тело);
+      } finally {
+        if (адрес === '/api/release') живо = false;
+      }
+    };
+    const х = {...ход(сУходом, []), жива: () => живо, поставитьДоступность: async () => {
+      записейДоступности += 1;
+      return true;
+    }};
+
+    const исход = await опубликовать(RU, false, х, 'всем');
+
+    expect(исход.вид).toBe('готово');
+    expect(await наСервере(с.сервер)).toBe(запись.sha);
+    // Доступность записана один раз — первым проходом, пока человек был в статье.
+    expect(записейДоступности).toBe(1);
   }, ЖДАТЬ_GIT);
 
   it('досылка идёт до новых проверок: уже проверенная запись не проверяется второй раз', async () => {
