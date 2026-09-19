@@ -100,7 +100,7 @@ async function ссылкиНаУшедшие({git, repo, settings, основа
 }
 
 /** Все обычные файлы основы. Спросить не удалось — `null`. */
-async function файлыОсновы(git, основа) {
+export async function файлыОсновы(git, основа) {
   try {
     const сырое = await git.raw(['-c', 'core.quotepath=false', 'ls-tree', '-r', '--name-only', '-z', основа]);
     return new Set(сырое.split('\0').filter(Boolean));
@@ -110,7 +110,7 @@ async function файлыОсновы(git, основа) {
 }
 
 /** `slug` и `draft` по готовому тексту — тем же чтением поля, что у всей программы. */
-function шапкаТекста(текст) {
+export function шапкаТекста(текст) {
   const шапка = splitArticle(текст).frontmatterRaw;
   return {slug: readField(шапка, 'slug'), черновик: черновикСайта(шапка)};
 }
@@ -120,7 +120,7 @@ function шапкаТекста(текст) {
  * Полем шапки считается строка между первым и вторым забором, если первый стоит в первой строке —
  * так шапку отделяет и сам разбор (`splitArticle`). Не удалось спросить — пустая карта.
  */
-async function шапкиОсновы(git, основа, корни) {
+export async function шапкиОсновы(git, основа, корни) {
   const карта = new Map();
   if (корни.length === 0) return карта;
   let сырое = '';

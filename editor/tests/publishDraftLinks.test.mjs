@@ -98,6 +98,20 @@ describe('«Недоступно» у опубликованной версии'
     expect(await сайт(с, СОСЕД_EN)).toBe(ФАЙЛЫ[СОСЕД_EN]);
   }, ЖДАТЬ_GIT * 2);
 
+  it('«Недоступно» со сменой адреса на занятый другой живой статьёй — ссылки на ту статью сохраняются в коммите и на диске', async () => {
+    const ТРЕТЬЯ = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/third/index.mdx';
+    const третья = '---\ntitle: "Третья"\nslug: /lessons/third\ndescription: "Третья."\n---\n\nСм. [другую](/lessons/other/) и [пробу](/lessons/proba/).\n';
+    const с = await среда({файлы: {...ФАЙЛЫ, [ТРЕТЬЯ]: третья}});
+    fs.writeFileSync(path.join(с.repo, RU), СТАТЬЯ.replace('slug: /lessons/proba', 'slug: /lessons/other'), 'utf8');
+
+    const исход = await опубликовать(RU, false, ход(дверь(с, []), [], undefined, undefined, недоступно(с)), 'недоступно');
+
+    expect(исход.вид).toBe('готово');
+    const стало = '---\ntitle: "Третья"\nslug: /lessons/third\ndescription: "Третья."\n---\n\nСм. [другую](/lessons/other/) и пробу.\n';
+    expect(await сайт(с, ТРЕТЬЯ)).toBe(стало);
+    expect(fs.readFileSync(path.join(с.repo, ТРЕТЬЯ), 'utf8')).toBe(стало);
+  }, ЖДАТЬ_GIT * 2);
+
   it('адрес сменён без «Недоступно», а на прежний ссылается другая статья — быстрая проверка останавливает публикацию', async () => {
     const с = await среда({файлы: ФАЙЛЫ});
     for (const rel of [EN, RU, ES]) {

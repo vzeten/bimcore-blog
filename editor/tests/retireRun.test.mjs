@@ -123,6 +123,25 @@ describe('удаление статьи, бывшей на сайте', () => {
     expect(fs.readFileSync(path.join(с.repo, СОСЕД_EN), 'utf8')).toBe(без);
   }, ЖДАТЬ_GIT * 2);
 
+  it('локальный адрес занят другой живой статьёй — ссылки на неё сохраняются и на сайте, и на диске', async () => {
+    const ТРЕТЬЯ = 'docs/lessons/third/index.mdx';
+    const третья = '---\ntitle: "Третья"\nslug: /lessons/third\ndescription: "Третья."\n---\n\nСм. [другую](/lessons/other/) и [пробу](/lessons/proba/).\n';
+    const с = await среда({файлы: {...ФАЙЛЫ, [ТРЕТЬЯ]: третья}});
+    // Проба локально взяла адрес живой статьи «Другая» и тут же удаляется.
+    for (const rel of [EN, RU, ES]) {
+      fs.writeFileSync(path.join(с.repo, rel), СТАТЬЯ.replace('slug: /lessons/proba', 'slug: /lessons/other'), 'utf8');
+    }
+    const х = ход(дверьУдаления(с, []));
+
+    const вопрос = await спроситьУдаление(RU, х);
+    const исход = await провестиУдаление(RU, вопрос.снятие, х);
+
+    expect(исход).toEqual({вид: 'удалено'});
+    const стало = '---\ntitle: "Третья"\nslug: /lessons/third\ndescription: "Третья."\n---\n\nСм. [другую](/lessons/other/) и пробу.\n';
+    expect(await сайт(с, ТРЕТЬЯ)).toBe(стало);
+    expect(fs.readFileSync(path.join(с.repo, ТРЕТЬЯ), 'utf8')).toBe(стало);
+  }, ЖДАТЬ_GIT * 2);
+
   it('обрыв отправки: статья на месте, повтор досылает ту же запись и второй не делает', async () => {
     const с = await среда({файлы: ФАЙЛЫ});
     const сайтДо = await наСервере(с.сервер);
