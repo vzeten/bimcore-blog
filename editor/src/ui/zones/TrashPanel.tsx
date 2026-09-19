@@ -9,7 +9,7 @@ import type {Settings} from '../types';
  * запись уходит только этой кнопкой (решение владельца 2026-09-18). Перечень спрашивается у
  * сервера при открытии и после каждого действия: окно ничего не хранит.
  */
-export function TrashPanel(props: {settings: Settings; onЗакрыть: () => void; onВозвращено: () => void}) {
+export function TrashPanel(props: {settings: Settings; onЗакрыть: () => void; onВозвращено: (текст: string) => void}) {
   const п = props.settings.подписи;
   const [записи, setЗаписи] = useState<TrashEntry[] | null>(null);
   const [занята, setЗанята] = useState<string | null>(null);
@@ -28,10 +28,11 @@ export function TrashPanel(props: {settings: Settings; onЗакрыть: () => v
     if (занята !== null) return;
     setЗанята(запись.id);
     await trashRestore(запись.id, {
-      ok: (итог) => {
-        setСообщение(label('статьяВозвращена', {пути: итог.возвращено.join(', ')}));
+      ok: () => {
+        setСообщение(label('статьяВозвращена'));
         перечитать();
-        props.onВозвращено();
+        // Полоса над окном говорит то же: прежнее «Статья в корзине…» больше неправда.
+        props.onВозвращено(label('статьяВозвращена'));
       },
       // Конфликт на месте статьи — обычный отказ: возврат не перезаписывает чужое, а называет, что мешает.
       fail: (текст, конфликты) => setСообщение(`${label('ошибкаВозврата')}: ${текст}${конфликты.length > 0 ? ` ${конфликты.join(', ')}` : ''}`),

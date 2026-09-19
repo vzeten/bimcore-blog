@@ -1,7 +1,8 @@
 import {usePublish, идётПубликация} from '../usePublish';
 import {перейтиКСтроке} from '../editor/jumpTo';
 import {PublishAsk} from './PublishAsk';
-import {PublishReason} from './PublishReason';
+import {PublishReason, строкаПричины} from './PublishReason';
+import type {Действие} from '../useMessage';
 import type {Article, Settings} from '../types';
 
 /**
@@ -26,7 +27,7 @@ export function PublishButton(props: {
   onДоступность: (режим: string) => Promise<boolean>;
   onOpen: (path: string) => void | Promise<boolean | void>;
   onОбновить: () => Promise<void>;
-  onСообщить: (текст: string) => void;
+  onСообщить: (текст: string, действие?: Действие) => void;
 }) {
   const п = props.settings.публикация;
   const публикация = usePublish(
@@ -44,6 +45,12 @@ export function PublishButton(props: {
       if (исход.ссылкиНеУбраны.length > 0) props.onСообщить(`${п.ссылкиНеУбраны} ${исход.ссылкиНеУбраны.join(', ')}`);
     },
     props.article?.versions ?? {},
+    // Публикация не прошла, а человек уже на другом экране: полоса ошибки там, где он сейчас, с
+    // кнопкой «Открыть статью» (проба владельца 2026-09-19).
+    (путь, название, остановка) => props.onСообщить(
+      п.неОпубликованаСтатья.replace('{название}', название).replace('{причина}', строкаПричины(остановка, props.settings)),
+      {подпись: п.открытьСтатью, сделать: () => void props.onOpen(путь)},
+    ),
   );
   const идёт = идётПубликация(публикация.шаг);
   const неВышло = публикация.остановка !== null;
@@ -61,7 +68,7 @@ export function PublishButton(props: {
     <div className="publish-anchor">
       <button
         className={неВышло ? 'ghost publish-failed' : 'ghost ghost-main'}
-        disabled={идёт || props.просмотр || !props.article}
+        disabled={идёт || (публикация.занята && !неВышло) || props.просмотр || !props.article}
         title={props.просмотр ? props.settings.подписи.идётПросмотр : (идёт ? (п.шаги[публикация.шаг] ?? '') : '')}
         onClick={неВышло ? публикация.показатьПричину : публикация.открыть}
       >
@@ -85,7 +92,7 @@ export function PublishButton(props: {
           onВыбрать={публикация.выбрать}
           версии={props.article.versions}
           onОтметить={публикация.отметить}
-          onОпубликовать={() => void публикация.начать()}
+          onОпубликовать={() => void публикация.начать(props.article?.title ?? '')}
           onОтмена={публикация.отмена}
         />
       )}

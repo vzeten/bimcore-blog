@@ -6,9 +6,18 @@ import {useCallback, useState} from 'react';
  * 2026-09-19): сообщение о том, что всё вышло, не должно выглядеть бедой.
  */
 export function useMessage() {
-  const [сообщение, setСообщение] = useState<{текст: string; удача: boolean} | null>(null);
-  const setОшибка = useCallback((текст: string | null) => setСообщение(текст === null ? null : {текст, удача: false}), []);
+  const [сообщение, setСообщение] = useState<{текст: string; удача: boolean; действие?: Действие} | null>(null);
+  const setОшибка = useCallback(
+    (текст: string | null, действие?: Действие) => setСообщение(текст === null ? null : {текст, удача: false, действие}),
+    [],
+  );
   const сообщитьУдачу = useCallback((текст: string) => setСообщение({текст, удача: true}), []);
 
-  return {ошибка: сообщение?.текст ?? null, удача: сообщение?.удача === true, setОшибка, сообщитьУдачу};
+  return {ошибка: сообщение?.текст ?? null, удача: сообщение?.удача === true, действие: сообщение?.действие ?? null, setОшибка, сообщитьУдачу};
+}
+
+/** Кнопка в полосе сообщения: например, «Открыть статью», которая не опубликовалась. */
+export interface Действие {
+  подпись: string;
+  сделать: () => void;
 }

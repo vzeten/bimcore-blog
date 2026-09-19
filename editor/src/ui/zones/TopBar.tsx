@@ -1,4 +1,5 @@
 import {изменениеНеНаСайте, скрытаВОкне, type Field} from '../headFields';
+import type {Действие} from '../useMessage';
 import {DeleteAsk} from './DeleteAsk';
 import {PrepareReport} from './PrepareReport';
 import {PublishButton} from './PublishButton';
@@ -46,7 +47,7 @@ export function TopBar(props: {
   /** Перечитать реестр: у статьи прибавилась языковая версия, и список обязан это показать. */
   onОбновить: () => Promise<void>;
   /** Сказать человеку словами: версия начата либо начать её не вышло. */
-  onСообщить: (текст: string) => void;
+  onСообщить: (текст: string, действие?: Действие) => void;
   /** Сообщение об удаче: полоса без красного. */
   onУдача: (текст: string) => void;
 }) {

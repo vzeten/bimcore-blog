@@ -1,4 +1,5 @@
 import {ErrorBar} from './ErrorBar';
+import type {Действие} from '../useMessage';
 import {ConflictPanel, type ОтветыСпора} from './ConflictPanel';
 import {RestoreBars} from './RestoreBar';
 import type {Article, Settings} from '../types';
@@ -14,6 +15,8 @@ export function Bars(props: {
   ошибка: string | null;
   /** Сообщение об удаче: полоса нейтральная, без красного. */
   удача: boolean;
+  /** Кнопка в полосе сообщения («Открыть статью»). */
+  действие?: Действие | null;
   onЗакрытьОшибку: () => void;
   /** Ответы человека по спорным местам и их отправка: сама панель правил не знает. */
   расхождение: {
@@ -37,7 +40,7 @@ export function Bars(props: {
 }) {
   return (
     <>
-      <ErrorBar settings={props.settings} текст={props.ошибка} удача={props.удача} onЗакрыть={props.onЗакрытьОшибку} />
+      <ErrorBar settings={props.settings} текст={props.ошибка} удача={props.удача} действие={props.действие} onЗакрыть={props.onЗакрытьОшибку} />
 
       {!props.просмотрИдёт && props.article?.спор && (
         <ConflictPanel

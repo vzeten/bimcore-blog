@@ -41,7 +41,7 @@ export function App() {
   const [, setText] = useState(''); // Текст живёт в редакторе и в `текстСейчас`; это — для пересоздания зоны.
   const [dirty, setDirty] = useState(false);
   const [colors, setColors] = useState(true);
-  const {ошибка, удача, setОшибка, сообщитьУдачу} = useMessage();
+  const {ошибка, удача, действие, setОшибка, сообщитьУдачу} = useMessage();
   const [состояниеСохранения, setСостояниеСохранения] = useState<SaveState>('сохранено');
   const {runSafe, сПричиной} = makeReporter(setОшибка);
   const автосохранение = useAutosave(settings?.хранение.автосохранениеСек ?? 0, setСостояниеСохранения, setОшибка);
@@ -184,8 +184,7 @@ export function App() {
       <Bars
         settings={settings}
         article={реестр ? null : article}
-        ошибка={ошибка}
-        удача={удача}
+        ошибка={ошибка} удача={удача} действие={действие}
         onЗакрытьОшибку={() => setОшибка(null)}
         расхождение={расхождение}
         просмотрИдёт={просмотрИдёт}
@@ -218,7 +217,7 @@ export function App() {
         />
 
         {article === null ? (
-          <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} onОбновить={refresh} создание={создание} />
+          <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} onОбновить={refresh} onУдача={сообщитьУдачу} создание={создание} />
         ) : (
           <>
             {/* Всё, что показывается вместо открытой статьи, встаёт РЯДОМ с рабочим редактором,
@@ -226,7 +225,7 @@ export function App() {
                 пересоздать его при возврате — из текста, каким статья открывалась, — то есть
                 потерять несохранённую правку и всю историю отмены. */}
             {реестр && (
-              <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} onОбновить={refresh} создание={создание} />
+              <Registry settings={settings} articles={articles} onOpen={(path) => void open(path)} onОбновить={refresh} onУдача={сообщитьУдачу} создание={создание} />
             )}
 
             {версии.просмотр && (

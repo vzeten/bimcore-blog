@@ -14,6 +14,8 @@ export function Registry(props: {
   onOpen: (path: string) => void;
   /** Перечитать реестр: из корзины вернулась статья, и список обязан её показать. */
   onОбновить: () => Promise<void>;
+  /** Сообщение об удаче в полосе над окном (статья вернулась из корзины). */
+  onУдача?: (текст: string) => void;
   /** Создание статьи: своё состояние живёт в хуке окна, реестр только показывает форму. */
   создание: {
     раздел: string | null | undefined;
@@ -58,7 +60,10 @@ export function Registry(props: {
       )}
 
       {корзина && (
-        <TrashPanel settings={props.settings} onЗакрыть={() => setКорзина(false)} onВозвращено={() => void props.onОбновить()} />
+        <TrashPanel settings={props.settings} onЗакрыть={() => setКорзина(false)} onВозвращено={(текст) => {
+          props.onУдача?.(текст);
+          void props.onОбновить();
+        }} />
       )}
 
       <SectionTree settings={props.settings} articles={props.articles} chosen={раздел} onChoose={setРаздел} />
