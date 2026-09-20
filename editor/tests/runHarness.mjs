@@ -22,6 +22,7 @@ import {отпечатокПлана} from '../src/adapters/planBytes.mjs';
 import {publishDateRoute} from '../src/adapters/publishDateRoute.mjs';
 import {publishCoverRoute} from '../src/adapters/publishCoverRoute.mjs';
 import {publishRoute} from '../src/adapters/publishRoute.mjs';
+import {unusedRoute} from '../src/adapters/unusedRoute.mjs';
 import {pushRoute} from '../src/adapters/pushRoute.mjs';
 import {publishStateRoute} from '../src/adapters/publishStateRoute.mjs';
 import {publishVersionsRoute} from '../src/adapters/publishVersionsRoute.mjs';
@@ -171,7 +172,8 @@ export function дверь({repo, editorDir, git}, записка, {безСни
     };
 
     const взято = await publishDateRoute(общее) || await publishCoverRoute(общее) || await releaseRoute(общее)
-      || await publishStateRoute(общее) || await publishVersionsRoute(общее) || await publishRoute(общее) || await pushRoute(общее) || await linkSweepRoute(общее);
+      || await publishStateRoute(общее) || await publishVersionsRoute(общее) || await publishRoute(общее)
+      || await unusedRoute(общее) || await pushRoute(общее) || await linkSweepRoute(общее);
     if (!взято) throw new Error(`ручки нет: ${адрес}`);
 
     const {status, payload} = ответы[0];

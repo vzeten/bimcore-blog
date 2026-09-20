@@ -11,6 +11,7 @@ import {releaseRoute} from './releaseRoute.mjs';
 import {publishStateRoute} from './publishStateRoute.mjs';
 import {publishVersionsRoute} from './publishVersionsRoute.mjs';
 import {publishRoute} from './publishRoute.mjs';
+import {unusedRoute} from './unusedRoute.mjs';
 import {retireRoute} from './retireRoute.mjs';
 import {linkSweepRoute} from './linkSweep.mjs';
 import {pushRoute} from './pushRoute.mjs';
@@ -26,6 +27,7 @@ import {siteStateRoute} from './siteStateRoute.mjs';
  */
 export async function publishRoutes(набор, слежение) {
   return await publishDateRoute(набор) || await publishCoverRoute(набор) || await releaseRoute(набор)
-    || await publishStateRoute(набор) || await publishVersionsRoute(набор) || await publishRoute(набор) || await retireRoute(набор)
+    || await publishStateRoute(набор) || await publishVersionsRoute(набор) || await publishRoute(набор)
+    || await unusedRoute(набор) || await retireRoute(набор)
     || await linkSweepRoute(набор) || await pushRoute(набор) || await siteStateRoute({...набор, слежение});
 }

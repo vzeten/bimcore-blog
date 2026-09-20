@@ -15,6 +15,7 @@ import {естьВОснове} from './publishFacts.mjs';
 import {путиВерсийНаСайте} from './retireFacts.mjs';
 import {ссылкиВОснове} from './linkFacts.mjs';
 import {лишниеВерсий} from './unusedFacts.mjs';
+import {имяФайла} from '../core/unusedFiles.mjs';
 import {целиНедоступной} from './draftLinks.mjs';
 import {черновыеПравки} from './library.mjs';
 import {showFile} from './gitFile.mjs';
@@ -96,7 +97,7 @@ function лишниеОкна({repo, settings, версии}) {
   const карта = лишниеВерсий({repo, settings, версии});
   if (карта === null) return [];
 
-  return [...карта].map(([путь, файлы]) => ({путь, файлы: файлы.map((файл) => файл.slice(файл.lastIndexOf('/') + 1))}));
+  return [...карта].map(([путь, файлы]) => ({путь, файлы: файлы.map(имяФайла)}));
 }
 
 /** Ключи статей, где уберутся ссылки, если версия станет недоступной. Не узнали — пусто. */
