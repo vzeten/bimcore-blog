@@ -39,7 +39,7 @@ export function articlePlace(path, roots) {
  */
 const ИМЕНА_ИНДЕКСА = ['index', 'readme'];
 
-function индексПапки(имя, папка, род) {
+export function индексПапки(имя, папка, род) {
   // Своей папки у файла в корне раздела нет: `blog/index.mdx` для Docusaurus обычная статья
   // с адресом `/index`, а не индекс чего-либо.
   if (род === 'blog') return имя === 'index' && папка !== undefined;

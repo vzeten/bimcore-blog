@@ -31,7 +31,6 @@
 .lang-срыв .lang-код { color: #fff; }
 .cell-shown, .cell-hidden { font-size: 12px; padding: 2px 6px; border-radius: 6px; }
 .cell-hidden { color: var(--ink-quiet); background: #eef1f4; }
-.cell-section .cell-title { color: var(--ink-quiet); font-style: italic; }
 .td-когда, .td-автор { color: var(--ink-quiet); font-size: 12px; white-space: nowrap; }
 
 /* Корзина: список записей поверх реестра, у каждой — срок возврата и кнопка «Вернуть». */

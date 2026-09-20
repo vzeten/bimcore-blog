@@ -13,6 +13,8 @@ import {готовностьВерсии, readState, путьФайлаСост�
 import {ФОРМАТ, parseGitLog, parseGitStatus} from '../core/gitLog.mjs';
 import {авторПравки} from '../core/externalEdit.mjs';
 import {latestSnapshot, listDrafts} from './draftStore.mjs';
+import {сПорядкомМеню} from './menuPositions.mjs';
+import {позицияШапки} from '../core/menuOrder.mjs';
 import {версияОтличается, служебноеИмя, файлСтатьи, путьВерсии} from '../core/articles.mjs';
 import {ИМЯ_КАТЕГОРИИ} from '../core/articleKind.mjs';
 import {articlePlace} from '../core/frontmatterRules.mjs';
@@ -208,6 +210,8 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
       // Пустое название не подменяется здесь: чем его заменить — правило статьи, а не адаптера.
       title: readField(frontmatterRaw, 'title'),
       скрыта: isUnlisted(frontmatterRaw),
+      // Место версии в боковом меню сайта; что с этим числом делать — правило `core/menuOrder.mjs`.
+      позиция: позицияШапки(frontmatterRaw),
       // Видимость ОПУБЛИКОВАННОЙ версии — отдельный факт от местной шапки выше, и путать их
       // нельзя: первая описывает живую страницу, вторая — то, что человек получит после
       // публикации. `null` — у ветки не спрашивали или спросить не удалось.
@@ -239,10 +243,9 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
 }
 
 export function listArticles(repo, settings, times, published, расходится = null, веткаИзвестна = true, черновики = new Set(), вВетке = new Map()) {
-  return groupArticles(
-    listFiles(repo, settings, times, published, расходится, веткаИзвестна, черновики, вВетке),
-    settings,
-  );
+  const файлы = listFiles(repo, settings, times, published, расходится, веткаИзвестна, черновики, вВетке);
+
+  return сПорядкомМеню(repo, groupArticles(файлы, settings), файлы.map((файл) => файл.path), settings);
 }
 
 /**

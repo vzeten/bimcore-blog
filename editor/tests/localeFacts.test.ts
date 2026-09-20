@@ -52,6 +52,7 @@ const версия = (path: string, ещё: Partial<ArticleVersion> = {}): Artic
   черновикВВетке: false,
   правил: null,
   когда: 0,
+  позиция: null,
   ...ещё,
 });
 
@@ -67,6 +68,7 @@ const свод = (versions: Record<string, ArticleVersion>): ArticleRow[] => [{
   titleFromOtherLocale: false,
   служебная: false,
   нетНаСайте: false,
+  порядокМеню: null,
   versions,
 }];
 

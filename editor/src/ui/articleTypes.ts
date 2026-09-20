@@ -43,6 +43,8 @@ export interface ArticleVersion {
   черновикВВетке: boolean | null;
   правил: string | null;
   когда: number;
+  /** `sidebar_position` из шапки: место версии в боковом меню сайта. `null` — поля нет. */
+  позиция: number | null;
 }
 
 /** Статья как одна сущность: несколько языковых версий под одним именем. */
@@ -57,5 +59,10 @@ export interface ArticleRow {
   titleFromOtherLocale: boolean;
   служебная: boolean;
   нетНаСайте: boolean;
+  /**
+   * Каким по счёту статья стоит в боковом меню сайта. Считает сервер: у него шапки всех версий
+   * и `_category_.json` каталогов. `null` — места в меню нет вовсе (лента).
+   */
+  порядокМеню: number | null;
   versions: Record<string, ArticleVersion>;
 }

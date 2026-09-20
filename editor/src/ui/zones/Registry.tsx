@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {filterArticles, lastEditOf, sortArticles} from '../../core/registry.mjs';
+import {filterArticles, lastEditOf, порядокПоУмолчанию, sortArticles} from '../../core/registry.mjs';
 import {признакиЛокали, подсказкаЛокали} from '../../core/localeSigns.mjs';
 import {LocaleMark} from './LocaleMark';
 import {NewArticle} from './NewArticle';
@@ -32,9 +32,15 @@ export function Registry(props: {
   const [готовность, setГотовность] = useState('');
   const [переводы, setПереводы] = useState('');
   const [запрос, setЗапрос] = useState('');
-  const [колонка, setКолонка] = useState(р.сортировкаПоУмолчанию);
-  const [сторона, setСторона] = useState<'вверх' | 'вниз'>('вверх');
+  // Пока человек не щёлкнул по заголовку колонки, порядок задаёт выбранный раздел: правило
+  // одно на программу и живёт в ядре. Выбранный руками порядок держится и при смене раздела —
+  // он сказан явно, и подменять его своим было бы неожиданностью.
+  const [выбранныйПорядок, setВыбранныйПорядок] = useState<{колонка: string; сторона: 'вверх' | 'вниз'} | null>(null);
   const [корзина, setКорзина] = useState(false);
+
+  const поУмолчанию = порядокПоУмолчанию(раздел, props.settings);
+  const колонка = выбранныйПорядок?.колонка ?? поУмолчанию.колонка;
+  const сторона = выбранныйПорядок?.сторона ?? поУмолчанию.сторона;
 
   const строки = useMemo(
     () => sortArticles(
@@ -103,10 +109,10 @@ export function Registry(props: {
                 <th
                   key={столбец.ключ}
                   className={колонка === столбец.ключ ? 'th-on' : ''}
-                  onClick={() => {
-                    setСторона(колонка === столбец.ключ && сторона === 'вверх' ? 'вниз' : 'вверх');
-                    setКолонка(столбец.ключ);
-                  }}
+                  onClick={() => setВыбранныйПорядок({
+                    колонка: столбец.ключ,
+                    сторона: колонка === столбец.ключ && сторона === 'вверх' ? 'вниз' : 'вверх',
+                  })}
                 >
                   {столбец.подпись}
                   {колонка === столбец.ключ && <span>{сторона === 'вверх' ? ' ↑' : ' ↓'}</span>}
