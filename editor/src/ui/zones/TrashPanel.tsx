@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import {trashDrop, trashList, trashRestore, type TrashEntry} from '../trashActions';
+import {ключВозврата, trashDrop, trashList, trashRestore, type TrashEntry} from '../trashActions';
 import {label} from '../labels';
 import type {Settings} from '../types';
 
@@ -29,10 +29,12 @@ export function TrashPanel(props: {settings: Settings; onЗакрыть: () => v
     setЗанята(запись.id);
     await trashRestore(запись.id, {
       ok: () => {
-        setСообщение(label('статьяВозвращена'));
+        // Слово подбирается по ВИДУ записи: вернулись файлы папки — про статью говорить нечего.
+        const слово = label(ключВозврата(запись));
+        setСообщение(слово);
         перечитать();
         // Полоса над окном говорит то же: прежнее «Статья в корзине…» больше неправда.
-        props.onВозвращено(label('статьяВозвращена'));
+        props.onВозвращено(слово);
       },
       // Конфликт на месте статьи — обычный отказ: возврат не перезаписывает чужое, а называет, что мешает.
       fail: (текст, конфликты) => setСообщение(`${label('ошибкаВозврата')}: ${текст}${конфликты.length > 0 ? ` ${конфликты.join(', ')}` : ''}`),

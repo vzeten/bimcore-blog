@@ -7,7 +7,9 @@ import path from 'node:path';
 
 import {убратьЛишнее} from '../src/adapters/unusedFacts.mjs';
 import {unusedRoute} from '../src/adapters/unusedRoute.mjs';
-import {вернутьИзКорзины, списокКорзины} from '../src/adapters/trashStore.mjs';
+import {ВИД_ЛИШНИХ} from '../src/core/unusedFiles.mjs';
+import {ключВозврата} from '../src/ui/trashActions';
+import {вКорзину, вернутьИзКорзины, списокКорзины, составАрхива} from '../src/adapters/trashStore.mjs';
 import {EN, ПАПКА, RU, НАСТРОЙКИ, песочницы, среда, шапка} from './unusedHarness.mjs';
 
 afterEach(() => {
@@ -103,5 +105,34 @@ describe('ручка уборки', () => {
     expect(ответ.payload.убрано).toEqual([сирота]);
     expect(fs.existsSync(path.join(место.repo, сирота))).toBe(false);
     expect(списокКорзины({repo: место.repo, settings: НАСТРОЙКИ})).toHaveLength(1);
+  });
+});
+
+describe('слово при возврате из корзины', () => {
+  it('запись уборки говорит про файлы, запись удалённой статьи — про статью', async () => {
+    const сирота = `${ПАПКА[RU]}/сирота.png`;
+    const место = await среда({тексты: {[RU]: шапка('Текст.'), [EN]: шапка('Текст.')}, файлы: {[сирота]: 'старое'}});
+    убратьЛишнее({repo: место.repo, editorDir: место.editorDir, settings: НАСТРОЙКИ, версии: [RU]});
+    // Та же корзина, но запись удалённой статьи: вида она не несёт вовсе.
+    вКорзину({
+      repo: место.repo, editorDir: место.editorDir, settings: НАСТРОЙКИ,
+      состав: составАрхива({repo: место.repo, settings: НАСТРОЙКИ, решение: {файлы: [RU], папки: [], пути: [RU]}}),
+      статья: {название: 'Проба', пути: [RU], языки: ['ru'], папки: []},
+    });
+
+    const записи = списокКорзины({repo: место.repo, settings: НАСТРОЙКИ});
+    const уборка = записи.find((запись) => запись.вид === ВИД_ЛИШНИХ);
+    const статья = записи.find((запись) => запись.вид === undefined);
+
+    expect(уборка).toBeDefined();
+    expect(статья).toBeDefined();
+    expect(ключВозврата(уборка)).toBe('лишниеВозвращены');
+    expect(ключВозврата(статья)).toBe('статьяВозвращена');
+  });
+
+  it('обе подписи есть в настройках и говорят разное', () => {
+    expect(НАСТРОЙКИ['подписи']['лишниеВозвращены']).toBeTruthy();
+    expect(НАСТРОЙКИ['подписи']['статьяВозвращена']).toBeTruthy();
+    expect(НАСТРОЙКИ['подписи']['лишниеВозвращены']).not.toBe(НАСТРОЙКИ['подписи']['статьяВозвращена']);
   });
 });
