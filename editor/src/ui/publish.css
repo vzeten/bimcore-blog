@@ -12,6 +12,8 @@
 .publish-ask-nofile { display: inline-flex; min-width: 7rem; padding-left: 19px; color: var(--ink-quiet); }
 .publish-ask-head { margin: 0; font-size: 13px; color: var(--ink); }
 .publish-ask-links { margin: 0; font-size: 13px; color: var(--layer-deleted); }
+/* Что уберётся из папки статьи: отдельный блок между языками и замечаниями, своим заголовком. */
+.publish-ask-extra { display: grid; gap: 2px; }
 .publish-ask-notes summary { color: var(--ink-second); font-size: 13px; cursor: pointer; }
 /* Замечания в окне — одной строкой каждое, тем же шрифтом, что всё окно (макет владельца). */
 .publish-ask-list { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--ink); display: grid; gap: 2px; }

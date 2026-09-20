@@ -3,7 +3,7 @@ import {useFocusTrap} from '../focusTrap';
 import {РЕЖИМЫ} from '../../core/siteAccess.mjs';
 import {формаЧисла} from '../../core/wordForm.mjs';
 import {словаНаходки} from './PublishReason';
-import {кПубликации, ссылокВОтмеченных, строкиЯзыков} from '../publishLangs';
+import {кПубликации, лишниеОтмеченных, ссылокВОтмеченных, строкиЯзыков} from '../publishLangs';
 import type {ОкноПубликации} from '../usePublish';
 import type {ВерсияНаСайте} from '../publishTypes';
 import type {Settings} from '../types';
@@ -41,6 +41,9 @@ export function PublishAsk(props: {
   const порядок = Object.keys(props.settings.локали);
   const строки = строкиЯзыков(props.окно.состояние, props.path, props.окно.отмечены, props.версии ?? {}, порядок);
   const ссылок = ссылокВОтмеченных(строки);
+  // Что уберётся из папки отмеченных языков. Человек видит это ДО согласия: публикация унесёт эти
+  // файлы в корзину и уберёт их с сайта, а узнать о таком после дела он не должен.
+  const лишние = лишниеОтмеченных(props.окно.состояние, props.окно.отмечены);
   // Пути человеку не показываются никогда: язык без кода (песочница) узнаётся по своду статьи.
   const своя = Object.entries(props.версии ?? {}).find(([, путь]) => путь === props.path)?.[0] ?? null;
   const имя = (локаль: string | null, путь: string) => {
@@ -103,6 +106,15 @@ export function PublishAsk(props: {
           <p className="publish-ask-links">
             {п.ссылкиУберутся.replace('{n}', String(ссылок)).replace('{статьях}', формаЧисла(ссылок, props.settings.склонения.вСтатьях) as string)}
           </p>
+        )}
+
+        {лишние.length > 0 && (
+          <div className="publish-ask-extra">
+            <p className="publish-ask-head">{п.лишние}</p>
+            <ul className="publish-ask-list">
+              {лишние.map((имя) => <li key={имя}>{имя}</li>)}
+            </ul>
+          </div>
         )}
 
         {находки !== null && находки.length > 0 && (
