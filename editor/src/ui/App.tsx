@@ -23,7 +23,7 @@ import {label, setLabels} from './labels';
 import {makeReporter} from './errors';
 import {useConflict} from './useConflict';
 import {makeОтветАвтосохранения} from './mergeApply';
-import {useSaving} from './useSaving';
+import {useSaving, type ПамятьЗаписей} from './useSaving';
 import {useNavigation} from './useNavigation';
 import {useVersions} from './useVersions';
 import {useVersionRestore} from './useVersionRestore';
@@ -57,6 +57,7 @@ export function App() {
   const статьяСейчас = useRef<string | null>(null);
   // Номер захода в статью: та же статья, открытая заново, — уже другое окно.
   const открытие = useRef(0);
+  const последняяЗапись = useRef<ПамятьЗаписей | null>(null); // свои записи этого захода: `базаЗаписи`
   const просмотрРеф = useRef(false);
   // Пока грузится обложка, человек мог уйти в другую статью, в просмотр версии или открыть эту же
   // заново: во всех трёх случаях путь в шапку не пишется. Признаки берутся из ref по той же причине.
@@ -107,7 +108,7 @@ export function App() {
   автосохранение.ответСервера.current = makeОтветАвтосохранения({статьяСейчас, setArticle, положитьПару});
 
   const {save} = useSaving({
-    article, settings, fields, текстСейчас, шапкаСейчас, статьяСейчас, открытие, автосохранение,
+    article, settings, fields, текстСейчас, шапкаСейчас, статьяСейчас, открытие, автосохранение, последняяЗапись,
     setArticle, setDirty, setОшибка, setСпор, setСостояние: setСостояниеСохранения,
     refresh, сПричиной, вЧерновик: () => вЧерновик(),
     // Сервер свёл нашу работу с внешней правкой: в окно кладём то, что действительно в файле,
