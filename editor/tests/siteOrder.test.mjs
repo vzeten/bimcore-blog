@@ -246,7 +246,7 @@ describe('отбор «Есть что опубликовать»', () => {
   });
 });
 
-describe('отбор «Нужен перевод»', () => {
+describe('отбор «Не доделано»', () => {
   const статьи = свод([
     ...трёхъязычная('full'),
     ...трёхъязычная('stub', {es: {заглушка: true}}),
@@ -254,12 +254,15 @@ describe('отбор «Нужен перевод»', () => {
     файл(`${ES_DOCS}/no-ru/index.mdx`),
     файл(`${RU_BLOG}/no-en/index.mdx`),
     файл(`${ES_BLOG}/no-en/index.mdx`),
-    файл('editor/sandbox/proba/index.mdx'),
+    ...трёхъязычная('local-link', {es: {скрыта: true, опубликован: false, отличается: null}}),
+    ...трёхъязычная('site-link', {ru: {скрытаВВетке: true}}),
+    файл('editor/sandbox/proba/index.mdx', {скрыта: true}),
   ]);
 
-  it('берёт статьи, где какого-то языка нет или он заглушка; песочницы нет', () => {
-    expect(отобрать(статьи, 'перевод').sort()).toEqual([
-      'blog:no-en/index.mdx', 'docs:no-ru/index.mdx', 'docs:stub/index.mdx',
+  it('берёт статьи без языка, с заглушкой и с версией «по ссылке» у себя или на сайте; песочницы нет', () => {
+    expect(отобрать(статьи, 'недоделано').sort()).toEqual([
+      'blog:no-en/index.mdx', 'docs:local-link/index.mdx', 'docs:no-ru/index.mdx',
+      'docs:site-link/index.mdx', 'docs:stub/index.mdx',
     ]);
   });
 
@@ -268,7 +271,7 @@ describe('отбор «Нужен перевод»', () => {
     const служебная = раздел.find((статья) => статья.служебная);
 
     expect(служебная).toBeDefined();
-    expect(отобрать(раздел, 'перевод')).toContain(служебная.key);
+    expect(отобрать(раздел, 'недоделано')).toContain(служебная.key);
   });
 
   it('«Все» показывает всё, включая песочницу', () => {

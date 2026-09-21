@@ -30,7 +30,7 @@ export function Registry(props: {
   const п = props.settings.подписи;
 
   const [раздел, setРаздел] = useState<string | null>(null);
-  const [отбор, setОтбор] = useState<'' | 'опубликовать' | 'перевод'>('');
+  const [отбор, setОтбор] = useState<'' | 'опубликовать' | 'недоделано'>('');
   const [запрос, setЗапрос] = useState('');
   // Порядок задаёт режим — «как на сайте» при каждом открытии (решение владельца 2026-09-21).
   // Щелчок по заголовку колонки поверх режима даёт ручную сортировку; она держится и при смене
@@ -94,7 +94,7 @@ export function Registry(props: {
           <select value={отбор} onChange={(event) => setОтбор(event.target.value as typeof отбор)}>
             <option value="">{р.отборВсе}</option>
             <option value="опубликовать">{р.отборОпубликовать}</option>
-            <option value="перевод">{р.отборПеревод}</option>
+            <option value="недоделано">{р.отборНедоделано}</option>
           </select>
 
           <span className="registry-order">

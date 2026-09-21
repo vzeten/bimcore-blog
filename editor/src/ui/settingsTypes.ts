@@ -176,7 +176,7 @@ export interface Settings {
     порядокПоследниеПравки: string;
     отборВсе: string;
     отборОпубликовать: string;
-    отборПеревод: string;
+    отборНедоделано: string;
     всеРазделы: string;
     нетНаСайте: string;
     неизвестныйАвтор: string;
