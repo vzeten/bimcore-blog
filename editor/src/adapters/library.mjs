@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {nothingChanged, readField, splitArticle} from '../core/articleFile.mjs';
-import {isUnlisted} from '../core/frontmatterRules.mjs';
+import {articlePlace, isUnlisted} from '../core/frontmatterRules.mjs';
 import {черновикСайта} from '../core/localeSigns.mjs';
 import {этоЗаглушка} from '../core/stubText.mjs';
 import {groupArticles} from '../core/articles.mjs';
@@ -15,9 +15,9 @@ import {авторПравки} from '../core/externalEdit.mjs';
 import {latestSnapshot, listDrafts} from './draftStore.mjs';
 import {сПорядкомМеню} from './menuPositions.mjs';
 import {позицияШапки} from '../core/menuOrder.mjs';
+import {датаШапки} from '../core/siteOrder.mjs';
 import {версияОтличается, служебноеИмя, файлСтатьи, путьВерсии} from '../core/articles.mjs';
 import {ИМЯ_КАТЕГОРИИ} from '../core/articleKind.mjs';
-import {articlePlace} from '../core/frontmatterRules.mjs';
 
 /**
  * Лежит ли рядом с этой версией `_category_.json`, то есть каталог — категория.
@@ -210,8 +210,9 @@ export function listFiles(repo, settings, times = new Map(), published = new Set
       // Пустое название не подменяется здесь: чем его заменить — правило статьи, а не адаптера.
       title: readField(frontmatterRaw, 'title'),
       скрыта: isUnlisted(frontmatterRaw),
-      // Место версии в боковом меню сайта; что с этим числом делать — правило `core/menuOrder.mjs`.
+      // Место версии в меню и дата в ленте; правила порядка — `menuOrder.mjs` и `siteOrder.mjs`.
       позиция: позицияШапки(frontmatterRaw),
+      дата: датаШапки(frontmatterRaw),
       // Видимость ОПУБЛИКОВАННОЙ версии — отдельный факт от местной шапки выше, и путать их
       // нельзя: первая описывает живую страницу, вторая — то, что человек получит после
       // публикации. `null` — у ветки не спрашивали или спросить не удалось.

@@ -1,5 +1,6 @@
 import {useMemo, useState} from 'react';
-import {filterArticles, lastEditOf, порядокПоУмолчанию, sortArticles} from '../../core/registry.mjs';
+import {filterArticles, lastEditOf, sortArticles} from '../../core/registry.mjs';
+import {порядокРежима} from '../../core/siteOrder.mjs';
 import {признакиЛокали, подсказкаЛокали} from '../../core/localeSigns.mjs';
 import {LocaleMark} from './LocaleMark';
 import {NewArticle} from './NewArticle';
@@ -29,27 +30,31 @@ export function Registry(props: {
   const п = props.settings.подписи;
 
   const [раздел, setРаздел] = useState<string | null>(null);
-  const [готовность, setГотовность] = useState('');
-  const [переводы, setПереводы] = useState('');
+  const [отбор, setОтбор] = useState<'' | 'опубликовать' | 'перевод'>('');
   const [запрос, setЗапрос] = useState('');
-  // Пока человек не щёлкнул по заголовку колонки, порядок задаёт выбранный раздел: правило
-  // одно на программу и живёт в ядре. Выбранный руками порядок держится и при смене раздела —
-  // он сказан явно, и подменять его своим было бы неожиданностью.
+  // Порядок задаёт режим — «как на сайте» при каждом открытии (решение владельца 2026-09-21).
+  // Щелчок по заголовку колонки поверх режима даёт ручную сортировку; она держится и при смене
+  // раздела, потому что сказана явно, а кнопка режима возвращает к его порядку.
+  const [режим, setРежим] = useState<'сайт' | 'правки'>('сайт');
   const [выбранныйПорядок, setВыбранныйПорядок] = useState<{колонка: string; сторона: 'вверх' | 'вниз'} | null>(null);
   const [корзина, setКорзина] = useState(false);
 
-  const поУмолчанию = порядокПоУмолчанию(раздел, props.settings);
-  const колонка = выбранныйПорядок?.колонка ?? поУмолчанию.колонка;
-  const сторона = выбранныйПорядок?.сторона ?? поУмолчанию.сторона;
+  const поРежиму = порядокРежима(режим);
+  const колонка = выбранныйПорядок?.колонка ?? поРежиму.колонка;
+  const сторона = выбранныйПорядок?.сторона ?? поРежиму.сторона;
+  const выбратьРежим = (новый: 'сайт' | 'правки') => {
+    setРежим(новый);
+    setВыбранныйПорядок(null);
+  };
 
   const строки = useMemo(
     () => sortArticles(
-      filterArticles(props.articles, {раздел, готовность, переводы, запрос}, props.settings),
+      filterArticles(props.articles, {раздел, отбор, запрос}, props.settings),
       колонка,
       сторона,
       props.settings,
     ) as ArticleRow[],
-    [props.articles, раздел, готовность, переводы, запрос, колонка, сторона, props.settings],
+    [props.articles, раздел, отбор, запрос, колонка, сторона, props.settings],
   );
 
   return (
@@ -86,18 +91,24 @@ export function Registry(props: {
             onChange={(event) => setЗапрос(event.target.value)}
           />
 
-          <select value={готовность} onChange={(event) => setГотовность(event.target.value)}>
-            <option value="">{р.любая}</option>
-            {props.settings.статусы.map((статус) => (
-              <option key={статус} value={статус}>{статус}</option>
-            ))}
+          <select value={отбор} onChange={(event) => setОтбор(event.target.value as typeof отбор)}>
+            <option value="">{р.отборВсе}</option>
+            <option value="опубликовать">{р.отборОпубликовать}</option>
+            <option value="перевод">{р.отборПеревод}</option>
           </select>
 
-          <select value={переводы} onChange={(event) => setПереводы(event.target.value)}>
-            <option value="">{р.любая}</option>
-            <option value="толькоДыры">{р.толькоДыры}</option>
-            <option value="нетНаСайте">{р.нетНаСайте}</option>
-          </select>
+          <span className="registry-order">
+            {([['сайт', р.порядокКакНаСайте], ['правки', р.порядокПоследниеПравки]] as const).map(([код, подпись]) => (
+              <button
+                key={код}
+                className={режим === код && !выбранныйПорядок ? 'order-on' : ''}
+                aria-pressed={режим === код && !выбранныйПорядок}
+                onClick={() => выбратьРежим(код)}
+              >
+                {подпись}
+              </button>
+            ))}
+          </span>
 
           <span className="registry-count">{строки.length}</span>
         </div>

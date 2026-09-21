@@ -34,6 +34,7 @@ const версия = (путь: string, ещё: Partial<ArticleVersion> = {}): A
   правил: null,
   когда: 0,
   позиция: null,
+  дата: null,
   ...ещё,
 });
 

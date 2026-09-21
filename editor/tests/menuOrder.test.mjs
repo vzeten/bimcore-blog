@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 
 import {groupArticles} from '../src/core/articles.mjs';
 import {ПОРЯДОК_МЕНЮ, расставитьПоМеню} from '../src/core/menuOrder.mjs';
-import {nodeChain, порядокПоУмолчанию, sortArticles} from '../src/core/registry.mjs';
+import {nodeChain, sortArticles} from '../src/core/registry.mjs';
 import {ПАПКА_ВЛАДЕЛЬЦА} from '../src/core/materialRoot.mjs';
 import {listArticles} from '../src/adapters/library.mjs';
 
@@ -85,20 +85,6 @@ describe('порядок статей как в боковом меню сайт
 
     expect(sortArticles(свод, ПОРЯДОК_МЕНЮ, 'вверх', НАСТРОЙКИ).map((статья) => статья.kind))
       .toEqual(['docs', 'blog']);
-  });
-});
-
-describe('порядок, в котором раздел открывается сам', () => {
-  it('блог и все статьи — сверху те, что менялись последними', () => {
-    for (const раздел of [null, '', 'blog']) {
-      expect(порядокПоУмолчанию(раздел, НАСТРОЙКИ)).toEqual({колонка: 'когда', сторона: 'вниз'});
-    }
-  });
-
-  it('раздел документации — в порядке бокового меню сайта', () => {
-    for (const раздел of ['docs', 'docs/guides/families', 'проба']) {
-      expect(порядокПоУмолчанию(раздел, НАСТРОЙКИ)).toEqual({колонка: ПОРЯДОК_МЕНЮ, сторона: 'вверх'});
-    }
   });
 });
 

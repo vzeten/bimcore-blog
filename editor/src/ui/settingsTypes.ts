@@ -172,10 +172,12 @@ export interface Settings {
   };
   реестр: {
     колонки: Column[];
-    сортировкаПоУмолчанию: string;
+    порядокКакНаСайте: string;
+    порядокПоследниеПравки: string;
+    отборВсе: string;
+    отборОпубликовать: string;
+    отборПеревод: string;
     всеРазделы: string;
-    любая: string;
-    толькоДыры: string;
     нетНаСайте: string;
     неизвестныйАвтор: string;
     разное: string;

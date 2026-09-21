@@ -53,6 +53,7 @@ const версия = (path: string, ещё: Partial<ArticleVersion> = {}): Artic
   правил: null,
   когда: 0,
   позиция: null,
+  дата: null,
   ...ещё,
 });
 
