@@ -111,6 +111,69 @@ describe('порядок «как на сайте»', () => {
   });
 });
 
+describe('того, чего на сайте нет, — после опубликованного', () => {
+  const новая = {опубликован: false, отличается: null};
+
+  it('опубликованные записи идут как лента, неопубликованные — в конце тем же порядком', () => {
+    const статьи = свод([
+      файл('blog/draft-new/index.mdx', {...новая, дата: день('2026-09-10')}),
+      файл('blog/live-new/index.mdx', {дата: день('2026-09-17')}),
+      файл('blog/draft-old/index.mdx', {...новая, дата: день('2026-09-04')}),
+      файл('blog/live-old/index.mdx', {дата: день('2026-09-04')}),
+      файл('blog/draft-nodate/index.mdx', новая),
+    ]);
+
+    expect(какНаСайте(статьи)).toEqual([
+      'blog:live-new/index.mdx', 'blog:live-old/index.mdx',
+      'blog:draft-new/index.mdx', 'blog:draft-old/index.mdx', 'blog:draft-nodate/index.mdx',
+    ]);
+  });
+
+  it('запись ленты решает английская версия: русская на сайте не поднимает её в ленту', () => {
+    const статьи = свод([
+      файл('blog/ru-only-live/index.mdx', {...новая, дата: день('2026-12-01')}),
+      файл(`${RU_BLOG}/ru-only-live/index.mdx`, {дата: день('2026-12-01')}),
+      файл('blog/live/index.mdx', {дата: день('2026-01-01')}),
+    ]);
+
+    expect(какНаСайте(статьи)[0]).toBe('blog:live/index.mdx');
+  });
+
+  it('выпущенная на сайт черновиком запись в ленте не стоит', () => {
+    const статьи = свод([
+      файл('blog/hidden/index.mdx', {дата: день('2026-12-01'), черновикВВетке: true}),
+      файл('blog/live/index.mdx', {дата: день('2026-01-01')}),
+    ]);
+
+    expect(какНаСайте(статьи)).toEqual(['blog:live/index.mdx', 'blog:hidden/index.mdx']);
+  });
+
+  it('страница документации без опубликованной версии — после опубликованных, по меню', () => {
+    const статьи = свод(
+      [файл('docs/a/index.mdx', новая), файл('docs/b/index.mdx'), файл('docs/c/index.mdx', новая), файл('docs/d/index.mdx')],
+      ['docs:a/index.mdx', 'docs:b/index.mdx', 'docs:c/index.mdx', 'docs:d/index.mdx'],
+    );
+
+    expect(какНаСайте(статьи)).toEqual(['docs:b/index.mdx', 'docs:d/index.mdx', 'docs:a/index.mdx', 'docs:c/index.mdx']);
+  });
+
+  it('во «Всех статьях» — сначала всё видимое (меню, лента), потом невидимое тем же порядком', () => {
+    const статьи = свод(
+      [
+        файл('blog/draft/index.mdx', {...новая, дата: день('2026-09-10')}),
+        файл('docs/draft/index.mdx', новая),
+        файл('blog/live/index.mdx', {дата: день('2026-01-01')}),
+        файл('docs/live/index.mdx'),
+      ],
+      ['docs:draft/index.mdx', 'docs:live/index.mdx'],
+    );
+
+    expect(какНаСайте(статьи)).toEqual([
+      'docs:live/index.mdx', 'blog:live/index.mdx', 'docs:draft/index.mdx', 'blog:draft/index.mdx',
+    ]);
+  });
+});
+
 describe('порядок «последние правки»', () => {
   it('сверху то, что меняли последним, по самой свежей из версий', () => {
     const статьи = свод([
