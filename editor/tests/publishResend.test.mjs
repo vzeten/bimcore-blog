@@ -37,7 +37,7 @@ const подставнойХод = (дверьСервера) => ({
 });
 
 describe('досылка прошлой записи', () => {
-  it('прежний коммит уехал, а нового только лишний файл — это успех, и слова называют оба факта', async () => {
+  it('прежний коммит уехал, а нового только лишний файл — это успех, а лишнее молча убрано', async () => {
     const адреса = [];
     const СИРОТА = 'i18n/ru/docusaurus-plugin-content-docs/current/lessons/proba/сирота.png';
     let заходов = 0;
@@ -64,7 +64,6 @@ describe('досылка прошлой записи', () => {
 
     expect(итог.вид).toBe('готово');
     expect(итог.коммит).toBe('a'.repeat(7));
-    expect(итог.убрано).toEqual(['сирота.png']);
     // Уборка и вправду была позвана, и была она ПОСЛЕ отправки прежней записи.
     expect(адреса.indexOf('/api/publish/tidy')).toBeGreaterThan(адреса.indexOf('/api/publish/push'));
   });
@@ -91,7 +90,6 @@ describe('досылка прошлой записи', () => {
     const итог = await проверить(RU, false, х);
 
     expect(итог.вид).toBe('готово');
-    expect(итог.убрано).toEqual([]);
     expect(адреса).not.toContain('/api/publish/tidy');
   });
 });
