@@ -148,6 +148,24 @@ describe('того, чего на сайте нет, — после опубли
     expect(какНаСайте(статьи)).toEqual(['blog:live/index.mdx', 'blog:hidden/index.mdx']);
   });
 
+  it('опубликованная, но скрытая из ленты запись (`unlisted` на сайте) стоит в хвосте', () => {
+    const статьи = свод([
+      файл('blog/unlisted/index.mdx', {дата: день('2026-12-01'), скрытаВВетке: true}),
+      файл('blog/live/index.mdx', {дата: день('2026-01-01')}),
+    ]);
+
+    expect(какНаСайте(статьи)).toEqual(['blog:live/index.mdx', 'blog:unlisted/index.mdx']);
+  });
+
+  it('страница документации «по ссылке» в меню не видна и стоит после видимых', () => {
+    const статьи = свод(
+      [файл('docs/a/index.mdx', {скрытаВВетке: true}), файл('docs/b/index.mdx')],
+      ['docs:a/index.mdx', 'docs:b/index.mdx'],
+    );
+
+    expect(какНаСайте(статьи)).toEqual(['docs:b/index.mdx', 'docs:a/index.mdx']);
+  });
+
   it('страница документации без опубликованной версии — после опубликованных, по меню', () => {
     const статьи = свод(
       [файл('docs/a/index.mdx', новая), файл('docs/b/index.mdx'), файл('docs/c/index.mdx', новая), файл('docs/d/index.mdx')],
