@@ -184,6 +184,29 @@ describe('просмотры статей', () => {
     expect(ответ.статьи.a.за30).toBe(8);
   });
 
+  it('числа пришли, а снимок не записался — это неудача с паузой, Google не спрашивается снова', async () => {
+    fs.mkdirSync(path.join(repo, 'editor', '.views', 'снимок.json'), {recursive: true});
+    const fetch = google();
+    vi.stubGlobal('fetch', fetch);
+    const ответ = await спросить();
+    expect(ответ.данные.надпись).toContain('не смогла сохранить');
+    const спрошено = fetch.mock.calls.length;
+    await спросить();
+    await спросить();
+    expect(fetch.mock.calls.length).toBe(спрошено);
+  });
+
+  it('папку запоминания нельзя создать — ответ без чисел, без падения и без обращения к Google', async () => {
+    fs.mkdirSync(path.join(repo, 'editor'), {recursive: true});
+    fs.writeFileSync(path.join(repo, 'editor', '.views'), 'не папка');
+    const fetch = google();
+    vi.stubGlobal('fetch', fetch);
+    const ответ = await спросить();
+    expect(ответ.код).toBe(200);
+    expect(ответ.данные.статьи).toEqual({});
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('два запроса разом — Google спрашивает только один экземпляр', async () => {
     const fetch = google();
     vi.stubGlobal('fetch', fetch);
