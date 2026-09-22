@@ -45,3 +45,21 @@
 .trash-row .trash-name { flex: 1; min-width: 0; }
 .trash-row .trash-meta { color: var(--ink-quiet); font-size: 12px; white-space: nowrap; }
 .trash-note { color: var(--ink-quiet); font-size: 13px; margin: 6px 0; }
+/* Просмотры: число в колонке — кнопка окна аналитики; окно — как корзина, поверх реестра. */
+.cell-views { border: 0; background: transparent; font: inherit; padding: 0; cursor: pointer; font-variant-numeric: tabular-nums; }
+.cell-views:hover { text-decoration: underline; }
+.td-просмотры { text-align: right; white-space: nowrap; }
+.views-none { color: var(--ink-quiet); }
+.views-note { color: var(--ink-quiet); font-size: 13px; margin: 4px 0 8px; }
+.views-panel h3 { font-size: 13px; margin: 14px 0 6px; }
+.views-compare, .views-langs { display: flex; flex-wrap: wrap; gap: 24px; }
+.views-compare div { display: flex; flex-direction: column; gap: 2px; }
+.views-compare strong { font-size: 20px; }
+.views-label { color: var(--ink-quiet); font-size: 12px; }
+.views-up { color: #1f7a3a; }
+.views-down { color: #b3261e; }
+.views-months { display: flex; align-items: flex-end; gap: 6px; height: 160px; padding-bottom: 4px; }
+.views-month { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; }
+.views-bar { width: 100%; min-height: 1px; background: #8fb3e0; border-radius: 3px 3px 0 0; }
+.views-count { font-size: 11px; font-variant-numeric: tabular-nums; }
+.views-month .views-label { font-size: 10px; white-space: nowrap; }

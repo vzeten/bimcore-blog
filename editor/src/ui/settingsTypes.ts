@@ -10,6 +10,8 @@ import type {НастройкиДоработки} from './refineTypes';
 export interface Column {
   ключ: string;
   подпись: string;
+  /** Колонка без ручной сортировки: щелчок по заголовку ничего не переставляет. */
+  безПорядка?: boolean;
 }
 
 export interface Root {
@@ -181,5 +183,20 @@ export interface Settings {
     нетНаСайте: string;
     неизвестныйАвтор: string;
     разное: string;
+  };
+  /** Просмотры из Google Analytics: окну нужны только надписи, остальное читает сервер. */
+  просмотры: {
+    папкаКлюча: string;
+    подсказка: string;
+    заголовок: string;
+    за30: string;
+    прежние30: string;
+    изменение: string;
+    нетСравнения: string;
+    поЯзыкам: string;
+    всего: string;
+    поМесяцам: string;
+    поДень: string;
+    закрыть: string;
   };
 }

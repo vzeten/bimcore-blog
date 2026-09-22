@@ -6,6 +6,8 @@ import {LocaleMark} from './LocaleMark';
 import {NewArticle} from './NewArticle';
 import {SectionTree} from './SectionTree';
 import {TrashPanel} from './TrashPanel';
+import {ViewsPanel} from './ViewsPanel';
+import {useViews, type Просмотры} from '../useViews';
 import type {ArticleRow, Settings} from '../types';
 
 /** Реестр статей — стартовый экран: дерево разделов слева, таблица справа. */
@@ -38,6 +40,9 @@ export function Registry(props: {
   const [режим, setРежим] = useState<'сайт' | 'правки'>('сайт');
   const [выбранныйПорядок, setВыбранныйПорядок] = useState<{колонка: string; сторона: 'вверх' | 'вниз'} | null>(null);
   const [корзина, setКорзина] = useState(false);
+  // Просмотры спрашиваются своим запросом: таблица показывается сразу, числа встают, когда придут.
+  const просмотры = useViews();
+  const [аналитика, setАналитика] = useState<ArticleRow | null>(null);
 
   const поРежиму = порядокРежима(режим);
   const колонка = выбранныйПорядок?.колонка ?? поРежиму.колонка;
@@ -77,6 +82,16 @@ export function Registry(props: {
         }} />
       )}
 
+      {аналитика && просмотры?.поДень && просмотры.статьи[аналитика.key] && (
+        <ViewsPanel
+          settings={props.settings}
+          название={аналитика.title}
+          числа={просмотры.статьи[аналитика.key]}
+          поДень={просмотры.поДень}
+          onЗакрыть={() => setАналитика(null)}
+        />
+      )}
+
       <SectionTree settings={props.settings} articles={props.articles} chosen={раздел} onChoose={setРаздел} />
 
       <div className="registry-main">
@@ -113,6 +128,8 @@ export function Registry(props: {
           <span className="registry-count">{строки.length}</span>
         </div>
 
+        {просмотры?.надпись && <p className="views-note">{просмотры.надпись}</p>}
+
         <table className="registry-table">
           <thead>
             <tr>
@@ -120,7 +137,7 @@ export function Registry(props: {
                 <th
                   key={столбец.ключ}
                   className={колонка === столбец.ключ ? 'th-on' : ''}
-                  onClick={() => setВыбранныйПорядок({
+                  onClick={() => !столбец.безПорядка && setВыбранныйПорядок({
                     колонка: столбец.ключ,
                     сторона: колонка === столбец.ключ && сторона === 'вверх' ? 'вниз' : 'вверх',
                   })}
@@ -137,7 +154,7 @@ export function Registry(props: {
               <tr key={article.key}>
                 {р.колонки.map((столбец) => (
                   <td key={столбец.ключ} className={`td-${столбец.ключ}`}>
-                    {клетка(article, столбец.ключ, props)}
+                    {клетка(article, столбец.ключ, {...props, просмотры, onАналитика: setАналитика})}
                   </td>
                 ))}
               </tr>
@@ -157,9 +174,22 @@ function клетка(
   props: {
     settings: Settings;
     onOpen: (path: string) => void;
+    просмотры: Просмотры | null;
+    onАналитика: (article: ArticleRow) => void;
   },
 ) {
   const {settings} = props;
+
+  // Прочерк — чисел нет: статья не выходила на сайт, Google ещё не ответил или ответить не смог.
+  if (ключ === 'просмотры') {
+    const числа = props.просмотры?.статьи[article.key];
+    if (!числа) return <span className="views-none">—</span>;
+    return (
+      <button className="cell-views" title={settings.просмотры.подсказка} onClick={() => props.onАналитика(article)}>
+        {числа.за30.toLocaleString(settings.основнойЯзык)}
+      </button>
+    );
+  }
 
   if (ключ === 'название') {
     const основная = article.versions[settings.основнойЯзык] ?? Object.values(article.versions)[0];
