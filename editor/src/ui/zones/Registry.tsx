@@ -58,8 +58,9 @@ export function Registry(props: {
       колонка,
       сторона,
       props.settings,
+      Object.fromEntries(Object.entries(просмотры?.статьи ?? {}).map(([key, числа]) => [key, числа.всего])),
     ) as ArticleRow[],
-    [props.articles, раздел, отбор, запрос, колонка, сторона, props.settings],
+    [props.articles, раздел, отбор, запрос, колонка, сторона, props.settings, просмотры],
   );
 
   return (
@@ -137,9 +138,12 @@ export function Registry(props: {
                 <th
                   key={столбец.ключ}
                   className={колонка === столбец.ключ ? 'th-on' : ''}
-                  onClick={() => !столбец.безПорядка && setВыбранныйПорядок({
+                  onClick={() => setВыбранныйПорядок({
                     колонка: столбец.ключ,
-                    сторона: колонка === столбец.ключ && сторона === 'вверх' ? 'вниз' : 'вверх',
+                    // Первый щелчок по просмотрам ставит сверху самые читаемые статьи.
+                    сторона: колонка === столбец.ключ
+                      ? (сторона === 'вверх' ? 'вниз' : 'вверх')
+                      : (столбец.сначалаБольшие ? 'вниз' : 'вверх'),
                   })}
                 >
                   {столбец.подпись}
@@ -184,9 +188,14 @@ function клетка(
   if (ключ === 'просмотры') {
     const числа = props.просмотры?.статьи[article.key];
     if (!числа) return <span className="views-none">—</span>;
+    // Разница 30 дней с предыдущими 30 — в штуках: зелёная — читают больше, красная — меньше.
+    const разница = числа.за30 - числа.прежние30;
     return (
       <button className="cell-views" title={settings.просмотры.подсказка} onClick={() => props.onАналитика(article)}>
-        {числа.за30.toLocaleString(settings.основнойЯзык)}
+        {числа.всего.toLocaleString(settings.основнойЯзык)}
+        <span className={разница > 0 ? 'views-up' : разница < 0 ? 'views-down' : 'views-same'}>
+          {' '}{разница > 0 ? '+' : разница < 0 ? '−' : '±'}{Math.abs(разница).toLocaleString(settings.основнойЯзык)}
+        </span>
       </button>
     );
   }

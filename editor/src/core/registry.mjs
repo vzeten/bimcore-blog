@@ -157,8 +157,10 @@ export function filterArticles(articles, filters, settings) {
 /**
  * Сортировка по колонке либо режимом «как на сайте». Пустые значения всегда уходят вниз,
  * в обе стороны: иначе половина таблицы — это пустые клетки сверху.
+ * `просмотры` — число просмотров по ключу статьи: оно приходит отдельным ответом сервера, а не
+ * в своде; статья без числа (не выходила на сайт, числа ещё не пришли) — пустая клетка.
  */
-export function sortArticles(articles, column, direction, settings) {
+export function sortArticles(articles, column, direction, settings, просмотры = {}) {
   // «Как на сайте» — не одно значение, а правило из нескольких ключей (`core/siteOrder.mjs`).
   if (column === КАК_НА_САЙТЕ) return [...articles].sort((a, b) => сравнитьКакНаСайте(a, b, settings));
 
@@ -174,6 +176,7 @@ export function sortArticles(articles, column, direction, settings) {
     if (column === 'переводы') return Object.keys(article.versions).length;
     if (column === 'автор') return lastEditOf(article).правил;
     if (column === 'когда') return lastEditOf(article).когда || null;
+    if (column === 'просмотры') return просмотры[article.key] ?? null;
     return article.title;
   };
 

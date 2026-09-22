@@ -4,12 +4,13 @@
 import {useEffect, useState} from 'react';
 import {requestJson} from './api';
 
-/** Числа одной статьи; месяцы — `YYYYMM` от старого к текущему. */
+/** Числа одной статьи; месяцы — `YYYYMM` от старого к текущему, у каждого — разбивка по языкам. */
 export interface ПросмотрыСтатьи {
+  всего: number;
   за30: number;
   прежние30: number;
   языки: Record<string, number>;
-  месяцы: {месяц: string; просмотры: number}[];
+  месяцы: {месяц: string; просмотры: number; языки: Record<string, number>}[];
 }
 
 /** Ответ сервера: числа по ключу статьи, последний день в них и надпись, если что-то не так. */

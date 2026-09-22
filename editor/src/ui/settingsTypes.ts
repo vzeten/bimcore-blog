@@ -10,8 +10,8 @@ import type {НастройкиДоработки} from './refineTypes';
 export interface Column {
   ключ: string;
   подпись: string;
-  /** Колонка без ручной сортировки: щелчок по заголовку ничего не переставляет. */
-  безПорядка?: boolean;
+  /** Первый щелчок по заголовку ставит сверху большие значения, а не меньшие (просмотры). */
+  сначалаБольшие?: boolean;
 }
 
 export interface Root {
@@ -188,6 +188,9 @@ export interface Settings {
   просмотры: {
     папкаКлюча: string;
     подсказка: string;
+    заВсёВремя: string;
+    раскраска: string;
+    цветаЯзыков: Record<string, string>;
     заголовок: string;
     за30: string;
     прежние30: string;
