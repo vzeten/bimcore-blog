@@ -51,7 +51,10 @@ export function ViewsPanel(props: {
       <div className="views-months">
         {месяцы.map((строка) => (
           <div className="views-month" key={строка.месяц} title={`${месяцСловами(строка.месяц, язык)}: ${число(строка.просмотры)}`}>
-            <span className="views-bar" style={{height: `${Math.round((строка.просмотры / наибольший) * 100)}%`}} />
+            {/* Столбик растёт в своей области постоянной высоты: подписи под ним его не сжимают. */}
+            <span className="views-track">
+              <span className="views-bar" style={{height: `${Math.round((строка.просмотры / наибольший) * 100)}%`}} />
+            </span>
             <span className="views-count">{число(строка.просмотры)}</span>
             <span className="views-label">{месяцСловами(строка.месяц, язык)}</span>
           </div>

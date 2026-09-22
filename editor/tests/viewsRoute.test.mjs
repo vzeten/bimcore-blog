@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {execFileSync} from 'node:child_process';
 import {viewsRoute} from '../src/adapters/viewsRoute.mjs';
 import {занять, завершить, пораСпросить} from '../src/adapters/viewsStore.mjs';
 
@@ -99,6 +100,14 @@ describe('просмотры статей', () => {
     expect(ответ.данные.статьи.новая).toBeUndefined();
     expect(ответ.данные.надпись).toBeNull();
     безСекрета(ответ);
+  });
+
+  it('папка запоминания прячется от Git сама, без правила в корневом .gitignore', async () => {
+    execFileSync('git', ['init', '-q'], {cwd: repo});
+    vi.stubGlobal('fetch', google());
+    await спросить();
+    const видит = execFileSync('git', ['status', '--porcelain', '--untracked-files=all', '--', 'editor'], {cwd: repo, encoding: 'utf8'});
+    expect(видит).toBe('');
   });
 
   it('в тот же день Google второй раз не спрашивается: числа из снимка', async () => {

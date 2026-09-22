@@ -17,6 +17,19 @@ const ЗАХВАТ = 'захват';
 
 export const папкаПросмотров = (repo) => path.join(repo, 'editor', '.views');
 
+/**
+ * Создать папку запоминания, которая сама себя прячет от Git: правило в корневом `.gitignore`
+ * приходит в основную папку только с выпуском кода, а до того папка лежала бы там неучтённой и
+ * могла уехать общим `git add`. Свой `.gitignore` со звёздочкой прячет её в любой ветке.
+ */
+function готоваяПапка(repo) {
+  const папка = папкаПросмотров(repo);
+  fs.mkdirSync(папка, {recursive: true});
+  const правило = path.join(папка, '.gitignore');
+  if (!fs.existsSync(правило)) fs.writeFileSync(правило, '*\n');
+  return папка;
+}
+
 function прочитать(файл) {
   try {
     return JSON.parse(fs.readFileSync(файл, 'utf8'));
@@ -26,7 +39,6 @@ function прочитать(файл) {
 }
 
 function записать(папка, имя, данные) {
-  fs.mkdirSync(папка, {recursive: true});
   const временный = path.join(папка, `.${имя}.${process.pid}.${Date.now()}.tmp`);
   fs.writeFileSync(временный, JSON.stringify(данные));
   fs.renameSync(временный, path.join(папка, имя));
@@ -66,9 +78,7 @@ export function пораСпросить({снимок, попытка, сейч
  * Брошенная отметка (экземпляр упал посреди запроса) старше `срокМс` снимается.
  */
 export function занять(repo, срокМс, сейчас = Date.now()) {
-  const папка = папкаПросмотров(repo);
-  const файл = path.join(папка, ЗАХВАТ);
-  fs.mkdirSync(папка, {recursive: true});
+  const файл = path.join(готоваяПапка(repo), ЗАХВАТ);
   for (let попытка = 0; попытка < 2; попытка += 1) {
     try {
       fs.writeFileSync(файл, String(сейчас), {flag: 'wx'});
@@ -98,7 +108,7 @@ export function занять(repo, срокМс, сейчас = Date.now()) {
 
 /** Записать итог захода и освободить право спросить. Удачный заход кладёт и новый снимок. */
 export function завершить(repo, {когда, итог, снимок}) {
-  const папка = папкаПросмотров(repo);
+  const папка = готоваяПапка(repo);
   try {
     if (снимок) записать(папка, СНИМОК, снимок);
     записать(папка, ПОПЫТКА, {когда, итог});

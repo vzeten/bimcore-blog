@@ -58,8 +58,9 @@
 .views-label { color: var(--ink-quiet); font-size: 12px; }
 .views-up { color: #1f7a3a; }
 .views-down { color: #b3261e; }
-.views-months { display: flex; align-items: flex-end; gap: 6px; height: 160px; padding-bottom: 4px; }
-.views-month { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; }
+.views-months { display: flex; align-items: flex-end; gap: 6px; padding-bottom: 4px; }
+.views-month { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.views-track { width: 100%; height: 120px; display: flex; align-items: flex-end; }
 .views-bar { width: 100%; min-height: 1px; background: #8fb3e0; border-radius: 3px 3px 0 0; }
 .views-count { font-size: 11px; font-variant-numeric: tabular-nums; }
 .views-month .views-label { font-size: 10px; white-space: nowrap; }
