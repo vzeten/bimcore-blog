@@ -86,8 +86,15 @@ describe('события из серверной main', {timeout: 120_000}, () =
     expect(виды).toContain('правка:docs/lessons/a.mdx');
     expect(виды).toContain('переименование:blog/new/index.mdx');
     expect(виды).toContain('удаление:docs/lessons/a.mdx');
+    // Каждое изменение — у своего коммита: коммит «только код» не получает изменений соседнего коммита.
+    const поКоммиту = (сообщение) => г(сервер, 'log', '--format=%H', '-1', `--grep=^${сообщение}$`, 'main');
+    expect(события.filter((с) => с.коммит === поКоммиту('только код'))).toEqual([]);
+    expect(события.filter((с) => с.коммит === поКоммиту('правка статьи')).map((с) => с.вид)).toEqual(['правка']);
+    expect(события.filter((с) => с.вид === 'добавление' && с.путь === 'docs/lessons/a.mdx')).toHaveLength(1);
     // Слияние — одна запись против первого родителя; внутренние коммиты ветки отдельно не пишутся.
-    expect(события.filter((с) => с.путь === 'docs/lessons/m.mdx')).toHaveLength(1);
+    const слияние = события.filter((с) => с.путь === 'docs/lessons/m.mdx');
+    expect(слияние).toHaveLength(1);
+    expect(слияние[0].коммит).toBe(поКоммиту('слияние'));
     expect(события.some((с) => с.путь.endsWith('.png') || с.путь.startsWith('src/'))).toBe(false);
 
     const правка = события.find((с) => с.вид === 'правка');
