@@ -14,7 +14,14 @@ import crypto from 'node:crypto';
 
 const АДРЕС_ПРОПУСКА = 'https://oauth2.googleapis.com/token';
 const АДРЕС_ОТЧЁТА = 'https://analyticsdata.googleapis.com/v1beta/properties';
-const ОБЛАСТЬ = 'https://www.googleapis.com/auth/analytics.readonly';
+/**
+ * Права пропуска — только чтение и только из этого списка: просмотры GA4 и данные Поиска Google
+ * (Search Console, ED-054). Зовущий называет право словом, адреса прав заданы здесь.
+ */
+const ОБЛАСТИ = {
+  аналитика: 'https://www.googleapis.com/auth/analytics.readonly',
+  поиск: 'https://www.googleapis.com/auth/webmasters.readonly',
+};
 /** Строк в одной странице отчёта. Предел Google — 250 000; меньшие страницы быстрее доходят. */
 const СТРАНИЦА = 50000;
 
@@ -71,7 +78,7 @@ export function внутриGit(папка) {
 }
 
 /** Запрос с запретом перенаправлений и сроком. Сбой сети и срок — `null`, без исключения наружу. */
-async function запрос(адрес, опции, срокМс) {
+export async function запрос(адрес, опции, срокМс) {
   try {
     return await fetch(адрес, {...опции, redirect: 'error', signal: AbortSignal.timeout(срокМс)});
   } catch {
@@ -82,9 +89,11 @@ async function запрос(адрес, опции, срокМс) {
 /**
  * Пропуск Google на час: подписанное ключом заявление по стандарту служебного доступа. Сам ключ по
  * сети не идёт — идёт подпись. Отказ — `{причина}`: `неКлюч` (подпись не сложилась), `ключОтклонён`,
- * `нетСвязи`.
+ * `нетСвязи`. `право` — слово из `ОБЛАСТИ`; чужое слово — отказ `неКлюч`, а не пропуск на что попало.
  */
-export async function получитьПропуск(ключ, срокМс, сейчас = Date.now()) {
+export async function получитьПропуск(ключ, срокМс, сейчас = Date.now(), право = 'аналитика') {
+  const ОБЛАСТЬ = Object.hasOwn(ОБЛАСТИ, право) ? ОБЛАСТИ[право] : null;
+  if (!ОБЛАСТЬ) return {причина: 'неКлюч'};
   const b64 = (значение) => Buffer.from(JSON.stringify(значение)).toString('base64url');
   const сек = Math.floor(сейчас / 1000);
   const тело = `${b64({alg: 'RS256', typ: 'JWT'})}.${b64({iss: ключ.почта, scope: ОБЛАСТЬ, aud: АДРЕС_ПРОПУСКА, iat: сек, exp: сек + 3600})}`;

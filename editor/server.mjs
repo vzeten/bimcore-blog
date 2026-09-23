@@ -16,6 +16,7 @@ import {assetReformatRoute} from './src/adapters/assetReformat.mjs';
 import {assetIntakeRoute} from './src/adapters/assetIntake.mjs';
 import {productsRoute} from './src/adapters/productsRoute.mjs';
 import {viewsRoute} from './src/adapters/viewsRoute.mjs';
+import {analyticsRoute} from './src/adapters/analyticsRoute.mjs';
 import {versionsRoute} from './src/adapters/versionsRoute.mjs';
 import {deleteRoute} from './src/adapters/deleteRoute.mjs';
 import {trashRoute} from './src/adapters/trashRoute.mjs';
@@ -158,6 +159,7 @@ async function api(req, res, url) {
 
   // Просмотры из Google Analytics — своим запросом окна: реестр и работа со статьёй его не ждут.
   if (await viewsRoute({req, res, url, repo: REPO, settings: readSettings(), git, publishedRef: () => publishedRef, articles, send})) return;
+  if (await analyticsRoute({req, res, url, repo: REPO, settings: readSettings(), git, тело, send})) return;
 
   // Лента версий и содержимое одной версии — тоже отдельным модулем, по той же причине.
   if (await versionsRoute({req, res, url, repo: REPO, settings: readSettings(), insideRepo, send})) return;
