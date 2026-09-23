@@ -20,17 +20,20 @@
 .bars { margin: 6px 0 16px; }
 .trend-title { font-size: 12px; color: var(--ink-quiet); margin-bottom: 4px; }
 .bars-area { display: flex; gap: 6px; }
-.bars-scale { display: flex; flex-direction: column; justify-content: space-between; height: 150px; font-size: 11px;
+.bars-scale { display: flex; flex-direction: column; justify-content: space-between; height: 166px; padding-top: 16px; font-size: 11px;
   color: var(--ink-quiet); text-align: right; min-width: 44px; font-variant-numeric: tabular-nums; }
 .bars-plot { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 3px; border-top: 1px solid #eef1f4; }
 .bars-col { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.bars-track { width: 100%; height: 150px; display: flex; align-items: flex-end; border-bottom: 1px solid #d8dde3; }
+.bars-track { position: relative; width: 100%; height: 150px; display: flex; align-items: flex-end; border-bottom: 1px solid #d8dde3; }
 .bars-bar { width: 100%; min-height: 1px; display: flex; flex-direction: column; overflow: hidden; border-radius: 3px 3px 0 0; background: #cfd6de; }
 .bars-part { flex-basis: 0; min-height: 0; background: #cfd6de; border-top: 1px solid var(--bg); }
 .bars-part:first-child { border-top: 0; }
 .bars-fresh .bars-bar { opacity: 0.45; }
 .bars-hover .bars-bar { outline: 2px solid var(--ink-quiet); outline-offset: 1px; }
-.bars-count { font-size: 11px; min-height: 14px; font-variant-numeric: tabular-nums; }
+/* Число над столбиком: прижато к его верху; шкала оставляет место над самым высоким. */
+.bars-count { position: absolute; left: 50%; transform: translate(-50%, -2px); font-size: 11px; white-space: nowrap;
+  font-variant-numeric: tabular-nums; color: var(--ink); pointer-events: none; }
+.bars-plot { padding-top: 16px; }
 .bars-label { font-size: 10px; color: var(--ink-quiet); white-space: nowrap; min-height: 13px; }
 .bars-marker { min-height: 16px; }
 .bars-marker button { border: 0; background: transparent; padding: 0; font-size: 11px; color: #52514e; cursor: pointer; line-height: 1; }
