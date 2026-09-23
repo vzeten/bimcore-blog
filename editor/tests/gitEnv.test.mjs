@@ -13,6 +13,7 @@ import {simpleGit} from 'simple-git';
 import {ЗАПРЕЩЁННЫЕ, дверьGit, дверьИндекса, средаДляGit} from '../src/adapters/gitEnv.mjs';
 import {деревоПлана} from '../src/adapters/gitCommit.mjs';
 import {РЕЖИМ_ФАЙЛА} from '../src/core/publishPlan.mjs';
+import {ЖДАТЬ_GIT} from './saveHarness.mjs';
 
 const песочницы = [];
 const было = new Map();
@@ -73,7 +74,8 @@ async function репозиторий(текст = 'текст') {
   return {корень, repo, git};
 }
 
-describe('среда для git', () => {
+// Здесь зовётся настоящий git с отправкой во временные копии: пяти секунд умолчания под нагрузкой мало.
+describe('среда для git', {timeout: ЖДАТЬ_GIT}, () => {
   it('переменная постраничного просмотра не мешает уложить план: укладка проходит с GIT_PAGER в среде', async () => {
     const {корень, repo, git} = await репозиторий();
     // Ровно та среда, на которой публикация падала у человека.
