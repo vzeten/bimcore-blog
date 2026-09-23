@@ -211,7 +211,7 @@ export function App() {
 
       <div className="body">
         <Rail
-          settings={settings}
+          settings={settings} articles={articles}
           mode={mode}
           articleOpen={article !== null}
           onMode={(next) => void сменитьРежим(next)}

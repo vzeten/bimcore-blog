@@ -8,8 +8,6 @@ import {SectionTree} from './SectionTree';
 import {TrashPanel} from './TrashPanel';
 import {ViewsPanel} from './ViewsPanel';
 import {useViews, type Просмотры} from '../useViews';
-import {useAnalyticsAvailable} from '../useAnalytics';
-import {AnalyticsScreen} from './AnalyticsScreen';
 import type {ArticleRow, Settings} from '../types';
 
 /** Реестр статей — стартовый экран: дерево разделов слева, таблица справа. */
@@ -45,9 +43,6 @@ export function Registry(props: {
   // Просмотры спрашиваются своим запросом: таблица показывается сразу, числа встают, когда придут.
   const просмотры = useViews();
   const [аналитика, setАналитика] = useState<ArticleRow | null>(null);
-  // Экран «Аналитика» есть только там, где лежит ключ владельца (ED-054); у сотрудника кнопки нет.
-  const естьАналитика = useAnalyticsAvailable();
-  const [экранАналитики, setЭкранАналитики] = useState(false);
 
   const поРежиму = порядокРежима(режим);
   const колонка = выбранныйПорядок?.колонка ?? поРежиму.колонка;
@@ -98,17 +93,12 @@ export function Registry(props: {
         />
       )}
 
-      {экранАналитики && (
-        <AnalyticsScreen settings={props.settings} articles={props.articles} onЗакрыть={() => setЭкранАналитики(false)} />
-      )}
-
       <SectionTree settings={props.settings} articles={props.articles} chosen={раздел} onChoose={setРаздел} />
 
       <div className="registry-main">
         <div className="registry-filters">
           <button className="ghost" onClick={() => props.создание.начать(раздел)}>{п.новаяСтатья}</button>
           <button className="ghost" onClick={() => setКорзина(true)}>{п.корзина}</button>
-          {естьАналитика && <button className="ghost" onClick={() => setЭкранАналитики(true)}>{props.settings.аналитикаОкно.кнопка}</button>}
 
           <input
             className="registry-search"
