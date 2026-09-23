@@ -58,11 +58,14 @@ export function AnalyticsScreen(props: {settings: Settings; articles: ArticleRow
   };
 
   const метки = (охват: string): МеткаГрафика[] => {
-    const поДню = new Map<string, string[]>();
+    const поДню = new Map<string, МеткаГрафика>();
     for (const з of записи(охват)) {
-      поДню.set(з.день, [...(поДню.get(з.день) ?? []), `${з.подпись}${з.язык ? ` (${з.язык.toUpperCase()})` : ''}`]);
+      const метка = поДню.get(з.день) ?? {день: з.день, подписи: [], ручные: []};
+      if (з.событие) метка.подписи.push(`${з.подпись}${з.язык ? ` (${з.язык.toUpperCase()})` : ''}`);
+      else метка.ручные.push(з.подпись);
+      поДню.set(з.день, метка);
     }
-    return [...поДню].map(([день, подписи]) => ({день, подписи}));
+    return [...поДню.values()];
   };
 
   // Все изменения периода целиком: одна статья с одним видом изменения — одна строка со всеми языками
@@ -76,9 +79,10 @@ export function AnalyticsScreen(props: {settings: Settings; articles: ArticleRow
       группы.set(з.группа, группа);
     }
     const порядок = Object.keys(props.settings.локали).map((код) => код.toUpperCase());
+    // Ручные записи — первыми: их мало, и они важнее.
     return [...группы].map(([подпись, г]) => ({
       подпись, события: г.события, языки: [...г.языки].sort((а, б) => порядок.indexOf(а) - порядок.indexOf(б)).join(', '),
-    }));
+    })).sort((а, б) => Number(а.события.length > 0) - Number(б.события.length > 0));
   };
 
   const наГрафик = (адрес: string, день: string) => {

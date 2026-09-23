@@ -38,7 +38,7 @@ export function PeriodBox(props: {
       {props.изменения && props.группы.map((г) => {
         const описано = г.события.filter((с) => с.описание).length;
         return (
-          <div key={г.подпись} className="period-group">
+          <div key={г.подпись} className={г.события.length ? 'period-group' : 'period-group period-manual'}>
             <button className="period-row" aria-expanded={открыта === г.подпись} disabled={г.события.length === 0}
               onClick={() => setОткрыта(открыта === г.подпись ? null : г.подпись)}>
               <span>{г.события.length > 0 ? (открыта === г.подпись ? '▾' : '▸') : '▲'} {г.подпись}{г.языки && ` — ${г.языки}`}</span>

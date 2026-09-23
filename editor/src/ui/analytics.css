@@ -39,6 +39,10 @@
 .bars-marker button { border: 0; background: transparent; padding: 0 2px; font-size: 11px; color: #52514e; cursor: pointer; line-height: 1.2;
   white-space: nowrap; font-variant-numeric: tabular-nums; }
 .bars-marker button:hover { color: var(--ink); }
+/* Ручные SEO-записи — отдельным красным знаком под знаком изменений статей (слово владельца 24.09). */
+.bars-marker button { display: inline-flex; flex-direction: column; align-items: center; }
+.bars-manual { color: #d13b3b; font-weight: 700; }
+.period-manual .period-row { color: #b42626; font-weight: 600; }
 .bars-tip { position: absolute; top: 8px; left: 50%; z-index: 2; width: 210px; background: var(--bg); border: 1px solid var(--line);
   border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1); pointer-events: none; }
 .bars-col:nth-last-child(-n+4) .bars-tip { left: auto; right: 50%; }
@@ -71,7 +75,7 @@
 .action-lang { font-size: 12px; color: var(--ink-quiet); }
 .action-text { font-size: 13px; margin-top: 2px; }
 .action-empty { color: var(--ink-quiet); font-style: italic; }
-.action-manual .action-kind { color: #7a4ab0; font-weight: 600; }
+.action-manual .action-kind { color: #d13b3b; font-weight: 600; }
 .action-diff { max-height: 420px; overflow: auto; background: var(--bg-soft); border-radius: 6px; padding: 6px 0; font: 12px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; }
 /* Цветная разница: убранное красным, добавленное зелёным, изменившиеся слова — насыщеннее (слово владельца 24.09). */
 .diff-line { padding: 0 8px 0 22px; text-indent: -14px; }
