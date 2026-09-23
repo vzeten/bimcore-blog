@@ -193,7 +193,12 @@ export interface Settings {
     разделПоиск: string;
     разделПросмотры: string;
     поЯзыкам: string;
-    ещёИзменений: string;
+    сводкаИзменений: string;
+    выбрано: string;
+    кПоследним30: string;
+    изменения: string;
+    нетИзменений: string;
+    страницыПериода: string;
     просмотры: string;
     колонкаПросмотры: string;
     разделВоронка: string;

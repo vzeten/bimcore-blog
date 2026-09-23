@@ -42,8 +42,17 @@
 .bars-tip { position: absolute; top: 8px; left: 50%; z-index: 2; width: 210px; background: var(--bg); border: 1px solid var(--line);
   border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1); pointer-events: none; }
 .bars-col:nth-last-child(-n+4) .bars-tip { left: auto; right: 50%; }
-/* Окно изменений — вверх от метки, поверх столбиков, целиком и без прокрутки (длинный список обрезан строкой «…и ещё»). */
-.bars-tip-actions { top: auto; bottom: 34px; width: 300px; }
+/* Сводка изменений — вверх от метки, поверх столбиков; полный список — в блоке «Выбрано» под графиками. */
+.bars-tip-actions { top: auto; bottom: 34px; width: 260px; }
+.bars-col { cursor: pointer; }
+.bars-selected .bars-bar { outline: 2px solid var(--ink); outline-offset: 1px; }
+.bars-selected .bars-label { color: var(--ink); font-weight: 600; }
+.period-box { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 4px 0 12px; background: var(--bg-soft); }
+.period-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.period-head strong { font-size: 14px; }
+.period-list { margin: 8px 0 0; padding: 0; list-style: none; columns: 2; column-gap: 24px; font-size: 13px; }
+.period-list li { break-inside: avoid; padding: 2px 0; }
+.period-list .action-lang { margin-left: 4px; }
 .bars-tip i, .lang-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; }
 .trend-tip-note { color: var(--ink-quiet); margin-top: 2px; }
 .trend-tip-event { margin-top: 3px; }

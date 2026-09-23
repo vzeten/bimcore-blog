@@ -62,7 +62,12 @@ export async function analyticsReadRoute({req, res, url, repo, settings, send}) 
     const строкиЗа = (с, по) => (просмотры ? снимок.строки.filter((с_) => с_.день >= с && с_.день <= по) : строкиПоискаЗа(база, с, по));
 
     if (url.pathname === '/api/analytics/pages' || url.pathname === '/api/analytics/views-pages') {
-      send(res, 200, {есть: true, ...страницы(строкиЗа(сдвиг(последний, -70), последний), {охват, сайт})});
+      // Выбранный на графике период — с его сравнением; без выбора — последние 30 полных дней.
+      const [пс, пп] = [url.searchParams.get('с'), url.searchParams.get('по')];
+      const период = ДЕНЬ.test(пс ?? '') && ДЕНЬ.test(пп ?? '') && пс <= пп ? {с: пс, по: пп} : null;
+      const длина = период ? Math.round((Date.parse(пп) - Date.parse(пс)) / 86_400_000) + 1 : 30;
+      const с = период ? сдвиг(пс, -длина) : сдвиг(последний, -70);
+      send(res, 200, {есть: true, ...страницы(строкиЗа(с, период ? пп : последний), {охват, сайт, период})});
       return true;
     }
 

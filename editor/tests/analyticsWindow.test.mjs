@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {analyticsReadRoute, охватИзЗапроса} from '../src/adapters/analyticsReadRoute.mjs';
 import {открыть, заменитьДни, записатьКоммит} from '../src/adapters/analyticsStore.mjs';
 import {занять, завершить} from '../src/adapters/viewsStore.mjs';
-import {граница, схлопнуть} from '../src/ui/zones/BarChart.tsx';
+import {граница, сводка} from '../src/ui/zones/BarChart.tsx';
 import {подписьНедели} from '../src/ui/zones/SearchPane.tsx';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -49,8 +49,9 @@ describe('граница оси', () => {
 });
 
 describe('изменения под столбиком', () => {
-  it('одинаковые строки — одной с числом повторов, порядок первого появления', () => {
-    expect(схлопнуть(['Правка: А (RU)', 'Новая: Б (EN)', 'Правка: А (RU)'])).toEqual([['Правка: А (RU)', 2], ['Новая: Б (EN)', 1]]);
+  it('у метки — короткая сводка по видам, полный список не обрезается в окошке', () => {
+    const подписи = ['Правка: А (RU)', 'Новая: Б (EN)', 'Правка: А (RU)', 'Новая: В (ES)', 'Новая: Б (RU)'];
+    expect(сводка(подписи, 'Изменений: {n} ({виды})')).toBe('Изменений: 5 (Правка — 2, Новая — 3)');
   });
 });
 
