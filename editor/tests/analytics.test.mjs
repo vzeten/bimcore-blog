@@ -151,10 +151,22 @@ describe('ручки аналитики', () => {
     expect(fs.existsSync(папкаАналитики(repo))).toBe(false);
   });
 
-  it('поиск загружается в базу; ручное событие; описание к несуществующему — отказ; секрета нигде нет', async () => {
+  /** Обновление идёт в фоне: дождаться, пока право обновлять освободится. */
+  async function дождаться() {
+    for (let шаг = 0; шаг < 200; шаг += 1) {
+      const ответ = await спросить('GET', '/api/analytics');
+      if (!ответ.тело.обновляется) return ответ;
+      await new Promise((готово) => setTimeout(готово, 25));
+    }
+    throw new Error('обновление не закончилось');
+  }
+
+  it('ответ сразу, обновление в фоне: поиск ложится в базу; ручное событие; описание к несуществующему — отказ; секрета нигде нет', async () => {
     vi.stubGlobal('fetch', google());
-    const сводка = await спросить('GET', '/api/analytics');
-    expect(сводка.тело).toMatchObject({есть: true, днейПоиска: 1, поиск: 'есть'});
+    const первый = await спросить('GET', '/api/analytics');
+    expect(первый.тело).toMatchObject({есть: true, днейПоиска: 0});
+    const сводка = await дождаться();
+    expect(сводка.тело).toMatchObject({есть: true, днейПоиска: 1, поиск: 'есть', обновляется: false});
     expect((await спросить('POST', '/api/analytics/manual', {дата: '2026-09-24', текст: 'заголовки'})).тело).toEqual({ид: 1});
     expect((await спросить('POST', '/api/analytics/manual', {дата: '24.09', текст: 'x'})).код).toBe(400);
     expect((await спросить('POST', '/api/analytics/describe', {коммит: 'abc', путь: 'docs/a.mdx', описание: 'x'})).код).toBe(404);
@@ -169,8 +181,9 @@ describe('ручки аналитики', () => {
     const fetch = google();
     vi.stubGlobal('fetch', fetch);
     await спросить('GET', '/api/analytics');
+    await дождаться();
     const спрошено = fetch.mock.calls.length;
-    await спросить('GET', '/api/analytics');
+    await дождаться();
     expect(fetch.mock.calls.length).toBe(спрошено);
   });
 });
