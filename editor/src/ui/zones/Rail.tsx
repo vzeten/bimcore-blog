@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {createPortal} from 'react-dom';
 import {useAnalyticsAvailable} from '../useAnalytics';
 import {AnalyticsScreen} from './AnalyticsScreen';
 import type {ArticleRow, PanelMode, Settings} from '../types';
@@ -41,7 +42,12 @@ export function Rail(props: {
           </svg>
         </button>
       )}
-      {аналитика && <AnalyticsScreen settings={props.settings} articles={props.articles} onЗакрыть={() => setАналитика(false)} />}
+      {/* Экран выводится в корень страницы, а не внутрь полосы: иначе оформление её кнопок (квадрат 30×30)
+          ложилось на все кнопки экрана и ломало подписи (проба владельца 2026-09-24). */}
+      {аналитика && createPortal(
+        <AnalyticsScreen settings={props.settings} articles={props.articles} onЗакрыть={() => setАналитика(false)} />,
+        document.body,
+      )}
     </nav>
   );
 }
