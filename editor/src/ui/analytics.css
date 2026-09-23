@@ -36,11 +36,14 @@
 .bars-plot { padding-top: 16px; }
 .bars-label { font-size: 10px; color: var(--ink-quiet); text-align: center; line-height: 1.2; min-height: 13px; }
 .bars-marker { min-height: 16px; }
-.bars-marker button { border: 0; background: transparent; padding: 0; font-size: 11px; color: #52514e; cursor: pointer; line-height: 1; }
+.bars-marker button { border: 0; background: transparent; padding: 0 2px; font-size: 11px; color: #52514e; cursor: pointer; line-height: 1.2;
+  white-space: nowrap; font-variant-numeric: tabular-nums; }
 .bars-marker button:hover { color: var(--ink); }
 .bars-tip { position: absolute; top: 8px; left: 50%; z-index: 2; width: 210px; background: var(--bg); border: 1px solid var(--line);
   border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1); pointer-events: none; }
 .bars-col:nth-last-child(-n+4) .bars-tip { left: auto; right: 50%; }
+/* Окно изменений — под меткой, шире, со своей прокруткой, если изменений много. */
+.bars-tip-actions { top: auto; bottom: -8px; transform: translateY(100%); width: 300px; max-height: 260px; overflow: auto; }
 .bars-tip i, .lang-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; }
 .trend-tip-note { color: var(--ink-quiet); margin-top: 2px; }
 .trend-tip-event { margin-top: 3px; }
