@@ -34,7 +34,7 @@
 .bars-count { position: absolute; left: 50%; transform: translate(-50%, -2px); font-size: 11px; white-space: nowrap;
   font-variant-numeric: tabular-nums; color: var(--ink); pointer-events: none; }
 .bars-plot { padding-top: 16px; }
-.bars-label { font-size: 10px; color: var(--ink-quiet); white-space: nowrap; min-height: 13px; }
+.bars-label { font-size: 10px; color: var(--ink-quiet); text-align: center; line-height: 1.2; min-height: 13px; }
 .bars-marker { min-height: 16px; }
 .bars-marker button { border: 0; background: transparent; padding: 0; font-size: 11px; color: #52514e; cursor: pointer; line-height: 1; }
 .bars-marker button:hover { color: var(--ink); }
