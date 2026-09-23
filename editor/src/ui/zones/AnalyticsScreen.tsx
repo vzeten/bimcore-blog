@@ -48,7 +48,7 @@ export function AnalyticsScreen(props: {settings: Settings; articles: ArticleRow
 
   const наГрафик = (адрес: string, день: string) => {
     setРаздел('поиск');
-    setВид({охват: `стр:${адрес}`, шаг: 'день', с: сдвигДня(день, -21), по: сдвигДня(день, 21)});
+    setВид({охват: `стр:${адрес}`, шаг: 'день', с: сдвигДня(день, -15), по: сдвигДня(день, 15)});
   };
 
   return (

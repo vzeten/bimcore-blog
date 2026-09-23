@@ -68,15 +68,18 @@ describe('ручки чтения окна', () => {
     ]}});
     (await открыть(repo)).close();
 
+    // 12 месяцев плюс текущий — постоянная ширина: пустые месяцы до данных остаются нулями.
     const ряд = (await спросить('/api/analytics/views?шаг=месяц')).тело;
-    expect(ряд.ряд.map((т) => [т.начало, т.показы])).toEqual([['2026-08-01', 40], ['2026-09-01', 8]]);
+    expect(ряд.ряд).toHaveLength(13);
+    expect(ряд.ряд[0].начало).toBe('2025-09-01');
+    expect(ряд.ряд.slice(-2).map((т) => [т.начало, т.показы])).toEqual([['2026-08-01', 40], ['2026-09-01', 8]]);
     const русские = (await спросить(`/api/analytics/views-pages?${new URLSearchParams({охват: 'ru'})}`)).тело;
     expect(русские.страницы).toEqual([expect.objectContaining({путь: '/ru/lessons/a', показы: 3, разницаПоказов: 3})]);
     const все = (await спросить('/api/analytics/views-pages')).тело;
     expect(все.страницы.find((с) => с.путь === '/lessons/a')).toMatchObject({показы: 5, разницаПоказов: -35});
   });
 
-  it('ряд начинается не раньше первого дня с данными; страницы; действия без разницы, разница — по запросу', async () => {
+  it('окна постоянной ширины: 12 недель и 30 дней; действия без разницы, разница — по запросу', async () => {
     const база = await открыть(repo);
     заменитьДни(база, {с: '2026-06-01', по: '2026-09-22', строки: [
       ['2026-06-03', 'https://learn.bimcore.one/a/', 10, 1, 0.1, 5],
@@ -89,11 +92,13 @@ describe('ручки чтения окна', () => {
     база.close();
 
     const ряд = (await спросить('/api/analytics/search?шаг=неделя')).тело;
-    expect(ряд.с).toBe('2026-06-03');
-    expect(ряд.ряд[0].начало).toBe('2026-06-01');
+    expect(ряд.с).toBe('2026-07-01');
+    expect(ряд.ряд).toHaveLength(13);
     expect(ряд.ряд.at(-1).неполный).toBe(true);
+    const дни = (await спросить('/api/analytics/search?шаг=день')).тело;
+    expect(дни.ряд).toHaveLength(30);
     const русский = (await спросить(`/api/analytics/search?${new URLSearchParams({шаг: 'месяц', охват: 'ru'})}`)).тело;
-    expect(русский.ряд.map((т) => т.показы)).toEqual([0, 0, 0, 20]);
+    expect(русский.ряд.map((т) => т.показы)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20]);
 
     const действия = (await спросить('/api/analytics/actions')).тело;
     expect(действия.события).toHaveLength(1);
