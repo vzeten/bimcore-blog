@@ -46,7 +46,7 @@ export async function analyticsReadRoute({req, res, url, repo, settings, send}) 
       return true;
     }
     if (url.pathname === '/api/analytics/delta') {
-      send(res, 200, {есть: true, дельта: дельтаСобытия(база, url.searchParams.get('коммит') ?? '', url.searchParams.get('путь') ?? '')});
+      send(res, 200, {есть: true, ...дельтаСобытия(база, url.searchParams.get('коммит') ?? '', url.searchParams.get('путь') ?? '')});
       return true;
     }
 

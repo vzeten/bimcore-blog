@@ -229,8 +229,9 @@ export interface Settings {
     скрыть: string;
     наГрафике: string;
     нетСобытий: string;
-    строк: string;
-    картинок: string;
+    текстСтрок: string;
+    картинкиСчёт: string;
+    изображенияЗаголовок: string;
     ещё: string;
   };
   /** Просмотры из Google Analytics: окну нужны только надписи, остальное читает сервер. */

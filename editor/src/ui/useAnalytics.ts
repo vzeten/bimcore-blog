@@ -48,6 +48,8 @@ export interface Событие {
   автор: string;
   добавлено: number;
   убрано: number;
+  картинокДобавлено: number;
+  картинокУбрано: number;
   описание: string | null;
 }
 
@@ -101,9 +103,8 @@ export function адресРяда(охват: Охват, шаг: Шаг, с?: 
 }
 
 /** Текст разницы одного события — по щелчку, не заранее. */
-export async function дельтаСобытия(коммит: string, путь: string): Promise<string | null> {
-  const ответ = await requestJson<{дельта: string | null}>(`/api/analytics/delta?${new URLSearchParams({коммит, путь})}`);
-  return ответ.дельта;
+export async function дельтаСобытия(коммит: string, путь: string): Promise<{дельта: string | null; картинки: string | null}> {
+  return requestJson<{дельта: string | null; картинки: string | null}>(`/api/analytics/delta?${new URLSearchParams({коммит, путь})}`);
 }
 
 /** День `YYYY-MM-DD` плюс дни. */

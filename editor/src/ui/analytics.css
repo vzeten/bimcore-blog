@@ -85,3 +85,4 @@
 .diff-del mark { background: #f6b8b8; color: inherit; text-decoration: line-through; }
 .diff-add mark { background: #a9e2b8; color: inherit; }
 .diff-gap { color: var(--ink-quiet); }
+.diff-title { margin: 6px 0 2px; }

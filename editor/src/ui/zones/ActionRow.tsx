@@ -3,8 +3,10 @@ import {дельтаСобытия, type Событие} from '../useAnalytics';
 import type {Settings} from '../types';
 
 /**
- * Одно изменение статьи: вид, статья, язык, строк +/−, описание от ИИ (или «без описания»), цветная разница
- * текста по щелчку и, если задан, переход к графику. Общая строка «Действий» и списка выбранного периода.
+ * Одно действие со статьёй в публикации: вид, статья, язык, что изменилось (текст — строк +/−, изображения —
+ * +/−; одно действие на статью и язык, слово владельца 2026-09-24), описание от ИИ (или «без описания»),
+ * цветная разница текста и список изображений по щелчку и, если задан, переход к графику. Общая строка
+ * «Действий» и списка выбранного периода.
  */
 export function ActionRow(props: {
   settings: Settings;
@@ -16,12 +18,16 @@ export function ActionRow(props: {
 }) {
   const п = props.settings.аналитикаОкно;
   const {с} = props;
-  const [текст, setТекст] = useState<string | null | undefined>(undefined);
+  const [разница, setРазница] = useState<{дельта: string | null; картинки: string | null} | null | undefined>(undefined);
   const открыть = async () => {
-    if (текст !== undefined) return setТекст(undefined);
-    setТекст(null);
-    setТекст((await дельтаСобытия(с.коммит, с.путь).catch(() => null)) ?? '');
+    if (разница !== undefined) return setРазница(undefined);
+    setРазница(null);
+    setРазница((await дельтаСобытия(с.коммит, с.путь).catch(() => null)) ?? {дельта: null, картинки: null});
   };
+  const что = [
+    с.добавлено || с.убрано ? п.текстСтрок.replace('{a}', String(с.добавлено)).replace('{b}', String(с.убрано)) : '',
+    с.картинокДобавлено || с.картинокУбрано ? п.картинкиСчёт.replace('{a}', String(с.картинокДобавлено)).replace('{b}', String(с.картинокУбрано)) : '',
+  ].filter(Boolean).join(' · ');
   return (
     <>
       <div className="action-row">
@@ -29,13 +35,19 @@ export function ActionRow(props: {
         <span className="action-main">
           <strong>{props.название}</strong>
           {с.локаль && <span className="action-lang"> {с.локаль.toUpperCase()}</span>}
-          <span className="pages-path"> +{с.добавлено} / −{с.убрано} {с.вид === 'изображения' ? п.картинок : п.строк} · {с.автор}</span>
+          <span className="pages-path"> {что && `${что} · `}{с.автор}</span>
           <div className={с.описание ? 'action-text' : 'action-text action-empty'}>{с.описание ?? п.безОписания}</div>
         </span>
-        <button className="ghost" onClick={() => void открыть()}>{текст !== undefined ? п.скрыть : п.разница}</button>
+        <button className="ghost" onClick={() => void открыть()}>{разница !== undefined ? п.скрыть : п.разница}</button>
         {props.onГрафик && <button className="ghost" onClick={props.onГрафик}>{п.наГрафике}</button>}
       </div>
-      {текст !== undefined && (текст === null ? <pre className="action-diff">…</pre> : <DiffView текст={текст} />)}
+      {разница === null && <pre className="action-diff">…</pre>}
+      {разница && (
+        <>
+          {разница.дельта && <DiffView текст={разница.дельта} />}
+          {разница.картинки && <><div className="views-label diff-title">{п.изображенияЗаголовок}</div><DiffView текст={разница.картинки} /></>}
+        </>
+      )}
     </>
   );
 }
