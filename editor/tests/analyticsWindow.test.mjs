@@ -9,6 +9,7 @@ import {analyticsReadRoute, охватИзЗапроса} from '../src/adapters/
 import {открыть, заменитьДни, записатьКоммит} from '../src/adapters/analyticsStore.mjs';
 import {занять, завершить} from '../src/adapters/viewsStore.mjs';
 import {граница, сводка} from '../src/ui/zones/BarChart.tsx';
+import {строкиРазницы} from '../src/ui/zones/ActionRow.tsx';
 import {подписьНедели} from '../src/ui/zones/SearchPane.tsx';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -120,5 +121,20 @@ describe('ручки чтения окна', () => {
     expect(действия.события[0]).not.toHaveProperty('дельта');
     const разница = (await спросить(`/api/analytics/delta?${new URLSearchParams({коммит: 'c1', путь: 'docs/a.mdx'})}`)).тело;
     expect(разница.дельта).toBe('+текст');
+  });
+});
+
+describe('цветная разница', () => {
+  it('служебные строки git скрыты; в паре «убрано → добавлено» выделены только изменившиеся слова', () => {
+    const текст = ['diff --git a/x b/x', 'index 1..2 100644', '--- a/x', '+++ b/x', '@@ -1,3 +1,3 @@', ' title: A',
+      '-Пять наборов для кухни и спальни.', '+Пять нужных наборов для кухни и спальни.', '+Новая строка.'].join('\n');
+    expect(строкиРазницы(текст)).toEqual([
+      {вид: 'место', части: [['…', false]]},
+      {вид: 'как было', части: [['title: A', false]]},
+      // У убранной строки изменилось только добавление слова — выделять в ней нечего.
+      {вид: 'убрано', части: [['Пять ', false], ['наборов для кухни и спальни.', false]]},
+      {вид: 'добавлено', части: [['Пять ', false], ['нужных ', true], ['наборов для кухни и спальни.', false]]},
+      {вид: 'добавлено', части: [['Новая строка.', false]]},
+    ]);
   });
 });

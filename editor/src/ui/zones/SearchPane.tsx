@@ -2,6 +2,7 @@ import {адресРяда, сдвигДня, сЗнаком, useRead, type Ис
 import {useState} from 'react';
 import {BarChart, type МеткаГрафика} from './BarChart';
 import {PagesTable} from './PagesTable';
+import {PeriodBox, type ГруппаИзменений} from './PeriodBox';
 import type {Settings} from '../types';
 
 /** Что смотрим: охват (сайт, язык или `стр:/путь`), шаг и, для дней, отрезок вокруг события. */
@@ -23,7 +24,7 @@ export function SearchPane(props: {
   вид: Вид;
   onВид: (вид: Вид) => void;
   метки: (охват: string) => МеткаГрафика[];
-  изменения: (охват: string, с: string, по: string) => string[];
+  изменения: (охват: string, с: string, по: string) => ГруппаИзменений[];
   названия: Map<string, string>;
   источник: Источник;
 }) {
@@ -149,18 +150,8 @@ export function SearchPane(props: {
       )}
 
       {выбран && (
-        <div className="period-box">
-          <div className="period-head">
-            <strong>{п.выбрано.replace('{период}', период)}</strong>
-            <button className="ghost" onClick={() => setВыбор(null)}>{п.кПоследним30}</button>
-          </div>
-          {(() => {
-            const список = props.изменения(вид.охват, выбран.с, выбран.по);
-            return список.length
-              ? <><div className="views-label">{п.изменения}: {список.length}</div><ul className="period-list">{список.map((строка) => <li key={строка}>▲ {строка}</li>)}</ul></>
-              : <p className="trash-note">{п.нетИзменений}</p>;
-          })()}
-        </div>
+        <PeriodBox key={выбран.с} settings={props.settings} период={период} группы={props.изменения(вид.охват, выбран.с, выбран.по)}
+          названия={props.названия} onСброс={() => setВыбор(null)} />
       )}
 
       {стр?.по && (

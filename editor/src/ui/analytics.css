@@ -50,9 +50,12 @@
 .period-box { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 4px 0 12px; background: var(--bg-soft); }
 .period-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .period-head strong { font-size: 14px; }
-.period-list { margin: 8px 0 0; padding: 0; list-style: none; columns: 2; column-gap: 24px; font-size: 13px; }
-.period-list li { break-inside: avoid; padding: 2px 0; }
-.period-list .action-lang { margin-left: 4px; }
+.period-group { border-top: 1px solid #eef1f4; }
+.period-row { display: flex; justify-content: space-between; gap: 12px; width: 100%; padding: 5px 2px; border: 0; background: none; text-align: left; font-size: 13px; cursor: pointer; }
+.period-row:disabled { cursor: default; color: inherit; }
+.period-row:hover:not(:disabled) { background: #eef3f9; }
+.period-group .action-row { padding-left: 18px; }
+.period-group .action-diff { margin-left: 18px; }
 .bars-tip i, .lang-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; }
 .trend-tip-note { color: var(--ink-quiet); margin-top: 2px; }
 .trend-tip-event { margin-top: 3px; }
@@ -69,4 +72,12 @@
 .action-text { font-size: 13px; margin-top: 2px; }
 .action-empty { color: var(--ink-quiet); font-style: italic; }
 .action-manual .action-kind { color: #7a4ab0; font-weight: 600; }
-.action-diff { max-height: 320px; overflow: auto; background: var(--bg-soft); border-radius: 6px; padding: 8px; font-size: 12px; white-space: pre-wrap; }
+.action-diff { max-height: 420px; overflow: auto; background: var(--bg-soft); border-radius: 6px; padding: 6px 0; font: 12px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; }
+/* Цветная разница: убранное красным, добавленное зелёным, изменившиеся слова — насыщеннее (слово владельца 24.09). */
+.diff-line { padding: 0 8px 0 22px; text-indent: -14px; }
+.diff-sign { display: inline-block; width: 14px; text-indent: 0; color: var(--ink-quiet); }
+.diff-del { background: #fdecec; }
+.diff-add { background: #e8f6ec; }
+.diff-del mark { background: #f6b8b8; color: inherit; text-decoration: line-through; }
+.diff-add mark { background: #a9e2b8; color: inherit; }
+.diff-gap { color: var(--ink-quiet); }

@@ -199,6 +199,7 @@ export interface Settings {
     изменения: string;
     нетИзменений: string;
     страницыПериода: string;
+    сОписанием: string;
     просмотры: string;
     колонкаПросмотры: string;
     разделВоронка: string;
