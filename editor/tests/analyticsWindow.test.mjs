@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {analyticsReadRoute, охватИзЗапроса} from '../src/adapters/analyticsReadRoute.mjs';
 import {открыть, заменитьДни, записатьКоммит} from '../src/adapters/analyticsStore.mjs';
 import {занять, завершить} from '../src/adapters/viewsStore.mjs';
-import {граница} from '../src/ui/zones/TrendChart.tsx';
+import {граница} from '../src/ui/zones/BarChart.tsx';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const {privateKey} = crypto.generateKeyPairSync('rsa', {modulusLength: 2048});
@@ -42,7 +42,7 @@ async function спросить(адрес, settings = настройки()) {
 
 describe('граница оси', () => {
   it('середина оси — целое число; не меньше 2', () => {
-    expect([0, 1, 2, 3, 7, 15, 45, 8844].map(граница)).toEqual([2, 2, 2, 4, 10, 20, 100, 10000]);
+    expect([0, 1, 2, 3, 7, 15, 45, 6761, 8844].map(граница)).toEqual([2, 2, 2, 4, 8, 20, 60, 8000, 10000]);
     for (const в of [3, 7, 15, 45, 8844]) expect(Number.isInteger(граница(в) / 2)).toBe(true);
   });
 });

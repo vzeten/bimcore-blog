@@ -11,6 +11,8 @@ export interface Точка {
   показы: number;
   переходы: number;
   позиция: number | null;
+  /** Те же числа по языкам: части в сумме дают ровно точку. */
+  языки: Record<string, {показы: number; переходы: number}>;
   неполный: boolean;
 }
 

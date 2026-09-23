@@ -2,7 +2,7 @@ import {useMemo, useState} from 'react';
 import {сдвигДня, useRead, type Ручное, type Событие} from '../useAnalytics';
 import {SearchPane, type Вид} from './SearchPane';
 import {ActionsPane} from './ActionsPane';
-import type {МеткаГрафика} from './TrendChart';
+import type {МеткаГрафика} from './BarChart';
 import type {ArticleRow, Settings} from '../types';
 
 /**
@@ -13,7 +13,8 @@ import type {ArticleRow, Settings} from '../types';
 export function AnalyticsScreen(props: {settings: Settings; articles: ArticleRow[]; onЗакрыть: () => void}) {
   const п = props.settings.аналитикаОкно;
   const [раздел, setРаздел] = useState<'поиск' | 'просмотры' | 'действия'>('поиск');
-  const [вид, setВид] = useState<Вид>({охват: 'сайт', шаг: 'неделя'});
+  // По умолчанию — месяцы, как в окне просмотров статьи (решение владельца 2026-09-24).
+  const [вид, setВид] = useState<Вид>({охват: 'сайт', шаг: 'месяц'});
   const действия = useRead<{события: Событие[]; ручные: Ручное[]}>('/api/analytics/actions');
 
   // Адрес страницы → название статьи: событие знает и адрес, и путь файла, реестр — название файла.
