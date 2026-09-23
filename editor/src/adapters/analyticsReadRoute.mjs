@@ -1,6 +1,8 @@
 // Окно аналитики (ED-054, операция 2): ручки только чтения над базой операции 1.
 // GET `/api/analytics/search` — ряд поиска по охвату и шагу; `/api/analytics/pages` — страницы 30/30;
-// `/api/analytics/actions` — события и ручные события; `/api/analytics/delta` — текст разницы одного события.
+// `/api/analytics/actions` — события и ручные события; `/api/analytics/delta` — текст разницы одного события;
+// `/api/analytics/views` и `/api/analytics/views-pages` — то же по просмотрам сайта из снимка GA4 (раздел
+// «Просмотры сайта», слово владельца 2026-09-24): ряд и страницы считаются теми же правилами, что поиск.
 //
 // Приватно, как и основа: без ключа владельца функции нет, ответ пустой и без надписей. Здесь ничего не
 // пишется и Google не спрашивается — обновление базы живёт в `analyticsRoute.mjs`.
@@ -8,6 +10,7 @@
 import {найтиКлюч} from './ga4Client.mjs';
 import {открыть, строкиПоискаЗа, первыйДеньПоиска, событияДляОкна, ручныеДляОкна, дельтаСобытия, сводка} from './analyticsStore.mjs';
 import {ряд, страницы, последнийПолный, сдвиг} from '../core/searchSeries.mjs';
+import {прочитатьСнимок} from './viewsStore.mjs';
 
 const ДЕНЬ = /^\d{4}-\d{2}-\d{2}$/;
 const ШАГИ = ['день', 'неделя', 'месяц'];
@@ -21,7 +24,8 @@ export function охватИзЗапроса(значение, языки) {
 
 /** Обрабатывает ручки чтения окна аналитики. true, если запрос её. */
 export async function analyticsReadRoute({req, res, url, repo, settings, send}) {
-  const ручки = ['/api/analytics/search', '/api/analytics/pages', '/api/analytics/actions', '/api/analytics/delta'];
+  const ручки = ['/api/analytics/search', '/api/analytics/pages', '/api/analytics/actions', '/api/analytics/delta',
+    '/api/analytics/views', '/api/analytics/views-pages'];
   if (req.method !== 'GET' || !ручки.includes(url.pathname)) return false;
 
   const база = найтиКлюч(settings['просмотры']['папкаКлюча']).ключ ? await открыть(repo) : null;
@@ -44,16 +48,19 @@ export async function analyticsReadRoute({req, res, url, repo, settings, send}) 
       return true;
     }
 
-    const первый = первыйДеньПоиска(база);
+    // Просмотры сайта — из снимка GA4, а поиск — из базы; дальше правила одни.
+    const просмотры = url.pathname.startsWith('/api/analytics/views');
+    const снимок = просмотры ? строкиПросмотров(repo) : null;
+    const первый = просмотры ? снимок.первый : первыйДеньПоиска(база);
     if (первый === null) {
       send(res, 200, {есть: true, ряд: [], страницы: [], по: null, полныйПо: null});
       return true;
     }
-    const последний = сводка(база).последнийДеньПоиска;
+    const последний = просмотры ? снимок.последний : сводка(база).последнийДеньПоиска;
+    const строкиЗа = (с, по) => (просмотры ? снимок.строки.filter((с_) => с_.день >= с && с_.день <= по) : строкиПоискаЗа(база, с, по));
 
-    if (url.pathname === '/api/analytics/pages') {
-      const строки = строкиПоискаЗа(база, сдвиг(последний, -70), последний);
-      send(res, 200, {есть: true, ...страницы(строки, {охват, сайт})});
+    if (url.pathname === '/api/analytics/pages' || url.pathname === '/api/analytics/views-pages') {
+      send(res, 200, {есть: true, ...страницы(строкиЗа(сдвиг(последний, -70), последний), {охват, сайт})});
       return true;
     }
 
@@ -66,7 +73,7 @@ export async function analyticsReadRoute({req, res, url, repo, settings, send}) 
     const отрезок = сдвиг(по, шаг === 'неделя' ? -364 : -89);
     const поУмолчанию = шаг === 'месяц' || отрезок < первый ? первый : отрезок;
     const с = ДЕНЬ.test(сЗапроса ?? '') && сЗапроса <= по ? сЗапроса : поУмолчанию;
-    const строки = строкиПоискаЗа(база, с < первый ? первый : с, по);
+    const строки = строкиЗа(с < первый ? первый : с, по);
     send(res, 200, {
       есть: true, шаг, с, по, первый,
       полныйПо: последнийПолный(строки),
@@ -76,4 +83,23 @@ export async function analyticsReadRoute({req, res, url, repo, settings, send}) 
   } finally {
     база.close();
   }
+}
+
+/**
+ * Снимок просмотров GA4 (`viewsStore.mjs`) в виде строк поиска: день `YYYY-MM-DD`, страница — путь сайта,
+ * «показы» — просмотры. Дни снимка кончаются вчерашним: неполных дней в нём нет.
+ */
+function строкиПросмотров(repo) {
+  const снимок = прочитатьСнимок(repo);
+  const строки = (снимок?.строки ?? []).map(([страница, день, просмотры]) => ({
+    день: `${день.slice(0, 4)}-${день.slice(4, 6)}-${день.slice(6, 8)}`, страница, показы: Number(просмотры) || 0,
+    переходы: 0, позиция: 0, неполный: 0,
+  }));
+  let первый = null;
+  let последний = null;
+  for (const с of строки) {
+    if (первый === null || с.день < первый) первый = с.день;
+    if (последний === null || с.день > последний) последний = с.день;
+  }
+  return {строки, первый, последний};
 }

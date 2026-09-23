@@ -191,6 +191,9 @@ export interface Settings {
     закрыть: string;
     разделДействия: string;
     разделПоиск: string;
+    разделПросмотры: string;
+    просмотры: string;
+    колонкаПросмотры: string;
     разделВоронка: string;
     охватСайт: string;
     шагНедели: string;

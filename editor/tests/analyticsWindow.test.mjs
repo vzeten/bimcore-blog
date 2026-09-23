@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {analyticsReadRoute, охватИзЗапроса} from '../src/adapters/analyticsReadRoute.mjs';
 import {открыть, заменитьДни, записатьКоммит} from '../src/adapters/analyticsStore.mjs';
+import {занять, завершить} from '../src/adapters/viewsStore.mjs';
 import {граница} from '../src/ui/zones/TrendChart.tsx';
 
 const EDITOR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -58,6 +59,21 @@ describe('ручки чтения окна', () => {
     const пустая = fs.mkdtempSync(path.join(os.tmpdir(), 'нет-ключа-'));
     expect((await спросить('/api/analytics/search', настройки(пустая))).тело).toEqual({есть: false});
     expect(fs.existsSync(path.join(repo, 'editor', '.analytics'))).toBe(false);
+  });
+
+  it('просмотры сайта: снимок GA4 — те же ряды и страницы, что у поиска; язык по адресу', async () => {
+    const метка = занять(repo, 60_000, 1000);
+    завершить(repo, {метка, когда: 1000, итог: 'есть', снимок: {запрошено: '2026-09-23T00:00:00Z', с: '20200101', поДень: '20260922', строки: [
+      ['/lessons/a/', '20260920', 5], ['/ru/lessons/a/', '20260921', 3], ['/lessons/a/', '20260801', 40],
+    ]}});
+    (await открыть(repo)).close();
+
+    const ряд = (await спросить('/api/analytics/views?шаг=месяц')).тело;
+    expect(ряд.ряд.map((т) => [т.начало, т.показы])).toEqual([['2026-08-01', 40], ['2026-09-01', 8]]);
+    const русские = (await спросить(`/api/analytics/views-pages?${new URLSearchParams({охват: 'ru'})}`)).тело;
+    expect(русские.страницы).toEqual([expect.objectContaining({путь: '/ru/lessons/a', показы: 3, разницаПоказов: 3})]);
+    const все = (await спросить('/api/analytics/views-pages')).тело;
+    expect(все.страницы.find((с) => с.путь === '/lessons/a')).toMatchObject({показы: 5, разницаПоказов: -35});
   });
 
   it('ряд начинается не раньше первого дня с данными; страницы; действия без разницы, разница — по запросу', async () => {

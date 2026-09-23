@@ -87,12 +87,15 @@ export function useRead<T>(адрес: string | null): T | null {
   return ответ && ответ.адрес === адрес ? ответ.данные : null;
 }
 
-/** Адрес ряда поиска. */
-export function адресРяда(охват: Охват, шаг: Шаг, с?: string, по?: string): string {
+/** Источник чисел раздела: Поиск Google (показы и переходы) или просмотры сайта из GA4. */
+export type Источник = 'поиск' | 'просмотры';
+
+/** Адрес ряда: поиск — `/api/analytics/search`, просмотры сайта — `/api/analytics/views`. */
+export function адресРяда(охват: Охват, шаг: Шаг, с?: string, по?: string, источник: Источник = 'поиск'): string {
   const параметры = new URLSearchParams({охват, шаг});
   if (с) параметры.set('с', с);
   if (по) параметры.set('по', по);
-  return `/api/analytics/search?${параметры}`;
+  return `${источник === 'поиск' ? '/api/analytics/search' : '/api/analytics/views'}?${параметры}`;
 }
 
 /** Текст разницы одного события — по щелчку, не заранее. */

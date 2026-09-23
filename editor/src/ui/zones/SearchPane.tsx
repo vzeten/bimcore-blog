@@ -1,4 +1,4 @@
-import {адресРяда, сдвигДня, сЗнаком, useRead, type Ряд, type Страница, type Шаг} from '../useAnalytics';
+import {адресРяда, сдвигДня, сЗнаком, useRead, type Источник, type Ряд, type Страница, type Шаг} from '../useAnalytics';
 import {TrendChart, type МеткаГрафика} from './TrendChart';
 import {PagesTable} from './PagesTable';
 import type {Settings} from '../types';
@@ -12,9 +12,10 @@ export interface Вид {
 }
 
 /**
- * «Поиск Google»: охват (весь сайт, язык, страница), шаг (год по неделям, всё по месяцам, дни вокруг
- * события), итоги 30 дней с разницей в штуках, два графика — показы и переходы — с метками «Действий» и
- * список страниц. Числа приходят готовыми с сервера (`analyticsReadRoute.mjs`).
+ * «Поиск Google» и «Просмотры сайта» (один код на оба раздела, слово владельца 2026-09-24): охват (весь сайт,
+ * язык, страница), шаг (год по неделям, всё по месяцам, дни вокруг события), итоги 30 дней с разницей в штуках,
+ * графики с метками «Действий» и список страниц. У поиска два графика — показы и переходы, у просмотров один.
+ * Числа приходят готовыми с сервера (`analyticsReadRoute.mjs`).
  */
 export function SearchPane(props: {
   settings: Settings;
@@ -22,12 +23,16 @@ export function SearchPane(props: {
   onВид: (вид: Вид) => void;
   метки: (охват: string) => МеткаГрафика[];
   названия: Map<string, string>;
+  источник: Источник;
 }) {
   const п = props.settings.аналитикаОкно;
+  const поиск = props.источник === 'поиск';
   const язык = props.settings.основнойЯзык;
   const {вид} = props;
-  const ряд = useRead<Ряд>(адресРяда(вид.охват, вид.шаг, вид.с, вид.по));
-  const стр = useRead<{по: string | null; страницы: Страница[]}>(`/api/analytics/pages?${new URLSearchParams({охват: вид.охват})}`);
+  const ряд = useRead<Ряд>(адресРяда(вид.охват, вид.шаг, вид.с, вид.по, props.источник));
+  const стр = useRead<{по: string | null; страницы: Страница[]}>(
+    `/api/analytics/${поиск ? 'pages' : 'views-pages'}?${new URLSearchParams({охват: вид.охват})}`,
+  );
 
   const число = (значение: number) => Math.round(значение).toLocaleString(язык);
   const подписьДня = (день: string) => {
@@ -73,20 +78,20 @@ export function SearchPane(props: {
 
       {стр?.по && (
         <div className="views-compare">
-          <div><span className="views-label">{п.показы} · 30</span><strong>{число(итог.показы)}</strong>
+          <div><span className="views-label">{поиск ? п.показы : п.просмотры} · 30</span><strong>{число(итог.показы)}</strong>
             <span className={итог.рп >= 0 ? 'views-up' : 'views-down'}>{сЗнаком(итог.рп, язык)}</span></div>
-          <div><span className="views-label">{п.переходы} · 30</span><strong>{число(итог.переходы)}</strong>
-            <span className={итог.рх >= 0 ? 'views-up' : 'views-down'}>{сЗнаком(итог.рх, язык)}</span></div>
+          {поиск && <div><span className="views-label">{п.переходы} · 30</span><strong>{число(итог.переходы)}</strong>
+            <span className={итог.рх >= 0 ? 'views-up' : 'views-down'}>{сЗнаком(итог.рх, язык)}</span></div>}
         </div>
       )}
 
       {ряд && ряд.ряд.length === 0 && <p className="trash-note">{п.нетДанных}</p>}
       {ряд && ряд.ряд.length > 0 && (
         <>
-          <TrendChart название={п.показы} точки={ряд.ряд.map((т) => ({начало: т.начало, значение: т.показы, неполный: т.неполный}))}
+          <TrendChart название={поиск ? п.показы : п.просмотры} точки={ряд.ряд.map((т) => ({начало: т.начало, значение: т.показы, неполный: т.неполный}))}
             метки={метки} подписьДня={подписьДня} число={число} неполныйТекст={п.неполный} onМетка={открытьДни} />
-          <TrendChart название={п.переходы} точки={ряд.ряд.map((т) => ({начало: т.начало, значение: т.переходы, неполный: т.неполный}))}
-            метки={метки} подписьДня={подписьДня} число={число} неполныйТекст={п.неполный} onМетка={открытьДни} />
+          {поиск && <TrendChart название={п.переходы} точки={ряд.ряд.map((т) => ({начало: т.начало, значение: т.переходы, неполный: т.неполный}))}
+            метки={метки} подписьДня={подписьДня} число={число} неполныйТекст={п.неполный} onМетка={открытьДни} />}
         </>
       )}
 
@@ -94,7 +99,7 @@ export function SearchPane(props: {
         <>
           <h3>{п.страницы}</h3>
           <p className="trash-note">{п.поДень.replace('{день}', new Date(`${стр.по}T00:00:00`).toLocaleDateString(язык))}</p>
-          <PagesTable settings={props.settings} страницы={стр.страницы} названия={props.названия}
+          <PagesTable settings={props.settings} страницы={стр.страницы} названия={props.названия} толькоПросмотры={!поиск}
             onСтраница={(путь) => props.onВид({охват: `стр:${путь}`, шаг: 'неделя'})} />
         </>
       )}

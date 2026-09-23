@@ -6,12 +6,13 @@ import type {МеткаГрафика} from './TrendChart';
 import type {ArticleRow, Settings} from '../types';
 
 /**
- * Экран «Аналитика» поверх реестра (ED-054): слева «Действия», «Поиск Google» и место под воронку продаж
+ * Экран «Аналитика» поверх реестра (ED-054): слева «Действия», «Поиск Google», «Просмотры сайта» (GA4 по всему
+ * сайту — слово владельца 2026-09-24; тот же код, что у поиска) и место под воронку продаж
  * (операция 3). Названия статей берутся из реестра по пути файла события, метки графиков — из «Действий».
  */
 export function AnalyticsScreen(props: {settings: Settings; articles: ArticleRow[]; onЗакрыть: () => void}) {
   const п = props.settings.аналитикаОкно;
-  const [раздел, setРаздел] = useState<'поиск' | 'действия'>('поиск');
+  const [раздел, setРаздел] = useState<'поиск' | 'просмотры' | 'действия'>('поиск');
   const [вид, setВид] = useState<Вид>({охват: 'сайт', шаг: 'неделя'});
   const действия = useRead<{события: Событие[]; ручные: Ручное[]}>('/api/analytics/actions');
 
@@ -59,11 +60,12 @@ export function AnalyticsScreen(props: {settings: Settings; articles: ArticleRow
         <nav className="analytics-nav">
           <button className={раздел === 'действия' ? 'nav-on' : ''} onClick={() => setРаздел('действия')}>{п.разделДействия}</button>
           <button className={раздел === 'поиск' ? 'nav-on' : ''} onClick={() => setРаздел('поиск')}>{п.разделПоиск}</button>
+          <button className={раздел === 'просмотры' ? 'nav-on' : ''} onClick={() => setРаздел('просмотры')}>{п.разделПросмотры}</button>
           <button disabled title={п.разделВоронка}>{п.разделВоронка}</button>
         </nav>
         <div className="analytics-main">
-          {раздел === 'поиск' && (
-            <SearchPane settings={props.settings} вид={вид} onВид={setВид} метки={метки} названия={названия} />
+          {(раздел === 'поиск' || раздел === 'просмотры') && (
+            <SearchPane key={раздел} settings={props.settings} источник={раздел} вид={вид} onВид={setВид} метки={метки} названия={названия} />
           )}
           {раздел === 'действия' && (действия
             ? <ActionsPane settings={props.settings} события={действия.события} ручные={действия.ручные} названия={названия} onГрафик={наГрафик} />
