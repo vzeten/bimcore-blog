@@ -184,6 +184,43 @@ export interface Settings {
     неизвестныйАвтор: string;
     разное: string;
   };
+  /** Окно аналитики изменений и Поиска Google (ED-054): только надписи. */
+  аналитикаОкно: {
+    кнопка: string;
+    заголовок: string;
+    закрыть: string;
+    разделДействия: string;
+    разделПоиск: string;
+    разделВоронка: string;
+    охватСайт: string;
+    шагНедели: string;
+    шагМесяцы: string;
+    шагДни: string;
+    показы: string;
+    переходы: string;
+    неполный: string;
+    страницы: string;
+    колонкаСтраница: string;
+    колонкаПоказы: string;
+    колонкаПереходы: string;
+    колонкаCTR: string;
+    колонкаПозиция: string;
+    разницаПодсказка: string;
+    поДень: string;
+    страницаОхват: string;
+    вернутьСайт: string;
+    вокругСобытия: string;
+    нетДанных: string;
+    видыСобытий: Record<string, string>;
+    ручное: string;
+    безОписания: string;
+    разница: string;
+    скрыть: string;
+    наГрафике: string;
+    нетСобытий: string;
+    строк: string;
+    ещё: string;
+  };
   /** Просмотры из Google Analytics: окну нужны только надписи, остальное читает сервер. */
   просмотры: {
     папкаКлюча: string;

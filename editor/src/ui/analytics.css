@@ -1,0 +1,46 @@
+/* Окно «Аналитика» (ED-054, операция 2): поверх реестра, как корзина, но во весь экран. Графики — тонкие линии
+   одного цвета, сетка и оси тихие, метки изменений — тёмные треугольники под осью. Палитра проверена
+   валидатором цветов (dataviz): синий #2a78d6 проходит на светлом фоне. */
+
+.analytics-screen { inset: 56px 24px 24px 24px; max-height: none; display: flex; flex-direction: column; }
+.analytics-body { display: flex; gap: 20px; min-height: 0; flex: 1; }
+.analytics-nav { display: flex; flex-direction: column; gap: 4px; min-width: 170px; }
+.analytics-nav button { text-align: left; border: 0; background: transparent; padding: 7px 10px; border-radius: 6px; font: inherit; color: var(--ink); }
+.analytics-nav button:hover:not(:disabled) { background: var(--bg-soft); }
+.analytics-nav button.nav-on { background: var(--bg-soft); font-weight: 600; }
+.analytics-nav button:disabled { color: var(--ink-quiet); cursor: default; font-size: 13px; }
+.analytics-main { flex: 1; min-width: 0; overflow: auto; padding-right: 4px; }
+.analytics-main h3 { font-size: 13px; margin: 16px 0 6px; }
+.analytics-controls { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+.analytics-scope { margin: 4px 0 8px; font-size: 13px; }
+.analytics-main .views-compare { margin: 6px 0 12px; }
+.analytics-main .views-compare strong { margin-right: 6px; }
+
+.trend { position: relative; margin: 6px 0 14px; }
+.trend-title { font-size: 12px; color: var(--ink-quiet); margin-bottom: 2px; }
+.trend svg { display: block; }
+.trend-grid { stroke: #eef1f4; stroke-width: 1; }
+.trend-axis { fill: var(--ink-quiet); font-size: 11px; font-variant-numeric: tabular-nums; }
+.trend-line { fill: none; stroke: #2a78d6; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.trend-line-fresh { stroke-dasharray: 4 4; opacity: 0.6; }
+.trend-marker { fill: #52514e; cursor: pointer; }
+.trend-marker:hover { fill: #111418; }
+.trend-cross { stroke: #9aa2ad; stroke-width: 1; stroke-dasharray: 2 3; }
+.trend-dot { fill: #2a78d6; stroke: var(--bg); stroke-width: 2; }
+.trend-tip { position: absolute; top: 18px; width: 220px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
+  padding: 6px 8px; font-size: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1); pointer-events: none; }
+.trend-tip-note { color: var(--ink-quiet); margin-top: 2px; }
+.trend-tip-event { margin-top: 3px; }
+
+.pages-table td.num, .pages-table th:not(:first-child) { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pages-path { color: var(--ink-quiet); font-size: 11px; }
+
+.actions-pane h3 { margin-top: 14px; }
+.action-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-top: 1px solid #eef1f4; }
+.action-kind { min-width: 76px; font-size: 12px; color: var(--ink-quiet); padding-top: 2px; }
+.action-main { flex: 1; min-width: 0; }
+.action-lang { font-size: 12px; color: var(--ink-quiet); }
+.action-text { font-size: 13px; margin-top: 2px; }
+.action-empty { color: var(--ink-quiet); font-style: italic; }
+.action-manual .action-kind { color: #7a4ab0; font-weight: 600; }
+.action-diff { max-height: 320px; overflow: auto; background: var(--bg-soft); border-radius: 6px; padding: 8px; font-size: 12px; white-space: pre-wrap; }
