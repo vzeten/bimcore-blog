@@ -12,14 +12,17 @@ export interface ГруппаИзменений {
 
 /**
  * Блок «Выбрано: …» под графиками (слово владельца 2026-09-24): все изменения выбранного периода, сведённые по
- * статье с языками. Щелчок по строке раскрывает её изменения — описание от ИИ, строки +/− и цветную разницу;
- * кнопка возвращает к последним 30 дням.
+ * статье с языками — только после щелчка по ▲ (по столбику — одна строка выбора, чтобы видеть показатели
+ * страниц). Щелчок по строке раскрывает её изменения — описание от ИИ, строки +/− и цветную разницу; кнопка
+ * возвращает к последним 30 дням.
  */
 export function PeriodBox(props: {
   settings: Settings;
   период: string;
   группы: ГруппаИзменений[];
   названия: Map<string, string>;
+  /** Показывать ли список изменений (раскрыт щелчком по ▲). */
+  изменения: boolean;
   onСброс: () => void;
 }) {
   const п = props.settings.аналитикаОкно;
@@ -30,9 +33,9 @@ export function PeriodBox(props: {
         <strong>{п.выбрано.replace('{период}', props.период)}</strong>
         <button className="ghost" onClick={props.onСброс}>{п.кПоследним30}</button>
       </div>
-      {props.группы.length === 0 && <p className="trash-note">{п.нетИзменений}</p>}
-      {props.группы.length > 0 && <div className="views-label">{п.изменения}: {props.группы.length}</div>}
-      {props.группы.map((г) => {
+      {props.изменения && props.группы.length === 0 && <p className="trash-note">{п.нетИзменений}</p>}
+      {props.изменения && props.группы.length > 0 && <div className="views-label">{п.изменения}: {props.группы.length}</div>}
+      {props.изменения && props.группы.map((г) => {
         const описано = г.события.filter((с) => с.описание).length;
         return (
           <div key={г.подпись} className="period-group">
