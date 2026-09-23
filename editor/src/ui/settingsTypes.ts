@@ -230,6 +230,7 @@ export interface Settings {
     наГрафике: string;
     нетСобытий: string;
     строк: string;
+    картинок: string;
     ещё: string;
   };
   /** Просмотры из Google Analytics: окну нужны только надписи, остальное читает сервер. */

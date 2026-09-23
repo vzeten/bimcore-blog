@@ -29,7 +29,7 @@ export function ActionRow(props: {
         <span className="action-main">
           <strong>{props.название}</strong>
           {с.локаль && <span className="action-lang"> {с.локаль.toUpperCase()}</span>}
-          <span className="pages-path"> +{с.добавлено} / −{с.убрано} {п.строк} · {с.автор}</span>
+          <span className="pages-path"> +{с.добавлено} / −{с.убрано} {с.вид === 'изображения' ? п.картинок : п.строк} · {с.автор}</span>
           <div className={с.описание ? 'action-text' : 'action-text action-empty'}>{с.описание ?? п.безОписания}</div>
         </span>
         <button className="ghost" onClick={() => void открыть()}>{текст !== undefined ? п.скрыть : п.разница}</button>

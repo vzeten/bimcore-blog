@@ -1,6 +1,6 @@
 // События «Действия» (ED-054): какие изменения серверной main — изменения статей сайта. Чистые правила.
 import {describe, expect, it} from 'vitest';
-import {РАЗДЕЛИТЕЛЬ, статьяСайта, разобратьЛог, счётСтрок, короче} from '../src/core/changes.mjs';
+import {РАЗДЕЛИТЕЛЬ, статьяСайта, изображениеСайта, разницаИзображений, разобратьЛог, счётСтрок, короче} from '../src/core/changes.mjs';
 
 const roots = [
   {папка: 'docs', род: 'docs', локаль: 'en', наСайте: true},
@@ -36,6 +36,8 @@ describe('разбор истории', () => {
     const итог = разобратьЛог(вывод, roots);
     expect(итог.map((запись) => запись.коммит)).toEqual(['c1', 'c2', 'c3']);
     expect(итог[0].изменения).toEqual([{вид: 'добавление', путь: 'docs/lessons/a.mdx', прежнийПуть: null}]);
+    // Картинка — не статья, но идёт своим списком: к статье её привяжет разбор git по папке.
+    expect(итог[0].изображения).toEqual([{путь: 'docs/lessons/img-01.png', вид: 'добавлено'}]);
     expect(итог[1].автор).toBe('сотрудник');
     expect(итог[1].изменения).toEqual([
       {вид: 'правка', путь: 'docs/lessons/a.mdx', прежнийПуть: null},
@@ -68,5 +70,26 @@ describe('разница', () => {
     expect(Buffer.byteLength(итог, 'utf8')).toBeLessThan(260);
     expect(итог.endsWith('…обрезано\n')).toBe(true);
     expect(короче('+коротко', 200, '…')).toBe('+коротко');
+  });
+});
+
+describe('изображения', () => {
+  it('картинка сайта — по расширению в корне сайта, без служебных частей пути', () => {
+    expect(изображениеСайта('blog/post/img-01.JPG', roots)).toBe(true);
+    expect(изображениеСайта('i18n/ru/docusaurus-plugin-content-docs/current/guides/img/a.webp', roots)).toBe(true);
+    expect(изображениеСайта('blog/post/_state.json', roots)).toBe(false);
+    expect(изображениеСайта('blog/_drafts/a.png', roots)).toBe(false);
+    expect(изображениеСайта('static/img/logo.png', roots)).toBe(false);
+    expect(изображениеСайта('editor/sandbox/proba/a.png', roots)).toBe(false);
+  });
+
+  it('заменённая, убранная, новая и переехавшая картинка', () => {
+    const [запись] = разобратьЛог([коммит('i1'), 'M\tblog/p/a.jpg', 'D\tblog/p/b.jpg', 'A\tblog/p/c.jpg', 'R100\tblog/p/d.jpg\tblog/q/d.jpg'].join('\n'), roots);
+    expect(запись.изображения).toEqual([
+      {путь: 'blog/p/a.jpg', вид: 'заменено'}, {путь: 'blog/p/b.jpg', вид: 'удалено'}, {путь: 'blog/p/c.jpg', вид: 'добавлено'},
+      {путь: 'blog/p/d.jpg', вид: 'удалено'}, {путь: 'blog/q/d.jpg', вид: 'добавлено'},
+    ]);
+    expect(запись.изменения).toEqual([]);
+    expect(разницаИзображений(запись.изображения.slice(0, 3))).toEqual({дельта: '-a.jpg\n+a.jpg\n-b.jpg\n+c.jpg\n', добавлено: 2, убрано: 2});
   });
 });

@@ -42,7 +42,7 @@
 /* Ручные SEO-записи — отдельным красным знаком под знаком изменений статей (слово владельца 24.09). */
 .bars-marker button { display: inline-flex; flex-direction: column; align-items: center; }
 .bars-manual { color: #d13b3b; font-weight: 700; }
-.period-manual .period-row { color: #b42626; font-weight: 600; }
+.period-manual .period-row, .period-manual .period-row:disabled { color: #b42626; font-weight: 600; }
 .bars-tip { position: absolute; top: 8px; left: 50%; z-index: 2; width: 210px; background: var(--bg); border: 1px solid var(--line);
   border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1); pointer-events: none; }
 .bars-col:nth-last-child(-n+4) .bars-tip { left: auto; right: 50%; }
