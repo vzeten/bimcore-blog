@@ -10,6 +10,7 @@ import {
 import {defaultLocale, locales} from './plugins/translation-map/locales.mjs';
 import {собратьСсылкиЛокали} from './plugins/llms-locale-links.mjs';
 import shopUtm from './plugins/shop-utm.mjs';
+import faqSchema from './plugins/faq-schema.mjs';
 
 // Локально читаем токены из .env.local (в git не коммитится).
 // На GitHub Actions переменные приходят из секретов репозитория (process.env).
@@ -90,7 +91,8 @@ const config = {
           // (решение владельца 2026-09-15). На GitHub нужна полная история — deploy.yml.
           showLastUpdateTime: true,
           // Ссылки из статей в магазин — с меткой learn: раздел «Продажи» редактора видит заказы с learn (ED-054).
-          remarkPlugins: [shopUtm],
+          // Раздел «Вопросы и ответы» → JSON-LD FAQPage без JSX в статье (ED-029).
+          remarkPlugins: [shopUtm, faqSchema],
         },
         blog: {
           showReadingTime: true,
@@ -106,7 +108,7 @@ const config = {
           // Старый визуальный редактор не экранировал JSX-теги; MDX парсер их валидирует.
           // См. decisions «Truncate-маркер = <truncate /> JSX-тег».
           truncateMarker: /<truncate\s*\/>/,
-          remarkPlugins: [shopUtm],
+          remarkPlugins: [shopUtm, faqSchema],
         },
         theme: {
           customCss: './src/css/custom.css',

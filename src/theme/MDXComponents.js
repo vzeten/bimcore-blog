@@ -15,6 +15,7 @@ import MDXComponents from '@theme-original/MDXComponents';
 import CTA from '@site/src/components/CTA';
 import YouTube from '@site/src/components/YouTube';
 import ProductCard from '@site/src/components/ProductCard';
+import FaqSchema from '@site/src/components/FaqSchema';
 
 export default {
   ...MDXComponents,
@@ -22,6 +23,8 @@ export default {
   // Используется в .mdx как: <CTA type="blog" /> (или lesson | course | guide | help).
   // В редакторе статей должна быть быстрая вставка этого блока.
   CTA,
+  // FaqSchema — JSON-LD FAQPage; вставляет плагин сборки plugins/faq-schema.mjs, в статьях не пишется (ED-029).
+  FaqSchema,
   // YouTube — адаптивное 16:9 видео с ленивой загрузкой (см. src/components/YouTube.jsx).
   // Используется в .mdx как: <YouTube id="ifJtfM3LgGg" title="..." />.
   // В редакторе статей должна быть быстрая вставка этого блока.
