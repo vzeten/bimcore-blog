@@ -16,13 +16,7 @@
     "content:check": "node scripts/content-check.js",
     "repo:check": "node scripts/repo-check.mjs",
     "seo:audit": "node scripts/seo-audit.mjs",
-    "review": "node scripts/review-page.js",
-    "editor:dev": "npm --prefix editor run dev",
-    "editor:test": "npm --prefix editor run test",
-    "editor:typecheck": "npm --prefix editor run typecheck",
-    "editor:corpus": "npm --prefix editor run corpus",
-    "editor:adopt": "npm --prefix editor run adopt",
-    "editor:worktree-remove": "npm --prefix editor run worktree-remove --"
+    "review": "node scripts/review-page.js"
   },
   "dependencies": {
     "@docusaurus/core": "3.10.1",
