@@ -54,7 +54,9 @@ export default function faqSchema() {
     дерево.children.push({
       type: 'mdxJsxFlowElement',
       name: 'FaqSchema',
-      attributes: [{type: 'mdxJsxAttribute', name: 'data', value: JSON.stringify(данные)}],
+      // `<`, `>` и `&` — escape-последовательностями JSON: текст ответа вроде `</script>` иначе закрыл бы
+      // разметку раньше времени и открыл исполняемый код. Для читателя JSON-LD значение то же.
+      attributes: [{type: 'mdxJsxAttribute', name: 'data', value: JSON.stringify(данные).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')}],
       children: [],
     });
   };
