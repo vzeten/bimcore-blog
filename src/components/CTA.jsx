@@ -2,6 +2,7 @@
 import Translate, {translate} from '@docusaurus/Translate';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import styles from '../css/cta.module.css';
+import {сМеткой} from '@site/plugins/shop-utm.mjs';
 
 const ctaData = {
   blog: {
@@ -79,7 +80,8 @@ export default function CTA({type = 'blog'}) {
   const data = ctaData[type];
   // Внутренняя ссылка обязана получить префикс локали (/ru/, /es/) — иначе
   // с русской страницы уводит на английскую. Внешние (с протоколом) хук не трогает.
-  const link = useBaseUrl(data?.link ?? '/');
+  // Ссылка в магазин — с меткой learn и видом блока: заказ по ней виден в «Продажах» редактора (ED-054).
+  const link = сМеткой(useBaseUrl(data?.link ?? '/'), {носитель: 'cta', статья: `cta-${type}`});
   if (!data) return null;
 
   return (
