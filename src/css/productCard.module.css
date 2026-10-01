@@ -110,6 +110,69 @@
   text-decoration: none;
 }
 
+/* ---- Выбор оплаты: раскрывается под главной кнопкой там, где он предлагается ---- */
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  padding: 0.9rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 12px;
+  background: var(--ifm-background-surface-color, #fff);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+.choiceTitle {
+  margin: 0 0 0.1rem;
+  font-size: 0.86rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.choiceItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.65rem 0.9rem;
+  border: 2px solid var(--ifm-color-emphasis-200);
+  border-radius: 10px;
+  color: inherit;
+  font-size: 0.98rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.choiceItem:hover {
+  border-color: var(--ifm-color-primary);
+  color: var(--ifm-color-primary);
+  text-decoration: none;
+}
+
+.choiceHint {
+  font-size: 0.8rem;
+  font-weight: 400;
+  opacity: 0.72;
+}
+
+/* Запомненный магазин под кнопками: ссылка «Сменить» открывает выбор заново. */
+.chosen {
+  margin: 0.7rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.change {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ifm-color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* ---- Мобильная раскладка: в столбик, фото сверху ---- */
 @media (max-width: 700px) {
   .card {

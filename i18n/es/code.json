@@ -423,5 +423,38 @@
   },
   "cta.template.button": {
     "message": "Más sobre la plantilla"
+  },
+  "productCard.buy": {
+    "message": "Consultar precio"
+  },
+  "productCard.guide": {
+    "message": "Ver qué incluye"
+  },
+  "productCard.payment.title": {
+    "message": "¿Dónde vas a pagar?"
+  },
+  "productCard.payment.rub": {
+    "message": "Rusia y Bielorrusia"
+  },
+  "productCard.payment.rub.hint": {
+    "message": "pago en rublos"
+  },
+  "productCard.payment.kzt": {
+    "message": "Kazajistán"
+  },
+  "productCard.payment.kzt.hint": {
+    "message": "pago en tenges"
+  },
+  "productCard.payment.world": {
+    "message": "Otros países"
+  },
+  "productCard.payment.world.hint": {
+    "message": "tienda internacional de BIMCORE"
+  },
+  "productCard.payment.chosen": {
+    "message": "Tienda: {store}."
+  },
+  "productCard.payment.change": {
+    "message": "Cambiar"
   }
 }

@@ -1,0 +1,139 @@
+{
+  "оплата": {
+    "языкиСВыбором": [
+      "ru"
+    ],
+    "варианты": [
+      {
+        "код": "rub",
+        "магазин": "int-lines",
+        "валюта": "RUB"
+      },
+      {
+        "код": "kzt",
+        "магазин": "int-lines",
+        "валюта": "KZT"
+      },
+      {
+        "код": "world",
+        "магазин": "bimcore"
+      }
+    ]
+  },
+  "товары": {
+    "577113367": {
+      "инструкция": "/guides/families/armchairs-for-revit/",
+      "bimcore": "https://bimcore.one/products/armchair-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-kresla/"
+    },
+    "543750264": {
+      "инструкция": "/guides/families/bathroom-for-revit/",
+      "bimcore": "https://bimcore.one/products/bathroom-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-santehnika/"
+    },
+    "632953216": {
+      "инструкция": "/guides/families/bathroom-furniture-for-revit/",
+      "bimcore": "https://bimcore.one/products/bathroom-furniture-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-mebel-dlya-vannoy/"
+    },
+    "602815169": {
+      "инструкция": "/guides/families/beds-for-revit/",
+      "bimcore": "https://bimcore.one/products/bed-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-krovati/"
+    },
+    "582492458": {
+      "инструкция": "/guides/families/chairs-for-revit/",
+      "bimcore": "https://bimcore.one/products/chair-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-stulya/"
+    },
+    "759002618": {
+      "инструкция": "/guides/families/curtains-and-blinds-for-revit/",
+      "bimcore": "https://bimcore.one/products/surtains-and-blinds-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-shtory-i-zhalyuzi/"
+    },
+    "695706588": {
+      "инструкция": "/guides/families/doors-for-revit/",
+      "bimcore": "https://bimcore.one/products/door-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-dveri/"
+    },
+    "543629545": {
+      "инструкция": "/guides/families/kitchen-for-revit/",
+      "bimcore": "https://bimcore.one/products/kitchen-revit-families-v-3",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-kuhnya-v-3/"
+    },
+    "560800271": {
+      "инструкция": "/guides/families/lighting-for-revit/",
+      "bimcore": "https://bimcore.one/products/lighting-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-svetilniki/"
+    },
+    "543746540": {
+      "инструкция": "/guides/families/modular-sofa-for-revit/",
+      "bimcore": "https://bimcore.one/products/modular-sofa-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-divan-transformer/"
+    },
+    "543589695": {
+      "инструкция": "/guides/families/plants-for-revit/",
+      "bimcore": "https://bimcore.one/products/plants-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-rasteniya/"
+    },
+    "577117112": {
+      "инструкция": "/guides/families/radiators-for-revit/",
+      "bimcore": "https://bimcore.one/products/radiators-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-radiatory/"
+    },
+    "660613460": {
+      "инструкция": "/guides/families/retro-style-socket-for-revit/",
+      "bimcore": "https://bimcore.one/products/retro-style-socket-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-retro-rozetki/"
+    },
+    "582497943": {
+      "инструкция": "/guides/families/shelving-for-revit/",
+      "bimcore": "https://bimcore.one/products/shelving-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-stellazhi/"
+    },
+    "615953573": {
+      "инструкция": "/guides/families/sideboards-dressers-for-revit/",
+      "bimcore": "https://bimcore.one/products/dresser-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-tumby-i-komody/"
+    },
+    "543601734": {
+      "инструкция": "/guides/families/sockets-for-revit/",
+      "bimcore": "https://bimcore.one/products/socket-revit-families-v-4",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-rozetki-v-4/"
+    },
+    "577113364": {
+      "инструкция": "/guides/families/sofas-for-revit/",
+      "bimcore": "https://bimcore.one/products/sofa-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-divany/"
+    },
+    "660642703": {
+      "инструкция": "/guides/families/storage-cabinets-for-revit/",
+      "bimcore": "https://bimcore.one/products/storage-cabinet-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-shkafy/"
+    },
+    "592167128": {
+      "инструкция": "/guides/families/tables-for-revit/",
+      "bimcore": "https://bimcore.one/products/table-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-stoly/"
+    },
+    "543746528": {
+      "инструкция": "/guides/families/wardrobe-for-revit/",
+      "bimcore": "https://bimcore.one/products/wardrobe-revit-families",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-garderob/"
+    },
+    "794237685": {
+      "инструкция": "/guides/families/windows-for-revit/",
+      "bimcore": "https://bimcore.one/products/windows",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-okna/"
+    },
+    "735946318": {
+      "инструкция": "/guides/templates/",
+      "bimcore": "https://bimcore.one/products/revit-interior-design-template",
+      "int-lines": "https://int-lines.com/shablon-revit/shablon-interera-v-revit/"
+    },
+    "794392263": {
+      "bimcore": "https://bimcore.one/products/all-revit-families-set-21",
+      "int-lines": "https://int-lines.com/revit-families/nabor-vse-semeystva-21/"
+    }
+  }
+}

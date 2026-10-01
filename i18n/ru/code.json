@@ -423,5 +423,38 @@
   },
   "cta.template.button": {
     "message": "Узнать подробнее о шаблоне"
+  },
+  "productCard.buy": {
+    "message": "Посмотреть цену в магазине"
+  },
+  "productCard.guide": {
+    "message": "Состав набора"
+  },
+  "productCard.payment.title": {
+    "message": "Где вы будете оплачивать?"
+  },
+  "productCard.payment.rub": {
+    "message": "Россия и Беларусь"
+  },
+  "productCard.payment.rub.hint": {
+    "message": "оплата в рублях"
+  },
+  "productCard.payment.kzt": {
+    "message": "Казахстан"
+  },
+  "productCard.payment.kzt.hint": {
+    "message": "оплата в тенге"
+  },
+  "productCard.payment.world": {
+    "message": "Другие страны"
+  },
+  "productCard.payment.world.hint": {
+    "message": "международный магазин BIMCORE"
+  },
+  "productCard.payment.chosen": {
+    "message": "Магазин: {store}."
+  },
+  "productCard.payment.change": {
+    "message": "Сменить"
   }
 }

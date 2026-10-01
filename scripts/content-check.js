@@ -247,6 +247,42 @@ function checkLinks(entry, doc, routes) {
   }
 }
 
+// Свойства карточки товара, которые понимает компонент сайта (src/components/ProductCard.jsx). Лишнее сайт
+// молча игнорирует, а редактор показывал — отсюда расхождение «две кнопки в окне, одна на сайте» (ТЗ 2026-10-01).
+// В статье по смыслу нужны только код товара и вторая кнопка; остальное подтягивается само (решение 2026-10-01).
+const PRODUCT_CARD_PROPS = new Set(['ecwidProductId', 'guideButton', 'name', 'description', 'image', 'imageAlt', 'buyUrl', 'guideUrl']);
+// Прежние свойства, стоящие в инструкциях: сайт их больше не показывает (надписи — из переводов интерфейса), но
+// предупреждать о каждой из 43 инструкций до их отдельной чистки — шум. Убираются вместе с этой строкой.
+const PRODUCT_CARD_LEGACY = new Set(['buyLabel', 'sku']);
+const PRODUCT_CODES = new Set(Object.keys(
+  JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'data', 'products.json'), 'utf8')).товары,
+));
+
+function checkProductCard(entry, doc) {
+  const tagRe = /<ProductCard\b([\s\S]*?)\/?>/g;
+  let tag;
+  while ((tag = tagRe.exec(doc.body)) !== null) {
+    // Значения в кавычках и в фигурных скобках вынимаются: `?currency=RUB&ref=x` внутри адреса — не свойства.
+    const bare = tag[1].replace(/"[^"]*"|'[^']*'|\{[^}]*\}/g, '""');
+    // После вынимания значений в теге остаются только имена: и `имя=""`, и одиночные вроде `guideButton`.
+    const names = [...bare.matchAll(/[A-Za-z]\w*/g)].map((m) => m[0]);
+    for (const name of names) {
+      if (!PRODUCT_CARD_PROPS.has(name) && !PRODUCT_CARD_LEGACY.has(name)) {
+        add('productCardProps', entry.file, `у карточки товара неизвестное свойство «${name}» — сайт его не показывает`,
+          'убрать свойство; допустимые: ' + [...PRODUCT_CARD_PROPS].join(', '));
+      }
+    }
+    const code = /ecwidProductId\s*=\s*["']([^"']*)["']/.exec(tag[1])?.[1];
+    if (!code) {
+      add('productCardProps', entry.file, 'у карточки товара нет кода товара ecwidProductId — карточка не знает, какой это набор',
+        'добавить ecwidProductId из src/data/products.json');
+    } else if (!PRODUCT_CODES.has(code)) {
+      add('productCardProps', entry.file, `код товара «${code}» не найден в src/data/products.json — у карточки не будет магазинов и инструкции`,
+        'проверить код или добавить товар в таблицу');
+    }
+  }
+}
+
 function checkLocaleParity(articles) {
   if (!RULES.structure.checkLocaleParity) return;
   const bySlug = new Map();
@@ -290,6 +326,7 @@ function main() {
     checkPhrases(entry, doc);
     checkTerms(entry, doc);
     checkLinks(entry, doc, routes);
+    checkProductCard(entry, doc);
   }
   checkLocaleParity(articles);
 

@@ -12,7 +12,8 @@
     "headingNumerals": "warning",
     "phrasesStrict": "warning",
     "phrasesSoft": "warning",
-    "summaryTablePhrases": "warning"
+    "summaryTablePhrases": "warning",
+    "productCardProps": "warning"
   },
 
   "structure": {

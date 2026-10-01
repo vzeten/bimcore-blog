@@ -136,6 +136,9 @@ const config = {
     // статический HTML (иначе микроразметка появлялась только после fetch
     // в браузере — Google её не видел, GSC ругался «Укажите price»).
     './plugins/ecwid-prices',
+    // Название, описание и картинка набора для ProductCard — из карточки в его инструкции на языке
+    // страницы: в статье блога достаточно кода товара (src/data/products.json).
+    './plugins/product-cards/index.mjs',
     [
       '@docusaurus/plugin-google-gtag',
       {
