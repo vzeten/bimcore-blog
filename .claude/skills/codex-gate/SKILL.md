@@ -5,7 +5,7 @@ description: Одноразовый технический контроль то
 
 # Технический контролёр
 
-Когда вызывать и кто ждёт — [TASKS.md](../../../editor/TASKS.md#контролёр-и-границы-замечаний).
+Когда вызывать и кто ждёт — [TASKS.md](C:/My_code/bimcore-editor/editor/TASKS.md#контролёр-и-границы-замечаний).
 Запуск в PowerShell — одной командой с конечным вводом, без PTY (`tty: false`):
 ```powershell
 Get-Content -LiteralPath $promptFile -Raw -Encoding utf8 | & $codexExe exec --model gpt-6.1-sol --ephemeral --sandbox read-only --color never -C $worktree -
