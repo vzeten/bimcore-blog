@@ -6,12 +6,13 @@
 // разрешением что-либо удалять: решение о лишнем принимает владелец. Показывает:
 //   1. на какой ветке основная папка;
 //   2. какие рабочие копии есть, на каких ветках, и есть ли у временной копии владелец-операция
-//      (`editor/.coordination/run-status.json`), перенесена ли её ветка в `editor` (или в `main` для кода сайта), осталась ли в ней
-//      несохранённая работа (незакоммиченные, неотслеживаемые и игнорируемые файлы);
-//   3. какие ветки есть, кроме `main`, `editor`, `backup/*`;
+//      (`editor/.coordination/run-status.json` клона редактора), перенесена ли её ветка в `main` (копии кода сайта —
+//      в `C:/My_code/bimcore-blog-worktrees`) или в `editor` клона, осталась ли в ней несохранённая работа
+//      (незакоммиченные, неотслеживаемые и игнорируемые файлы);
+//   3. какие ветки есть, кроме `main`, `backup/*`;
 //   4. откуда работает экземпляр 4780 и какую папку материалов он читает (`/api/identity`);
 //   5. кто ещё слушает порты редактора 4779–4799 и из какой папки;
-//   6. посторонние папки в `editor/.coordination/worktrees` и кэш-копии в корне;
+//   6. посторонние папки среди копий сайта и клона, старая `editor/.coordination` на диске сайта, кэш-копии в корне;
 //   7. совпадает ли локальная main с настоящей серверной (ls-remote с ограничением времени, без fetch).
 // `--release-site` — строгая сверка main, одно из условий завершения выпуска кода сайта (CLAUDE.md, «Код сайта
 // Docusaurus», п. 4); выкладку, проверку сайта и приёмку не подтверждает. Ненулевой выход при другой ветке,
@@ -21,7 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
-// Корень — основная папка репозитория, а не папка самого скрипта: из копии (accepted-editor или временной)
+// Корень — основная папка репозитория, а не папка самого скрипта: из временной копии
 // скрипт проверяет ту же основную папку и не принимает копию за неё.
 const HERE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Каждый вызов git получает адресное safe.directory именно той папки, которую проверяет: в чужой среде (владелец папки
@@ -38,12 +39,13 @@ const git = (...args) => gitAt(ROOT, args).trim();
 const gitIn = (dir, ...args) => gitAt(dir, args).trim();
 const предок = (ветка, цель) => { try { gitAt(ROOT, ['merge-base', '--is-ancestor', ветка, цель], {stdio: 'ignore'}); return 'да'; } catch { return 'НЕТ'; } };
 const norm = (p) => path.resolve(p).replace(/\\/g, '/').toLowerCase();
-const ACCEPTED = norm(path.join(ROOT, 'editor/.coordination/worktrees/accepted-editor'));
 const КЛОН_ЕСТЬ = fs.existsSync(path.join(КЛОН, '.git'));
-// Код 4780 — из клона, когда он есть; до переезда — из прежней accepted-editor.
-const ПРИНЯТЫЙ = КЛОН_ЕСТЬ ? norm(КЛОН) : ACCEPTED;
-// Рабочая ветка одной одобренной операции: код редактора (`…/editor-…`, цель editor) или код сайта
-// (`…/site-…`, цель main). Оба вида живут в одной временной папке внутри editor/.coordination/worktrees.
+// Код 4780 — только из клона редактора.
+const ПРИНЯТЫЙ = norm(КЛОН);
+// Временные копии кода сайта — рядом с основной папкой, вне её (вынос редактора 2026-10-03).
+const КОПИИ_САЙТА = path.join(path.dirname(ROOT), 'bimcore-blog-worktrees');
+// Рабочая ветка одной одобренной операции: код редактора (`…/editor-…`, в клоне, цель editor) или код сайта
+// (`…/site-…`, в КОПИИ_САЙТА, цель main). Запись операции одна — в клоне редактора.
 const WORK = /^(feature|fix)\/(editor|site)-[a-z0-9-]+$/;
 
 const строки = [];
@@ -64,11 +66,11 @@ info(`в основной папке изменённых отслеживаем
 
 // 2. рабочие копии
 let текущаяОперация = null;
-const statusPath = path.join(ROOT, 'editor/.coordination/run-status.json');
+const statusPath = path.join(КЛОН, 'editor/.coordination/run-status.json');
 if (fs.existsSync(statusPath)) {
   try { текущаяОперация = JSON.parse(fs.readFileSync(statusPath, 'utf8')); } catch { /* сломанный файл покажем ниже */ }
   if (текущаяОперация) info(`последняя записанная операция: ${текущаяОперация.operation ?? '?'} на ${текущаяОперация.branch ?? '?'}, состояние ${текущаяОперация.state ?? '?'}`);
-  else bad('editor/.coordination/run-status.json не читается');
+  else bad(`${statusPath} не читается`);
 }
 const копии = [];
 let cur = null;
@@ -81,27 +83,15 @@ if (cur) копии.push(cur);
 for (const к of копии) {
   const p = norm(к.path);
   if (p === norm(ROOT)) continue;
-  if (p === ACCEPTED && КЛОН_ЕСТЬ) {
-    info('прежняя accepted-editor внутри папки сайта — точка отката до архивации, 4780 из неё не работает');
-    continue;
-  }
-  if (p === ACCEPTED) {
-    const st = fs.existsSync(к.path) ? gitIn(к.path, 'status', '--short') : 'НЕТ НА ДИСКЕ';
-    if (к.branch === 'editor' && st === '') ok(`accepted-editor на editor, без незакоммиченных правок`);
-    else bad(`accepted-editor: ветка «${к.branch}», незакоммиченных файлов: ${st === '' ? 0 : st.split('\n').length}`);
-    continue;
-  }
-  const внутри = p.startsWith(norm(path.join(ROOT, 'editor/.coordination/worktrees')) + '/');
-  const рабочая = !!(к.branch && WORK.test(к.branch));
+  const внутри = p.startsWith(norm(КОПИИ_САЙТА) + '/');
+  const рабочая = !!(к.branch && WORK.test(к.branch) && /\/site-/.test(к.branch));
   let описание = `копия ${к.path} (${к.branch ?? 'без ветки'})`;
   if (fs.existsSync(к.path)) {
     const незакоммич = gitIn(к.path, 'status', '--short').split('\n').filter(Boolean).length;
     const игнорируемые = gitIn(к.path, 'ls-files', '--others', '--ignored', '--exclude-standard', '--directory').split('\n').filter(Boolean).length;
     let перенесена = 'нет ветки';
-    const цель = к.branch && /\/site-/.test(к.branch) ? 'main' : 'editor';
-    if (к.branch) {
-      перенесена = предок(к.branch, цель);
-    }
+    const цель = 'main';
+    if (к.branch) перенесена = предок(к.branch, цель);
     const владелец = текущаяОперация && текущаяОперация.branch === к.branch ? `операция ${текущаяОперация.operation} (${текущаяОперация.state})` : 'операция не записана';
     описание += `: ${владелец}; ветка перенесена в ${цель}: ${перенесена}; незакоммиченных файлов: ${незакоммич}; игнорируемых (черновики/история/передача): ${игнорируемые}`;
   } else {
@@ -110,7 +100,7 @@ for (const к of копии) {
   if (внутри && рабочая && текущаяОперация && текущаяОперация.branch === к.branch) info(описание);
   else bad(описание + ' — по схеме такой копии быть не должно; решает владелец');
 }
-if (копии.length === 2) ok('рабочих копий две: основная и accepted-editor');
+if (копии.length === 1) ok('рабочая копия сайта одна: основная папка');
 // 2б. клон редактора и копии его операций — тем же порядком, что копии основной папки.
 const копииКлона = [];
 if (КЛОН_ЕСТЬ) try {
@@ -118,9 +108,7 @@ if (КЛОН_ЕСТЬ) try {
   const st = gitIn(КЛОН, 'status', '--short');
   if (вет === 'editor' && st === '') ok(`клон редактора ${КЛОН} на editor, без незакоммиченных правок`);
   else bad(`клон редактора ${КЛОН}: ветка «${вет}», незакоммиченных файлов: ${st === '' ? 0 : st.split('\n').length}`);
-  let операцияКлона = null;
-  const статусКлона = path.join(КЛОН, 'editor/.coordination/run-status.json');
-  if (fs.existsSync(статусКлона)) { try { операцияКлона = JSON.parse(fs.readFileSync(статусКлона, 'utf8')); } catch { bad(`${статусКлона} не читается`); } }
+  const операцияКлона = текущаяОперация;
   let к = null;
   for (const line of gitIn(КЛОН, 'worktree', 'list', '--porcelain').split('\n')) {
     if (line.startsWith('worktree ')) к = {path: line.slice(9), branch: null};
@@ -152,13 +140,13 @@ if (КЛОН_ЕСТЬ) try {
   }
 } catch (e) {
   bad(`клон редактора ${КЛОН} не читается git: ${e?.message?.split('\n')[0] ?? e}`);
-}
+} else bad(`клона редактора ${КЛОН} нет — 4780 работать неоткуда`);
 
 // 3. ветки
 const ветки = git('branch', '--format=%(refname:short)').split('\n').filter(Boolean);
-const лишние = ветки.filter((b) => !(b === 'main' || b === 'editor' || b.startsWith('backup/') || (текущаяОперация && b === текущаяОперация.branch && WORK.test(b))));
+const лишние = ветки.filter((b) => !(b === 'main' || b.startsWith('backup/') || (текущаяОперация && b === текущаяОперация.branch && WORK.test(b))));
 if (лишние.length === 0) ok(`ветки: ${ветки.join(', ')}`);
-else for (const b of лишние) { const цель = /\/site-/.test(b) ? 'main' : 'editor'; bad(`ветка вне схемы: ${b} (перенесена в ${цель}: ${предок(b, цель)})`); }
+else for (const b of лишние) bad(`ветка вне схемы: ${b} (перенесена в main: ${предок(b, 'main')})`);
 
 // 4. экземпляр 4780
 try {
@@ -191,13 +179,13 @@ try {
 }
 
 // 6. посторонние папки
-const wtDir = path.join(ROOT, 'editor/.coordination/worktrees');
-if (fs.existsSync(wtDir)) {
+if (fs.existsSync(КОПИИ_САЙТА)) {
   const известные = new Set(копии.map((к) => norm(к.path)));
-  for (const name of fs.readdirSync(wtDir)) {
-    if (!известные.has(norm(path.join(wtDir, name)))) bad(`папка в worktrees без рабочей копии: ${name} (что внутри — смотреть перед любым решением)`);
+  for (const name of fs.readdirSync(КОПИИ_САЙТА)) {
+    if (!известные.has(norm(path.join(КОПИИ_САЙТА, name)))) bad(`папка среди копий сайта без рабочей копии: ${name} (что внутри — смотреть перед любым решением)`);
   }
 }
+if (fs.existsSync(path.join(ROOT, 'editor/.coordination'))) bad('на диске сайта снова есть editor/.coordination — служебные записи живут в клоне редактора (что внутри — смотреть перед любым решением)');
 for (const name of fs.readdirSync(ROOT)) {
   if (/^\.cache-/.test(name) && name !== '.cache-loader' && fs.statSync(path.join(ROOT, name)).isDirectory()) bad(`кэш-копия в корне: ${name}`);
 }
