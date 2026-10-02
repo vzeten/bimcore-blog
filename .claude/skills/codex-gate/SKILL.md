@@ -8,10 +8,12 @@ description: Одноразовый технический контроль то
 Когда вызывать и кто ждёт — [TASKS.md](../../../editor/TASKS.md#контролёр-и-границы-замечаний).
 Запуск в PowerShell — одной командой с конечным вводом, без PTY (`tty: false`):
 ```powershell
-Get-Content -LiteralPath $promptFile -Raw -Encoding utf8 | & $codexExe exec --model gpt-5.6-sol --ephemeral --sandbox read-only --color never -C $worktree -
+Get-Content -LiteralPath $promptFile -Raw -Encoding utf8 | & $codexExe exec --model gpt-6.1-sol --ephemeral --sandbox read-only --color never -C $worktree -
 if ($LASTEXITCODE -ne 0) { throw "Контролёр завершился с кодом $LASTEXITCODE; технический вердикт не получен" }
 ```
-`$promptFile` — сохранённое задание, `$codexExe` — путь к установленному Codex,
+`$promptFile` — сохранённое задание, `$codexExe` — самый свежий установленный Codex (модель `gpt-6.1-sol`
+требует CLI не ниже 0.159.2):
+`$codexExe = Get-ChildItem "$env:LOCALAPPDATA\OpenAI\Codex\bin\*\codex.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName`,
 `$worktree` — проверяемая рабочая папка. До запуска проверить, что задание непустое.
 Конвейер закрывает stdin после передачи задания. Не заменять закрытие ввода символами
 Ctrl+Z/Ctrl+D через `write_stdin`: в PTY они могут оставить контролёра ждать ввод.
