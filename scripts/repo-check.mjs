@@ -30,7 +30,7 @@ const HERE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const gitAt = (dir, args, opts = {}) => execFileSync('git', ['--no-optional-locks', '-c', 'safe.directory=' + path.resolve(dir).split(path.sep).join('/'), '-C', dir, ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], ...opts});
 // Принятый код редактора — отдельный клон закрытого bimcore-editor (решение владельца 2026-10-02). Запуск из
 // него (или из копии операции внутри него) проверяет основную папку материалов, а не сам клон.
-const КЛОН = 'C:/My_code/bimcore-editor';
+const КЛОН = process.env.REPO_CHECK_CLONE ?? 'C:/My_code/bimcore-editor';
 const МАТЕРИАЛЫ = 'C:/My_code/bimcore-blog';
 const корень = path.resolve(HERE, gitAt(HERE, ['rev-parse', '--git-common-dir']).trim(), '..');
 const ROOT = path.resolve(корень).split(path.sep).join('/').toLowerCase() === КЛОН.toLowerCase() ? path.resolve(МАТЕРИАЛЫ) : корень;
@@ -111,14 +111,47 @@ for (const к of копии) {
   else bad(описание + ' — по схеме такой копии быть не должно; решает владелец');
 }
 if (копии.length === 2) ok('рабочих копий две: основная и accepted-editor');
-if (КЛОН_ЕСТЬ) {
+// 2б. клон редактора и копии его операций — тем же порядком, что копии основной папки.
+const копииКлона = [];
+if (КЛОН_ЕСТЬ) try {
   const вет = gitIn(КЛОН, 'rev-parse', '--abbrev-ref', 'HEAD');
   const st = gitIn(КЛОН, 'status', '--short');
   if (вет === 'editor' && st === '') ok(`клон редактора ${КЛОН} на editor, без незакоммиченных правок`);
   else bad(`клон редактора ${КЛОН}: ветка «${вет}», незакоммиченных файлов: ${st === '' ? 0 : st.split('\n').length}`);
+  let операцияКлона = null;
+  const статусКлона = path.join(КЛОН, 'editor/.coordination/run-status.json');
+  if (fs.existsSync(статусКлона)) { try { операцияКлона = JSON.parse(fs.readFileSync(статусКлона, 'utf8')); } catch { bad(`${статусКлона} не читается`); } }
+  let к = null;
   for (const line of gitIn(КЛОН, 'worktree', 'list', '--porcelain').split('\n')) {
-    if (line.startsWith('worktree ') && norm(line.slice(9)) !== norm(КЛОН)) info(`копия операции в клоне: ${line.slice(9)}`);
+    if (line.startsWith('worktree ')) к = {path: line.slice(9), branch: null};
+    else if (line.startsWith('branch ') && к) к.branch = line.slice(7).replace('refs/heads/', '');
+    else if (line === '' && к) { копииКлона.push(к); к = null; }
   }
+  if (к) копииКлона.push(к);
+  const wtКлона = norm(path.join(КЛОН, 'editor/.coordination/worktrees'));
+  for (const копия of копииКлона) {
+    if (norm(копия.path) === norm(КЛОН)) continue;
+    let описание = `копия в клоне ${копия.path} (${копия.branch ?? 'без ветки'})`;
+    if (fs.existsSync(копия.path)) {
+      const незакоммич = gitIn(копия.path, 'status', '--short').split('\n').filter(Boolean).length;
+      let перенесена = 'нет ветки';
+      if (копия.branch) { try { gitAt(КЛОН, ['merge-base', '--is-ancestor', копия.branch, 'editor'], {stdio: 'ignore'}); перенесена = 'да'; } catch { перенесена = 'НЕТ'; } }
+      const чья = операцияКлона && операцияКлона.branch === копия.branch ? `операция ${операцияКлона.operation} (${операцияКлона.state})` : 'операция не записана';
+      описание += `: ${чья}; ветка перенесена в editor: ${перенесена}; незакоммиченных файлов: ${незакоммич}`;
+    } else описание += ': папки нет на диске';
+    const внутри = norm(копия.path).startsWith(wtКлона + '/');
+    if (внутри && копия.branch && WORK.test(копия.branch) && операцияКлона && операцияКлона.branch === копия.branch) info(описание);
+    else bad(описание + ' — по схеме такой копии быть не должно; решает владелец');
+  }
+  const wtDirКлона = path.join(КЛОН, 'editor/.coordination/worktrees');
+  if (fs.existsSync(wtDirКлона)) {
+    const известные = new Set(копииКлона.map((копия) => norm(копия.path)));
+    for (const name of fs.readdirSync(wtDirКлона)) {
+      if (!известные.has(norm(path.join(wtDirКлона, name)))) bad(`папка в worktrees клона без рабочей копии: ${name} (что внутри — смотреть перед любым решением)`);
+    }
+  }
+} catch (e) {
+  bad(`клон редактора ${КЛОН} не читается git: ${e?.message?.split('\n')[0] ?? e}`);
 }
 
 // 3. ветки
@@ -145,7 +178,7 @@ try {
     "$l = Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -ge 4779 -and $_.LocalPort -le 4799 } | Select-Object -Unique LocalPort, OwningProcess; foreach ($c in $l) { $p = Get-CimInstance Win32_Process -Filter \"ProcessId = $($c.OwningProcess)\"; Write-Output (\"$($c.LocalPort)`t$($c.OwningProcess)`t$($p.CommandLine)\") }"],
   {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
   const порты = out ? out.split('\n').map((s) => s.trim()).filter(Boolean) : [];
-  const разрешённые = [norm(ROOT), ...копии.map((к) => norm(к.path))];
+  const разрешённые = [norm(ROOT), ...копии.map((к) => norm(к.path)), ...копииКлона.map((к) => norm(к.path))];
   for (const line of порты) {
     const [port, pid, cmd = ''] = line.split('\t');
     const путь = (cmd.match(/[A-Za-z]:[^"]*?(server|panel)\.mjs/) ?? [''])[0];
