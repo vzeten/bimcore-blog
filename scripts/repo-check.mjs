@@ -46,7 +46,8 @@ const ПРИНЯТЫЙ = norm(КЛОН);
 const КОПИИ_САЙТА = path.join(path.dirname(ROOT), 'bimcore-blog-worktrees');
 // Рабочая ветка одной одобренной операции: код редактора (`…/editor-…`, в клоне, цель editor) или код сайта
 // (`…/site-…`, в КОПИИ_САЙТА, цель main). Запись операции одна — в клоне редактора.
-const WORK = /^(feature|fix)\/(editor|site)-[a-z0-9-]+$/;
+const WORK_САЙТ = /^(feature|fix)\/site-[a-z0-9-]+$/;
+const WORK_РЕДАКТОР = /^(feature|fix)\/editor-[a-z0-9-]+$/;
 
 const строки = [];
 const несоответствия = [];
@@ -84,7 +85,7 @@ for (const к of копии) {
   const p = norm(к.path);
   if (p === norm(ROOT)) continue;
   const внутри = p.startsWith(norm(КОПИИ_САЙТА) + '/');
-  const рабочая = !!(к.branch && WORK.test(к.branch) && /\/site-/.test(к.branch));
+  const рабочая = !!(к.branch && WORK_САЙТ.test(к.branch));
   let описание = `копия ${к.path} (${к.branch ?? 'без ветки'})`;
   if (fs.existsSync(к.path)) {
     const незакоммич = gitIn(к.path, 'status', '--short').split('\n').filter(Boolean).length;
@@ -97,7 +98,7 @@ for (const к of копии) {
   } else {
     описание += ': папки нет на диске';
   }
-  if (внутри && рабочая && текущаяОперация && текущаяОперация.branch === к.branch) info(описание);
+  if (внутри && рабочая && fs.existsSync(к.path) && текущаяОперация && текущаяОперация.branch === к.branch) info(описание);
   else bad(описание + ' — по схеме такой копии быть не должно; решает владелец');
 }
 if (копии.length === 1) ok('рабочая копия сайта одна: основная папка');
@@ -128,7 +129,7 @@ if (КЛОН_ЕСТЬ) try {
       описание += `: ${чья}; ветка перенесена в editor: ${перенесена}; незакоммиченных файлов: ${незакоммич}`;
     } else описание += ': папки нет на диске';
     const внутри = norm(копия.path).startsWith(wtКлона + '/');
-    if (внутри && копия.branch && WORK.test(копия.branch) && операцияКлона && операцияКлона.branch === копия.branch) info(описание);
+    if (внутри && копия.branch && WORK_РЕДАКТОР.test(копия.branch) && fs.existsSync(копия.path) && операцияКлона && операцияКлона.branch === копия.branch) info(описание);
     else bad(описание + ' — по схеме такой копии быть не должно; решает владелец');
   }
   const wtDirКлона = path.join(КЛОН, 'editor/.coordination/worktrees');
@@ -144,7 +145,7 @@ if (КЛОН_ЕСТЬ) try {
 
 // 3. ветки
 const ветки = git('branch', '--format=%(refname:short)').split('\n').filter(Boolean);
-const лишние = ветки.filter((b) => !(b === 'main' || b.startsWith('backup/') || (текущаяОперация && b === текущаяОперация.branch && WORK.test(b))));
+const лишние = ветки.filter((b) => !(b === 'main' || b.startsWith('backup/') || (текущаяОперация && b === текущаяОперация.branch && WORK_САЙТ.test(b))));
 if (лишние.length === 0) ok(`ветки: ${ветки.join(', ')}`);
 else for (const b of лишние) bad(`ветка вне схемы: ${b} (перенесена в main: ${предок(b, 'main')})`);
 
