@@ -24,6 +24,7 @@ import {
   llmsExcludeRoutePatterns,
   hreflangByRoute,
   toClientData,
+  blogListPages,
 } from '../plugins/translation-map/map.mjs';
 
 // ---------- временный сайт-образец ----------
@@ -240,4 +241,16 @@ test('переход: снятие draft с EN возвращает en в hrefla
   } finally {
     fs.rmSync(dir, {recursive: true, force: true});
   }
+});
+
+test('лента блога: число страниц по локалям считает только открытые записи', () => {
+  const entry = (unlisted) => ({route: '/blog/x', kind: 'blog', translated: {en: true, ru: true}, unlisted, draft: {en: false, ru: false}});
+  const map = {
+    locales: ['en', 'ru'],
+    entries: [
+      ...Array.from({length: 11}, () => entry({en: true, ru: false})),
+      {route: '/doc', kind: 'docs', translated: {en: true, ru: true}, unlisted: {en: false, ru: false}, draft: {en: false, ru: false}},
+    ],
+  };
+  assert.deepEqual(blogListPages(map, 10), {en: 1, ru: 2});
 });

@@ -298,6 +298,26 @@ export function hreflangByRoute(map) {
 }
 
 /**
+ * Сколько страниц у ленты блога в каждой локали. Лента строится из записей
+ * локали по умолчанию (перевод подставляется поверх), а записи «по ссылке»
+ * (unlisted) и черновики в неё не попадают — поэтому у языков разное число
+ * страниц: русских открытых записей больше, чем английских, и /ru/blog/page/2/
+ * есть, а /blog/page/2/ — нет (выкладка 2026-10-02 упала на seo:audit именно
+ * на языковых ссылках этой страницы). `perPage` — postsPerPage блога (у сайта
+ * штатные 10). Минимум одна страница: сама лента есть всегда.
+ */
+export function blogListPages(map, perPage = 10) {
+  const pages = {};
+  for (const locale of map.locales) {
+    const open = map.entries.filter(
+      (entry) => entry.kind === 'blog' && !entry.unlisted[locale] && !entry.draft[locale],
+    ).length;
+    pages[locale] = Math.max(1, Math.ceil(open / perPage));
+  }
+  return pages;
+}
+
+/**
  * Компактный вид для браузера: только то, что нужно SiteMetadata.
  * Заглушки идут отдельным списком — им noindex ставит сам Docusaurus
  * (unlisted → «noindex, nofollow»), и второй тег там не нужен.
@@ -309,5 +329,6 @@ export function toClientData(map) {
     untranslated: untranslatedRoutesByLocale(map),
     unlisted: unlistedRoutesByLocale(map),
     alternates: hreflangByRoute(map),
+    blogPages: blogListPages(map),
   };
 }

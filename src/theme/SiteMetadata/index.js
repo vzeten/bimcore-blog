@@ -72,7 +72,7 @@ function useSharedRoute() {
  * языковые ссылки ему положены.
  */
 function useTranslationAvailability() {
-  const {untranslated, unlisted, alternates} = usePluginData('translation-map');
+  const {untranslated, unlisted, alternates, blogPages} = usePluginData('translation-map');
   const {
     i18n: {locales, defaultLocale},
   } = useDocusaurusContext();
@@ -82,7 +82,16 @@ function useTranslationAvailability() {
   const isUnlisted = (locale) => Boolean(unlisted[locale]?.includes(route));
   // Адрес вне карты (главная, поиск, списки блога) существует во всех
   // локалях одинаково — для него остаётся штатное поведение темы.
-  const plan = alternates[route] ?? {locales, xDefault: defaultLocale};
+  // Страница ленты блога N есть не во всех локалях: открытых записей у
+  // языков разное число (blogListPages в map.mjs). Ссылка на отсутствующую
+  // страницу — ошибка для поиска и для проверки сборки.
+  const page = /^\/blog\/page\/(\d+)$/.exec(route);
+  const plan = page && blogPages
+    ? (() => {
+      const open = locales.filter((locale) => (blogPages[locale] ?? 1) >= Number(page[1]));
+      return {locales: open, xDefault: open.includes(defaultLocale) ? defaultLocale : (open[0] ?? null)};
+    })()
+    : (alternates[route] ?? {locales, xDefault: defaultLocale});
 
   return {isTranslated, isUnlisted, plan};
 }
