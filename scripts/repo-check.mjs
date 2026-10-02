@@ -28,12 +28,20 @@ const HERE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // считается другим, safe.directory задан только для копии) git иначе отвергает основную папку. Глобальные настройки не меняются.
 // `--no-optional-locks`: status и прочие чтения не обновляют индекс, скрипт не пишет в .git.
 const gitAt = (dir, args, opts = {}) => execFileSync('git', ['--no-optional-locks', '-c', 'safe.directory=' + path.resolve(dir).split(path.sep).join('/'), '-C', dir, ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], ...opts});
-const ROOT = path.resolve(HERE, gitAt(HERE, ['rev-parse', '--git-common-dir']).trim(), '..');
+// Принятый код редактора — отдельный клон закрытого bimcore-editor (решение владельца 2026-10-02). Запуск из
+// него (или из копии операции внутри него) проверяет основную папку материалов, а не сам клон.
+const КЛОН = 'C:/My_code/bimcore-editor';
+const МАТЕРИАЛЫ = 'C:/My_code/bimcore-blog';
+const корень = path.resolve(HERE, gitAt(HERE, ['rev-parse', '--git-common-dir']).trim(), '..');
+const ROOT = path.resolve(корень).split(path.sep).join('/').toLowerCase() === КЛОН.toLowerCase() ? path.resolve(МАТЕРИАЛЫ) : корень;
 const git = (...args) => gitAt(ROOT, args).trim();
 const gitIn = (dir, ...args) => gitAt(dir, args).trim();
 const предок = (ветка, цель) => { try { gitAt(ROOT, ['merge-base', '--is-ancestor', ветка, цель], {stdio: 'ignore'}); return 'да'; } catch { return 'НЕТ'; } };
 const norm = (p) => path.resolve(p).replace(/\\/g, '/').toLowerCase();
 const ACCEPTED = norm(path.join(ROOT, 'editor/.coordination/worktrees/accepted-editor'));
+const КЛОН_ЕСТЬ = fs.existsSync(path.join(КЛОН, '.git'));
+// Код 4780 — из клона, когда он есть; до переезда — из прежней accepted-editor.
+const ПРИНЯТЫЙ = КЛОН_ЕСТЬ ? norm(КЛОН) : ACCEPTED;
 // Рабочая ветка одной одобренной операции: код редактора (`…/editor-…`, цель editor) или код сайта
 // (`…/site-…`, цель main). Оба вида живут в одной временной папке внутри editor/.coordination/worktrees.
 const WORK = /^(feature|fix)\/(editor|site)-[a-z0-9-]+$/;
@@ -73,6 +81,10 @@ if (cur) копии.push(cur);
 for (const к of копии) {
   const p = norm(к.path);
   if (p === norm(ROOT)) continue;
+  if (p === ACCEPTED && КЛОН_ЕСТЬ) {
+    info('прежняя accepted-editor внутри папки сайта — точка отката до архивации, 4780 из неё не работает');
+    continue;
+  }
   if (p === ACCEPTED) {
     const st = fs.existsSync(к.path) ? gitIn(к.path, 'status', '--short') : 'НЕТ НА ДИСКЕ';
     if (к.branch === 'editor' && st === '') ok(`accepted-editor на editor, без незакоммиченных правок`);
@@ -99,6 +111,15 @@ for (const к of копии) {
   else bad(описание + ' — по схеме такой копии быть не должно; решает владелец');
 }
 if (копии.length === 2) ok('рабочих копий две: основная и accepted-editor');
+if (КЛОН_ЕСТЬ) {
+  const вет = gitIn(КЛОН, 'rev-parse', '--abbrev-ref', 'HEAD');
+  const st = gitIn(КЛОН, 'status', '--short');
+  if (вет === 'editor' && st === '') ok(`клон редактора ${КЛОН} на editor, без незакоммиченных правок`);
+  else bad(`клон редактора ${КЛОН}: ветка «${вет}», незакоммиченных файлов: ${st === '' ? 0 : st.split('\n').length}`);
+  for (const line of gitIn(КЛОН, 'worktree', 'list', '--porcelain').split('\n')) {
+    if (line.startsWith('worktree ') && norm(line.slice(9)) !== norm(КЛОН)) info(`копия операции в клоне: ${line.slice(9)}`);
+  }
+}
 
 // 3. ветки
 const ветки = git('branch', '--format=%(refname:short)').split('\n').filter(Boolean);
@@ -110,7 +131,7 @@ else for (const b of лишние) { const цель = /\/site-/.test(b) ? 'main'
 try {
   const r = execFileSync('curl', ['-s', '--max-time', '4', 'http://localhost:4780/api/identity'], {encoding: 'utf8'});
   const id = JSON.parse(r);
-  const кодOk = norm(id.code ?? '').startsWith(ACCEPTED + '/');
+  const кодOk = norm(id.code ?? '').startsWith(ПРИНЯТЫЙ + '/');
   const матOk = norm(id.materials ?? '') === norm(ROOT);
   const s = `экземпляр 4780: код ${id.branch}@${id.commit} из ${id.code}, материалы ${id.materials}, принят: ${id.accepted}`;
   if (кодOk && матOk && id.accepted) ok(s); else bad(s + ' — код или материалы не из схемы');
