@@ -75,3 +75,6 @@ scripts/knowledge-redirect/dist/
 /editor/.originals/
 # Схемы процессов для владельца живут вне репозитория: C:/My_work/process-review
 /output/process-review/
+
+# Временные копии кода сайта (git worktree), решение владельца 2026-10-06
+/.worktrees/
