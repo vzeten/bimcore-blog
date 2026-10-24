@@ -24,7 +24,7 @@
     "description": "The label for category 'Families' in sidebar 'mainSidebar'"
   },
   "sidebar.mainSidebar.category.BIMCORE Plugin": {
-    "message": "BIMCORE Plugin",
+    "message": "Plugin BIMCORE",
     "description": "The label for category 'BIMCORE Plugin' in sidebar 'mainSidebar'"
   },
   "sidebar.mainSidebar.category.Interior Template": {
