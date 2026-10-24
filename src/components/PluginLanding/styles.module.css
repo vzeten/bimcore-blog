@@ -103,8 +103,10 @@
   max-width: 100%;
 }
 
-.hero:has(.scene) {
-  grid-template-columns: 0.9fr 1.1fr;
+@media (min-width: 901px) {
+  .hero:has(.scene) {
+    grid-template-columns: 0.9fr 1.1fr;
+  }
 }
 
 /* Кнопки */
