@@ -10,7 +10,7 @@ const rowShots = [SHOTS.panel, SHOTS.open, SHOTS.info];
 export default function PluginB() {
   return (
     <LandingPage copy={c} variant="B">
-      <Hero hero={c.hero} shot={<HeroScene {...INTERIORS.kitchen} />} />
+      <Hero hero={c.hero} shot={<HeroScene {...INTERIORS.dopamine} />} />
       <Section id="paths" title={c.paths.title} tint>
         <Cards cols={2} items={c.paths.items.map((it, i) => ({...it, primary: i === 1}))} />
       </Section>

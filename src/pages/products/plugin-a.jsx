@@ -10,7 +10,7 @@ const featureShots = [SHOTS.panel, SHOTS.open, SHOTS.info, SHOTS.lang];
 export default function PluginA() {
   return (
     <LandingPage copy={c} variant="A">
-      <Hero hero={c.hero} shot={<HeroScene {...INTERIORS.logHouse} />} />
+      <Hero hero={c.hero} shot={<HeroScene {...INTERIORS.apartment} />} />
       <Section id="ecosystem" title={c.ecosystem.title} text={c.ecosystem.text} tint>
         <Cards items={c.ecosystem.items} cols={4} />
         <Links buttons={c.ecosystem.lessons.buttons} />

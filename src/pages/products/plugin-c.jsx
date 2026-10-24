@@ -25,7 +25,7 @@ export default function PluginC() {
   };
   return (
     <LandingPage copy={c} variant="C">
-      <Hero hero={hero} dark shot={<HeroScene {...INTERIORS.bath} />} />
+      <Hero hero={hero} dark shot={<HeroScene {...INTERIORS.flat} />} />
       <Section id="steps3" title={c.steps3.title}>
         <Cards
           cols={3}

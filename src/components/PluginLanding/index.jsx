@@ -46,7 +46,7 @@ export function Shot({src, alt, wide}) {
   );
 }
 
-// Первый экран: интерьер из семейств INT LINES (изометрии из публикаций INT LINES) и поверх него панель плагина.
+// Первый экран: интерьер из семейств INT LINES (изометрии, сделанные для INT LINES) и поверх него панель плагина.
 export function HeroScene({interior, alt}) {
   return (
     <div className={styles.scene}>
@@ -173,9 +173,9 @@ export function Final({final}) {
 }
 
 export const INTERIORS = {
-  logHouse: {interior: '/img/plugin-landing/interior-log-house.jpg', alt: 'Спальня с ванной в бревенчатом доме из семейств INT LINES'},
-  kitchen: {interior: '/img/plugin-landing/interior-kitchen-living.jpg', alt: 'Кухня-гостиная из семейств INT LINES'},
-  bath: {interior: '/img/plugin-landing/interior-bath.jpg', alt: 'Зона отдыха с ванной из семейств INT LINES'},
+  apartment: {interior: '/img/plugin-landing/interior-apartment.jpg', alt: 'Апартаменты из семейств INT LINES, изометрия'},
+  dopamine: {interior: '/img/plugin-landing/interior-dopamine.jpg', alt: 'Яркая гостиная из семейств INT LINES'},
+  flat: {interior: '/img/plugin-landing/interior-flat.jpg', alt: 'Квартира из семейств INT LINES, общий вид'},
 };
 
 export const SHOTS = {
