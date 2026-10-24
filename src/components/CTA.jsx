@@ -46,13 +46,13 @@ const ctaData = {
   // BIMCORE plugin docs. ВРЕМЕННО → сообщество (отдельной страницы продукта плагина пока нет).
   // Вернуть на страницу плагина, когда появится (аналог guide → продукт).
   plugin: {
-    title: translate({id: 'cta.plugin.title', message: 'Using the BIMCORE plugin?'}),
+    title: translate({id: 'cta.plugin.title', message: 'Have a question about the BIMCORE plugin?'}),
     text: translate({
       id: 'cta.plugin.text',
-      message: 'Join the BIMCORE community — get help with the plugin, share feedback, and download free Revit families to use with it.',
+      message: 'Ask it in the BIMCORE community and get help with the plugin.',
     }),
     link: 'https://community.bimcore.one/',
-    button: translate({id: 'cta.plugin.button', message: 'Join the Community'}),
+    button: translate({id: 'cta.plugin.button', message: 'Visit the Community'}),
   },
   // Статьи-инструкции к листам интерьерного шаблона. Ведёт на страницу раздела
   // «О шаблоне» — внутренняя ссылка, там же карточка товара с ценой и описанием.

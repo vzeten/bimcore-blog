@@ -36,13 +36,13 @@
     "message": "Ver el set completo"
   },
   "cta.plugin.title": {
-    "message": "¿Usas el plugin de BIMCORE?"
+    "message": "¿Tienes una pregunta sobre el plugin de BIMCORE?"
   },
   "cta.plugin.text": {
-    "message": "Únete a la comunidad de BIMCORE: ayuda con el plugin, comparte tu opinión y descarga familias de Revit gratuitas para usar con él."
+    "message": "Hazla en la comunidad de BIMCORE y te ayudarán con el plugin."
   },
   "cta.plugin.button": {
-    "message": "Unirse a la comunidad"
+    "message": "Ir a la comunidad"
   },
   "cta.help.title": {
     "message": "¿No encuentras lo que buscas?"
