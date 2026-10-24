@@ -1,6 +1,6 @@
 import React from 'react';
 import COPY from '@site/src/data/plugin-landing-ru.json';
-import {LandingPage, Hero, Section, Cards, Rows, Links, Shot, Sets, Final, SHOTS} from '@site/src/components/PluginLanding';
+import {LandingPage, Hero, Section, Cards, Rows, Links, Shot, Sets, Final, SHOTS, HeroScene, INTERIORS} from '@site/src/components/PluginLanding';
 import styles from '@site/src/components/PluginLanding/styles.module.css';
 
 // Вариант B «Два пути»: сразу делим читателя на «уже приобрёл» и «ещё выбирает».
@@ -10,7 +10,7 @@ const rowShots = [SHOTS.panel, SHOTS.open, SHOTS.info];
 export default function PluginB() {
   return (
     <LandingPage copy={c} variant="B">
-      <Hero hero={c.hero} shot={<Shot {...SHOTS.open} />} />
+      <Hero hero={c.hero} shot={<HeroScene {...INTERIORS.kitchen} />} />
       <Section id="paths" title={c.paths.title} tint>
         <Cards cols={2} items={c.paths.items.map((it, i) => ({...it, primary: i === 1}))} />
       </Section>

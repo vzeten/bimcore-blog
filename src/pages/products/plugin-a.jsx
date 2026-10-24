@@ -1,6 +1,6 @@
 import React from 'react';
 import COPY from '@site/src/data/plugin-landing-ru.json';
-import {LandingPage, Hero, Section, Cards, Links, Shot, Sets, Final, SHOTS} from '@site/src/components/PluginLanding';
+import {LandingPage, Hero, Section, Cards, Links, Shot, Sets, Final, SHOTS, HeroScene, INTERIORS} from '@site/src/components/PluginLanding';
 import styles from '@site/src/components/PluginLanding/styles.module.css';
 
 // Вариант A «Экосистема»: от общей картины BIMCORE к плагину.
@@ -10,7 +10,7 @@ const featureShots = [SHOTS.panel, SHOTS.open, SHOTS.info, SHOTS.lang];
 export default function PluginA() {
   return (
     <LandingPage copy={c} variant="A">
-      <Hero hero={c.hero} shot={<Shot {...SHOTS.panel} />} />
+      <Hero hero={c.hero} shot={<HeroScene {...INTERIORS.logHouse} />} />
       <Section id="ecosystem" title={c.ecosystem.title} text={c.ecosystem.text} tint>
         <Cards items={c.ecosystem.items} cols={4} />
         <Links buttons={c.ecosystem.lessons.buttons} />

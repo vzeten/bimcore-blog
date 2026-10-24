@@ -46,6 +46,18 @@ export function Shot({src, alt, wide}) {
   );
 }
 
+// Первый экран: интерьер из семейств INT LINES (изометрии из публикаций INT LINES) и поверх него панель плагина.
+export function HeroScene({interior, alt}) {
+  return (
+    <div className={styles.scene}>
+      <img className={styles.sceneInterior} src={useBaseUrl(interior)} alt={alt} />
+      <div className={styles.scenePanel}>
+        <Shot {...SHOTS.panel} />
+      </div>
+    </div>
+  );
+}
+
 export function Hero({hero, shot, dark}) {
   return (
     <section className={`${styles.hero} ${dark ? styles.heroDark : ''}`}>
@@ -159,6 +171,12 @@ export function Final({final}) {
     </section>
   );
 }
+
+export const INTERIORS = {
+  logHouse: {interior: '/img/plugin-landing/interior-log-house.jpg', alt: 'Спальня с ванной в бревенчатом доме из семейств INT LINES'},
+  kitchen: {interior: '/img/plugin-landing/interior-kitchen-living.jpg', alt: 'Кухня-гостиная из семейств INT LINES'},
+  bath: {interior: '/img/plugin-landing/interior-bath.jpg', alt: 'Зона отдыха с ванной из семейств INT LINES'},
+};
 
 export const SHOTS = {
   panel: {src: '/img/plugin-landing/panel-sets.png', alt: 'Панель плагина BIMCORE с наборами семейств'},

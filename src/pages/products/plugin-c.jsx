@@ -1,6 +1,6 @@
 import React from 'react';
 import COPY from '@site/src/data/plugin-landing-ru.json';
-import {LandingPage, Hero, Section, Cards, Links, Shot, Sets, Final, SHOTS} from '@site/src/components/PluginLanding';
+import {LandingPage, Hero, Section, Cards, Links, Shot, Sets, Final, SHOTS, HeroScene, INTERIORS} from '@site/src/components/PluginLanding';
 import styles from '@site/src/components/PluginLanding/styles.module.css';
 
 // Вариант C «Результат первым»: тёмный первый экран про проект интерьера, плагин вторым.
@@ -25,7 +25,7 @@ export default function PluginC() {
   };
   return (
     <LandingPage copy={c} variant="C">
-      <Hero hero={hero} dark shot={<Shot {...SHOTS.panel} />} />
+      <Hero hero={hero} dark shot={<HeroScene {...INTERIORS.bath} />} />
       <Section id="steps3" title={c.steps3.title}>
         <Cards
           cols={3}
