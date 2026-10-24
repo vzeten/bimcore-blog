@@ -1,47 +1,48 @@
 ---
-title: "Cómo instalar el plugin BIMCORE para Revit"
+title: "Cómo instalar el plugin BIMCORE y abrirlo en Revit"
 slug: /guides/bimcore-plugin/installation
-sidebar_label: "1. Instalación"
+sidebar_label: "1. Instalar el plugin"
 sidebar_position: 10
-description: "Descarga el instalador bimcore.msi, instala el plugin BIMCORE para Revit 2019–2027 y abre su panel desde la pestaña Complementos de Revit."
+description: "Descarga e instala el plugin BIMCORE para Revit 2019–2027, continúa tras el aviso de seguridad de Windows y abre el panel del plugin en Revit."
 image: ./cover.png
 unlisted: true
 ---
 
-{/* Окна Windows и Revit без снимков: Windows и Revit у владельца русские, английские окна не снять. Названия кнопок английских окон (More info, Run anyway, OK, Always Load) — официальные. */}
+El plugin BIMCORE funciona con Revit 2019–2027. Tras instalarlo, verás el botón **Panel** en la pestaña **Add-Ins**. Haz clic en **Panel** para abrir el panel del plugin.
 
-## 1. Cierra Revit
+## Descarga el instalador
 
-1. Guarda los proyectos abiertos en Revit.
-2. Cierra Revit.
+1. Guarda los proyectos abiertos y cierra Revit.
+2. Haz clic en [Descargar el instalador del plugin BIMCORE](https://revitcontentstorage.blob.core.windows.net/0-plugin-installers/bimcore.msi?sv=2023-01-03&st=2024-09-16T16%3A53%3A23Z&se=9999-09-17T16%3A53%3A00Z&sr=b&sp=r&sig=oVopKFMhyna0ItUuDXP4UNoV%2FNRg8KyIN9uv4z7Zk0M%3D) y espera a que termine la descarga de bimcore.msi.
 
-## 2. Descarga el instalador
+## Instala el plugin
+1. Abre el archivo bimcore.msi que has descargado.
+2. Si aparece el aviso **Windows protected your PC**, haz clic en **More info**.
 
-1. Haz clic en [Descargar el instalador del plugin BIMCORE](https://revitcontentstorage.blob.core.windows.net/0-plugin-installers/bimcore.msi?sv=2023-01-03&st=2024-09-16T16%3A53%3A23Z&se=9999-09-17T16%3A53%3A00Z&sr=b&sp=r&sig=oVopKFMhyna0ItUuDXP4UNoV%2FNRg8KyIN9uv4z7Zk0M%3D).
-2. El archivo bimcore.msi aparecerá en la lista de descargas del navegador.
+   ![Enlace More info en el aviso Windows protected your PC](./img-02.png)
 
-## 3. Instala el plugin
+3. En el aviso **Windows protected your PC**, haz clic en **Run anyway**.
 
-1. Abre bimcore.msi desde la lista de descargas del navegador.
-2. Si aparece el aviso "Windows protegió su PC", haz clic en **Más información**.
-3. En ese mismo aviso, haz clic en **Ejecutar de todas formas**.
-4. Si el instalador muestra una ventana con el texto "Autodesk Revit", cierra cualquier ventana de Revit que siga abierta.
-5. Si apareció esa ventana del instalador, haz clic en **OK** para continuar.
-6. Espera a que se cierre la ventana de instalación.
+   ![Botón Run anyway en el aviso de seguridad de Windows](./img-03.png)
 
-## 4. Abre el plugin en Revit
+4. Si el instalador te pide que cierres Autodesk Revit, cierra Revit y haz clic en **OK**.
+
+   ![Ventana del instalador con Autodesk Revit y el botón OK](./img-04.png)
+
+5. Espera a que se cierre la ventana de instalación.
+
+   ![Ventana de instalación con el mensaje Please wait while Windows configures bimcore](./img-05.png)
+
+## Abre el plugin en Revit
 
 1. Inicia Revit.
-2. Si aparece el cuadro de diálogo **Seguridad - Complemento sin firmar**, haz clic en **Cargar siempre**.
-3. En Revit, abre la pestaña **Complementos**.
-4. En **Complementos**, haz clic en **Panel**.
+2. Si al iniciar Revit por primera vez aparece **Security - Unsigned Add-In**, haz clic en **Always Load**.
+3. En la pestaña **Add-Ins**, haz clic en **Panel**.
 
-![Pestaña Add-Ins y botón Panel](./img-06.png)
+   ![Pestaña Add-Ins y botón Panel en Revit](./img-06.png)
 
-5. Se abrirá la ventana del plugin con la interfaz en inglés.
+Si necesitas ayuda, escríbenos a [mail@bimcore.one](mailto:mail@bimcore.one).
 
-Si tienes algún problema, escríbenos a `mail@bimcore.one`.
-
-Continúa con [Registro e inicio de sesión](/guides/bimcore-plugin/sign-in).
+Continúa con [Registro e inicio de sesión en el plugin BIMCORE](/guides/bimcore-plugin/sign-in).
 
 <CTA type="plugin" />
