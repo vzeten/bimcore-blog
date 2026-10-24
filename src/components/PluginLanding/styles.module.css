@@ -311,10 +311,11 @@
   color: var(--mute);
 }
 
+/* ProductCard рассчитан на ширину статьи: ставим карточки друг под другом, не в колонки. */
 .sets {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
+  max-width: 860px;
 }
 
 /* Финальный призыв */
@@ -361,8 +362,7 @@
   .rowFlip .rowShot {
     order: 0;
   }
-  .cards,
-  .sets {
+  .cards {
     grid-template-columns: 1fr;
   }
   .hero {
