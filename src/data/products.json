@@ -71,6 +71,11 @@
       "bimcore": "https://bimcore.one/products/modular-sofa-revit-families",
       "int-lines": "https://int-lines.com/revit-families/semeystva-divan-transformer/"
     },
+    "879069013": {
+      "инструкция": "/guides/families/office-chairs-for-revit/",
+      "bimcore": "https://bimcore.one/products/office-chairs",
+      "int-lines": "https://int-lines.com/revit-families/semeystva-ofisnye-kresla/"
+    },
     "543589695": {
       "инструкция": "/guides/families/plants-for-revit/",
       "bimcore": "https://bimcore.one/products/plants-revit-families",
